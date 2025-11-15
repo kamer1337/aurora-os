@@ -6,6 +6,7 @@
 
 #include "kernel.h"
 #include "../memory/memory.h"
+#include "../memory/paging.h"
 #include "../process/process.h"
 #include "../interrupt/interrupt.h"
 #include "../drivers/vga.h"
@@ -14,10 +15,14 @@
 #include "../drivers/serial.h"
 #include "../security/quantum_crypto.h"
 #include "../gui/gui_demo.h"
+#include "../smp/smp.h"
+#include "../network/network.h"
+#include "../usb/usb.h"
 #include "../../filesystem/vfs/vfs.h"
 #include "../../filesystem/ramdisk/ramdisk.h"
 #include "../../filesystem/journal/journal.h"
 #include "../../tests/test_suite.h"
+#include "../../tests/advanced_tests.h"
 
 /**
  * Initialize device drivers
@@ -55,6 +60,14 @@ void kernel_init(void) {
     memory_init();
     vga_write("Memory management initialized\n");
     
+    /* Initialize paging subsystem */
+    paging_init();
+    vga_write("Paging subsystem initialized\n");
+    
+    /* Initialize SMP (multi-core) support */
+    smp_init();
+    vga_write("SMP support initialized\n");
+    
     /* Initialize quantum encryption subsystem */
     if (quantum_crypto_init() == QCRYPTO_SUCCESS) {
         vga_write("Quantum encryption initialized\n");
@@ -89,6 +102,14 @@ void kernel_init(void) {
     scheduler_init();
     vga_write("Scheduler initialized\n");
     
+    /* Initialize network stack */
+    network_init();
+    vga_write("Network stack initialized\n");
+    
+    /* Initialize USB subsystem */
+    usb_init();
+    vga_write("USB subsystem initialized\n");
+    
     vga_write("\nAurora OS initialization complete!\n");
     
 #ifdef QUANTUM_CRYPTO_TESTS
@@ -105,6 +126,9 @@ void kernel_main(void) {
     
     /* Run test suite to validate implementations */
     run_tests();
+    
+    /* Run advanced feature tests */
+    run_advanced_tests();
     
     vga_write("\n=== Starting GUI Demo ===\n");
     
