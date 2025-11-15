@@ -113,6 +113,8 @@ To develop a modern, secure, and highly efficient operating system that surpasse
 
 ## **5. Development Roadmap**
 
+### **5.1 High-Level Timeline**
+
 | **Phase** | **Timeline** | **Key Tasks** | **Milestones** |
 |---------|--------------|----------------|----------------|
 | **Phase 1: Design & Planning** | Q1–Q2 2024 | • Define functional & non-functional requirements<br>• Design system architecture<br>• Create development roadmap | • Q1 2024: Finalized requirements<br>• Q2 2024: Approved system architecture |
@@ -121,11 +123,101 @@ To develop a modern, secure, and highly efficient operating system that surpasse
 | **Phase 4: User Interface** | Q3–Q4 2025 | • Build GUI framework<br>• Implement Start Menu & Taskbar | • Q3 2025: Functional desktop UI<br>• Q4 2025: Polished UX with core shell features |
 | **Phase 5: Testing & Debugging** | Q1 2026 | • End-to-end system testing<br>• Bug fixes, performance tuning, stability validation | • Q1 2026: Release candidate ready |
 
+### **5.2 Immediate Action Items (Current Sprint)**
+
+#### **Project Foundation Setup**
+- [x] Create project documentation (README.md)
+- [x] Define project structure and architecture
+- [x] Set up version control and repository organization
+- [x] Create initial directory structure
+- [x] Set up build system (Makefile)
+- [x] Configure development environment documentation
+
+#### **Phase 2.1: Kernel Core Implementation**
+- [x] Create kernel directory structure
+- [ ] Implement bootloader interface
+- [x] Develop basic kernel initialization (stubs)
+- [ ] Implement interrupt handling system
+- [x] Create process management framework (stubs)
+- [ ] Implement basic scheduler
+- [x] Develop memory management framework (stubs)
+- [ ] Create IPC mechanism
+
+#### **Phase 2.2: System Services**
+- [ ] Implement system call interface
+- [ ] Create device driver framework
+- [ ] Develop basic device drivers (keyboard, display)
+- [ ] Implement timer services
+- [ ] Create logging and debugging infrastructure
+
+#### **Phase 3.1: File System Foundation**
+- [x] Design file system structure
+- [x] Implement VFS (Virtual File System) layer (stubs)
+- [ ] Create basic file operations (create, read, write, delete)
+- [ ] Implement directory management
+- [ ] Add journaling support
+- [ ] Develop file system integrity checks
+
+### **5.3 Current Status**
+
+**Completed:**
+- ✅ Project planning and documentation
+- ✅ System architecture design
+- ✅ Requirements specification
+- ✅ Initial project structure setup
+- ✅ Development environment configuration
+- ✅ Basic kernel framework (core, memory, process modules)
+- ✅ VFS layer foundation
+- ✅ Build system (Makefile)
+
+**In Progress:**
+- 🔄 Kernel core implementation
+
+**Next Up:**
+- ⏭️ Bootloader development (GRUB multiboot)
+- ⏭️ Interrupt handling (IDT, GDT)
+- ⏭️ Memory paging implementation
+
 ---
 
 ## **6. Summary**
 
 **Aurora OS** is an ambitious project to build a next-generation operating system that combines the familiarity of Windows with the efficiency, security, and modularity of modern OS design principles. By leveraging a microkernel architecture, journaling file system, and a user-centric interface, Aurora OS aims to set a new standard for desktop and embedded computing environments.
+
+---
+
+## **7. Getting Started**
+
+### **Documentation**
+
+- **[Getting Started Guide](docs/GETTING_STARTED.md)** - Setup development environment and build instructions
+- **[Project Structure](docs/PROJECT_STRUCTURE.md)** - Overview of code organization
+- **[TODO List](TODO.md)** - Current tasks and priorities
+
+### **Quick Start**
+
+```bash
+# Clone the repository
+git clone https://github.com/kamer1337/aurora-os.git
+cd aurora-os
+
+# Build the kernel
+make all
+
+# Run in QEMU (when bootloader is implemented)
+qemu-system-i386 -kernel build/aurora-kernel.bin
+```
+
+### **Project Status**
+
+The project is currently in the **initial implementation phase**. We have:
+- ✅ Completed project planning and architecture design
+- ✅ Created initial directory structure
+- ✅ Implemented basic kernel framework (stub functions)
+- ✅ Setup build system
+- 🔄 Working on kernel core implementation
+
+See the [roadmap](#5-development-roadmap) above for detailed progress and upcoming milestones.
 
 ---
 

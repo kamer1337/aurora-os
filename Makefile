@@ -1,0 +1,61 @@
+# Aurora OS - Build System
+
+CC = gcc
+AS = nasm
+LD = ld
+
+# Directories
+KERNEL_DIR = kernel
+BUILD_DIR = build
+BOOT_DIR = boot
+FS_DIR = filesystem
+
+# Compiler flags
+CFLAGS = -Wall -Wextra -nostdlib -ffreestanding -m32 -fno-pie
+ASFLAGS = -f elf32
+LDFLAGS = -m elf_i386 -nostdlib
+
+# Source files
+KERNEL_SOURCES = $(wildcard $(KERNEL_DIR)/core/*.c) \
+                 $(wildcard $(KERNEL_DIR)/memory/*.c) \
+                 $(wildcard $(KERNEL_DIR)/process/*.c)
+
+VFS_SOURCES = $(wildcard $(FS_DIR)/vfs/*.c)
+
+# Object files
+KERNEL_OBJECTS = $(patsubst %.c,$(BUILD_DIR)/%.o,$(KERNEL_SOURCES))
+VFS_OBJECTS = $(patsubst %.c,$(BUILD_DIR)/%.o,$(VFS_SOURCES))
+
+ALL_OBJECTS = $(KERNEL_OBJECTS) $(VFS_OBJECTS)
+
+# Output
+KERNEL_BIN = $(BUILD_DIR)/aurora-kernel.bin
+
+.PHONY: all clean directories
+
+all: directories $(KERNEL_BIN)
+
+directories:
+	@mkdir -p $(BUILD_DIR)/$(KERNEL_DIR)/core
+	@mkdir -p $(BUILD_DIR)/$(KERNEL_DIR)/memory
+	@mkdir -p $(BUILD_DIR)/$(KERNEL_DIR)/process
+	@mkdir -p $(BUILD_DIR)/$(FS_DIR)/vfs
+
+$(BUILD_DIR)/%.o: %.c
+	@echo "Compiling $<"
+	@$(CC) $(CFLAGS) -c $< -o $@
+
+$(KERNEL_BIN): $(ALL_OBJECTS)
+	@echo "Linking kernel"
+	@$(LD) $(LDFLAGS) -T linker.ld -o $@ $^
+
+clean:
+	@echo "Cleaning build artifacts"
+	@rm -rf $(BUILD_DIR)/*
+
+help:
+	@echo "Aurora OS Build System"
+	@echo "====================="
+	@echo "make all    - Build the kernel"
+	@echo "make clean  - Clean build artifacts"
+	@echo "make help   - Show this help message"

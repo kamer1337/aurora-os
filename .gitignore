@@ -1,0 +1,37 @@
+# Build artifacts
+build/
+*.o
+*.bin
+*.elf
+*.iso
+*.img
+
+# Compiled files
+*.out
+*.exe
+*.ko
+*.obj
+*.so
+*.dylib
+
+# Debug files
+*.dSYM/
+*.su
+*.idb
+*.pdb
+
+# Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Toolchain
+*.log
+*.tmp
+
+# Testing
+test-results/
+coverage/
