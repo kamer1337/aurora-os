@@ -128,19 +128,19 @@ To develop a modern, secure, and highly efficient operating system that surpasse
 #### **Project Foundation Setup**
 - [x] Create project documentation (README.md)
 - [x] Define project structure and architecture
-- [ ] Set up version control and repository organization
-- [ ] Create initial directory structure
-- [ ] Set up build system (Makefile/CMake)
-- [ ] Configure development environment documentation
+- [x] Set up version control and repository organization
+- [x] Create initial directory structure
+- [x] Set up build system (Makefile)
+- [x] Configure development environment documentation
 
 #### **Phase 2.1: Kernel Core Implementation**
-- [ ] Create kernel directory structure
+- [x] Create kernel directory structure
 - [ ] Implement bootloader interface
-- [ ] Develop basic kernel initialization
+- [x] Develop basic kernel initialization (stubs)
 - [ ] Implement interrupt handling system
-- [ ] Create process management framework
+- [x] Create process management framework (stubs)
 - [ ] Implement basic scheduler
-- [ ] Develop memory management (paging, virtual memory)
+- [x] Develop memory management framework (stubs)
 - [ ] Create IPC mechanism
 
 #### **Phase 2.2: System Services**
@@ -151,8 +151,8 @@ To develop a modern, secure, and highly efficient operating system that surpasse
 - [ ] Create logging and debugging infrastructure
 
 #### **Phase 3.1: File System Foundation**
-- [ ] Design file system structure
-- [ ] Implement VFS (Virtual File System) layer
+- [x] Design file system structure
+- [x] Implement VFS (Virtual File System) layer (stubs)
 - [ ] Create basic file operations (create, read, write, delete)
 - [ ] Implement directory management
 - [ ] Add journaling support
