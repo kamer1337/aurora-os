@@ -164,14 +164,19 @@ To develop a modern, secure, and highly efficient operating system that surpasse
 - ✅ Project planning and documentation
 - ✅ System architecture design
 - ✅ Requirements specification
+- ✅ Initial project structure setup
+- ✅ Development environment configuration
+- ✅ Basic kernel framework (core, memory, process modules)
+- ✅ VFS layer foundation
+- ✅ Build system (Makefile)
 
 **In Progress:**
-- 🔄 Initial project structure setup
-- 🔄 Development environment configuration
+- 🔄 Kernel core implementation
 
 **Next Up:**
-- ⏭️ Kernel core implementation
-- ⏭️ Bootloader development
+- ⏭️ Bootloader development (GRUB multiboot)
+- ⏭️ Interrupt handling (IDT, GDT)
+- ⏭️ Memory paging implementation
 
 ---
 
