@@ -11,6 +11,7 @@
 #include "../drivers/keyboard.h"
 #include "../drivers/timer.h"
 #include "../drivers/serial.h"
+#include "../security/quantum_crypto.h"
 #include "../../filesystem/vfs/vfs.h"
 #include "../../filesystem/ramdisk/ramdisk.h"
 
@@ -46,6 +47,14 @@ void kernel_init(void) {
     memory_init();
     vga_write("Memory management initialized\n");
     
+    /* Initialize quantum encryption subsystem */
+    if (quantum_crypto_init() == QCRYPTO_SUCCESS) {
+        vga_write("Quantum encryption initialized\n");
+        serial_write(SERIAL_COM1, "Quantum cryptography subsystem online\n");
+    } else {
+        vga_write("WARNING: Quantum encryption initialization failed\n");
+    }
+    
     /* Initialize VFS */
     vfs_init();
     vga_write("VFS initialized\n");
@@ -69,6 +78,11 @@ void kernel_init(void) {
     vga_write("Scheduler initialized\n");
     
     vga_write("\nAurora OS initialization complete!\n");
+    
+#ifdef QUANTUM_CRYPTO_TESTS
+    /* Run quantum encryption tests if enabled */
+    run_quantum_crypto_tests();
+#endif
 }
 
 /**
