@@ -9,6 +9,7 @@ KERNEL_DIR = kernel
 BUILD_DIR = build
 BOOT_DIR = boot
 FS_DIR = filesystem
+TEST_DIR = tests
 
 # Compiler flags
 CFLAGS = -Wall -Wextra -nostdlib -ffreestanding -m32 -fno-pie
@@ -21,16 +22,21 @@ KERNEL_SOURCES = $(wildcard $(KERNEL_DIR)/core/*.c) \
                  $(wildcard $(KERNEL_DIR)/process/*.c) \
                  $(wildcard $(KERNEL_DIR)/drivers/*.c) \
                  $(wildcard $(KERNEL_DIR)/security/*.c)
+                 $(wildcard $(KERNEL_DIR)/interrupt/*.c) \
+                 $(wildcard $(KERNEL_DIR)/drivers/*.c)
 
 VFS_SOURCES = $(wildcard $(FS_DIR)/vfs/*.c) \
               $(wildcard $(FS_DIR)/ramdisk/*.c) \
               $(wildcard $(FS_DIR)/journal/*.c)
 
+TEST_SOURCES = $(wildcard $(TEST_DIR)/*.c)
+
 # Object files
 KERNEL_OBJECTS = $(patsubst %.c,$(BUILD_DIR)/%.o,$(KERNEL_SOURCES))
 VFS_OBJECTS = $(patsubst %.c,$(BUILD_DIR)/%.o,$(VFS_SOURCES))
+TEST_OBJECTS = $(patsubst %.c,$(BUILD_DIR)/%.o,$(TEST_SOURCES))
 
-ALL_OBJECTS = $(KERNEL_OBJECTS) $(VFS_OBJECTS)
+ALL_OBJECTS = $(KERNEL_OBJECTS) $(VFS_OBJECTS) $(TEST_OBJECTS)
 
 # Output
 KERNEL_BIN = $(BUILD_DIR)/aurora-kernel.bin
@@ -43,11 +49,13 @@ directories:
 	@mkdir -p $(BUILD_DIR)/$(KERNEL_DIR)/core
 	@mkdir -p $(BUILD_DIR)/$(KERNEL_DIR)/memory
 	@mkdir -p $(BUILD_DIR)/$(KERNEL_DIR)/process
+	@mkdir -p $(BUILD_DIR)/$(KERNEL_DIR)/interrupt
 	@mkdir -p $(BUILD_DIR)/$(KERNEL_DIR)/drivers
 	@mkdir -p $(BUILD_DIR)/$(KERNEL_DIR)/security
 	@mkdir -p $(BUILD_DIR)/$(FS_DIR)/vfs
 	@mkdir -p $(BUILD_DIR)/$(FS_DIR)/ramdisk
 	@mkdir -p $(BUILD_DIR)/$(FS_DIR)/journal
+	@mkdir -p $(BUILD_DIR)/$(TEST_DIR)
 
 $(BUILD_DIR)/%.o: %.c
 	@echo "Compiling $<"

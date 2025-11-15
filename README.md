@@ -232,5 +232,3 @@ See the [roadmap](#5-development-roadmap) above for detailed progress and upcomi
 > **License**: Proprietary – Aurora OS Project
 
 ---
-
-You can copy the above content into a `.md` file (e.g., `aurora_os_documentation.md`) for use in GitHub, GitLab, or any Markdown-supported platform. Let me know if you'd like a Polish version or PDF export!

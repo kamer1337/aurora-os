@@ -60,6 +60,9 @@ typedef struct journal_superblock {
 
 /* Journal functions */
 void journal_init(void);
+void journal_enable(void);
+void journal_disable(void);
+int journal_is_enabled(void);
 transaction_t* journal_begin_transaction(void);
 int journal_add_operation(transaction_t* txn, journal_operation_t* op);
 int journal_commit_transaction(transaction_t* txn);
@@ -69,5 +72,11 @@ int journal_replay(void);
 /* Recovery functions */
 int journal_recover(void);
 int journal_checkpoint(void);
+
+/* Helper functions to create journal operations */
+journal_operation_t journal_create_write_op(uint32_t block_num, void* old_data, void* new_data, size_t size);
+journal_operation_t journal_create_metadata_op(uint32_t block_num, void* old_data, void* new_data, size_t size);
+journal_operation_t journal_create_create_op(uint32_t block_num);
+journal_operation_t journal_create_delete_op(uint32_t block_num);
 
 #endif /* AURORA_JOURNAL_H */

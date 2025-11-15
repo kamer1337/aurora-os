@@ -7,6 +7,7 @@
 #include "kernel.h"
 #include "../memory/memory.h"
 #include "../process/process.h"
+#include "../interrupt/interrupt.h"
 #include "../drivers/vga.h"
 #include "../drivers/keyboard.h"
 #include "../drivers/timer.h"
@@ -14,6 +15,8 @@
 #include "../security/quantum_crypto.h"
 #include "../../filesystem/vfs/vfs.h"
 #include "../../filesystem/ramdisk/ramdisk.h"
+#include "../../filesystem/journal/journal.h"
+#include "../../tests/test_suite.h"
 
 /**
  * Initialize device drivers
@@ -43,6 +46,10 @@ void kernel_init(void) {
     /* Initialize device drivers first */
     drivers_init();
     
+    /* Initialize interrupt handling */
+    interrupt_init();
+    vga_write("Interrupt handling initialized\n");
+    
     /* Initialize memory management */
     memory_init();
     vga_write("Memory management initialized\n");
@@ -58,6 +65,10 @@ void kernel_init(void) {
     /* Initialize VFS */
     vfs_init();
     vga_write("VFS initialized\n");
+    
+    /* Initialize journaling subsystem */
+    journal_init();
+    vga_write("Journaling subsystem initialized\n");
     
     /* Initialize ramdisk */
     ramdisk_init();
@@ -90,6 +101,9 @@ void kernel_init(void) {
  */
 void kernel_main(void) {
     kernel_init();
+    
+    /* Run test suite to validate implementations */
+    run_tests();
     
     /* TODO: Start scheduler */
     /* TODO: Enter main kernel loop */
