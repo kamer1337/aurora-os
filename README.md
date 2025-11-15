@@ -138,28 +138,28 @@ To develop a modern, secure, and highly efficient operating system that surpasse
 
 #### **Phase 2.1: Kernel Core Implementation**
 - [x] Create kernel directory structure
-- [ ] Implement bootloader interface
-- [x] Develop basic kernel initialization (stubs)
-- [ ] Implement interrupt handling system
-- [x] Create process management framework (stubs)
-- [ ] Implement basic scheduler
-- [x] Develop memory management framework (stubs)
-- [ ] Create IPC mechanism
+- [x] Implement bootloader interface
+- [x] Develop basic kernel initialization
+- [x] Implement interrupt handling system
+- [x] Create process management framework
+- [x] Implement basic scheduler
+- [x] Develop memory management framework
+- [x] Create IPC mechanism
 
 #### **Phase 2.2: System Services**
-- [ ] Implement system call interface
-- [ ] Create device driver framework
-- [ ] Develop basic device drivers (keyboard, display)
-- [ ] Implement timer services
-- [ ] Create logging and debugging infrastructure
+- [x] Implement system call interface
+- [x] Create device driver framework
+- [x] Develop basic device drivers (keyboard, display)
+- [x] Implement timer services
+- [x] Create logging and debugging infrastructure
 
 #### **Phase 3.1: File System Foundation**
 - [x] Design file system structure
-- [x] Implement VFS (Virtual File System) layer (stubs)
-- [ ] Create basic file operations (create, read, write, delete)
-- [ ] Implement directory management
-- [ ] Add journaling support
-- [ ] Develop file system integrity checks
+- [x] Implement VFS (Virtual File System) layer
+- [x] Create basic file operations (create, read, write, delete)
+- [x] Implement directory management
+- [x] Add journaling support
+- [x] Develop file system integrity checks
 
 ### **5.3 Current Status**
 
