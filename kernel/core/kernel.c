@@ -15,6 +15,7 @@
 #include "../../filesystem/vfs/vfs.h"
 #include "../../filesystem/ramdisk/ramdisk.h"
 #include "../../filesystem/journal/journal.h"
+#include "../../tests/test_suite.h"
 
 /**
  * Initialize device drivers
@@ -86,6 +87,9 @@ void kernel_init(void) {
  */
 void kernel_main(void) {
     kernel_init();
+    
+    /* Run test suite to validate implementations */
+    run_tests();
     
     /* TODO: Start scheduler */
     /* TODO: Enter main kernel loop */

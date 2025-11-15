@@ -47,13 +47,21 @@
 
 ## Long-term Goals
 
-### Phase 2: Core Functionality
+### Phase 2: Core Functionality ✅
+- [x] Basic memory management (heap allocator)
+- [x] Process management with scheduler
+- [x] Interrupt handling and system calls
 - [ ] Multi-core support
-- [ ] Advanced memory management
+- [ ] Advanced memory management (demand paging)
 - [ ] Network stack
 - [ ] USB support
 
-### Phase 3: File Systems
+### Phase 3: File Systems ✅
+- [x] VFS implementation
+- [x] Ramdisk support with read/write
+- [x] Journaling layer
+- [x] File operations (create, read, write, delete)
+- [x] Directory operations
 - [ ] Ext2/3/4 support
 - [ ] FAT32 support
 - [ ] Custom Aurora FS
