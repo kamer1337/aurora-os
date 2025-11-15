@@ -19,6 +19,7 @@ LDFLAGS = -m elf_i386 -nostdlib
 KERNEL_SOURCES = $(wildcard $(KERNEL_DIR)/core/*.c) \
                  $(wildcard $(KERNEL_DIR)/memory/*.c) \
                  $(wildcard $(KERNEL_DIR)/process/*.c) \
+                 $(wildcard $(KERNEL_DIR)/interrupt/*.c) \
                  $(wildcard $(KERNEL_DIR)/drivers/*.c)
 
 VFS_SOURCES = $(wildcard $(FS_DIR)/vfs/*.c) \
@@ -42,6 +43,7 @@ directories:
 	@mkdir -p $(BUILD_DIR)/$(KERNEL_DIR)/core
 	@mkdir -p $(BUILD_DIR)/$(KERNEL_DIR)/memory
 	@mkdir -p $(BUILD_DIR)/$(KERNEL_DIR)/process
+	@mkdir -p $(BUILD_DIR)/$(KERNEL_DIR)/interrupt
 	@mkdir -p $(BUILD_DIR)/$(KERNEL_DIR)/drivers
 	@mkdir -p $(BUILD_DIR)/$(FS_DIR)/vfs
 	@mkdir -p $(BUILD_DIR)/$(FS_DIR)/ramdisk

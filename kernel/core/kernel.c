@@ -7,12 +7,14 @@
 #include "kernel.h"
 #include "../memory/memory.h"
 #include "../process/process.h"
+#include "../interrupt/interrupt.h"
 #include "../drivers/vga.h"
 #include "../drivers/keyboard.h"
 #include "../drivers/timer.h"
 #include "../drivers/serial.h"
 #include "../../filesystem/vfs/vfs.h"
 #include "../../filesystem/ramdisk/ramdisk.h"
+#include "../../filesystem/journal/journal.h"
 
 /**
  * Initialize device drivers
@@ -42,6 +44,10 @@ void kernel_init(void) {
     /* Initialize device drivers first */
     drivers_init();
     
+    /* Initialize interrupt handling */
+    interrupt_init();
+    vga_write("Interrupt handling initialized\n");
+    
     /* Initialize memory management */
     memory_init();
     vga_write("Memory management initialized\n");
@@ -49,6 +55,10 @@ void kernel_init(void) {
     /* Initialize VFS */
     vfs_init();
     vga_write("VFS initialized\n");
+    
+    /* Initialize journaling subsystem */
+    journal_init();
+    vga_write("Journaling subsystem initialized\n");
     
     /* Initialize ramdisk */
     ramdisk_init();

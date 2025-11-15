@@ -5,12 +5,14 @@
  */
 
 #include "journal.h"
+#include "../../kernel/memory/memory.h"
 #include <stddef.h>
 
 /* Journal state */
 static journal_superblock_t journal_sb;
 static transaction_t transactions[JOURNAL_MAX_TRANSACTIONS];
 static uint32_t current_txn_count = 0;
+static uint32_t journal_enabled = 0;
 
 /**
  * Initialize journaling subsystem
@@ -32,12 +34,38 @@ void journal_init(void) {
     }
     
     current_txn_count = 0;
+    journal_enabled = 1;
+}
+
+/**
+ * Enable journaling
+ */
+void journal_enable(void) {
+    journal_enabled = 1;
+}
+
+/**
+ * Disable journaling
+ */
+void journal_disable(void) {
+    journal_enabled = 0;
+}
+
+/**
+ * Check if journaling is enabled
+ */
+int journal_is_enabled(void) {
+    return journal_enabled;
 }
 
 /**
  * Begin a new transaction
  */
 transaction_t* journal_begin_transaction(void) {
+    if (!journal_enabled) {
+        return NULL;
+    }
+    
     /* Find free transaction slot */
     transaction_t* txn = NULL;
     for (uint32_t i = 0; i < JOURNAL_MAX_TRANSACTIONS; i++) {
@@ -79,9 +107,66 @@ int journal_add_operation(transaction_t* txn, journal_operation_t* op) {
         return -1; /* Transaction full */
     }
     
+    /* Allocate memory for old and new data if needed */
+    if (op->old_data && op->data_size > 0) {
+        void* old_copy = kmalloc(op->data_size);
+        if (old_copy) {
+            /* Copy old data */
+            uint8_t* src = (uint8_t*)op->old_data;
+            uint8_t* dst = (uint8_t*)old_copy;
+            for (size_t i = 0; i < op->data_size; i++) {
+                dst[i] = src[i];
+            }
+            op->old_data = old_copy;
+        }
+    }
+    
+    if (op->new_data && op->data_size > 0) {
+        void* new_copy = kmalloc(op->data_size);
+        if (new_copy) {
+            /* Copy new data */
+            uint8_t* src = (uint8_t*)op->new_data;
+            uint8_t* dst = (uint8_t*)new_copy;
+            for (size_t i = 0; i < op->data_size; i++) {
+                dst[i] = src[i];
+            }
+            op->new_data = new_copy;
+        }
+    }
+    
     /* Add operation to transaction */
     txn->operations[txn->op_count] = *op;
     txn->op_count++;
+    
+    return 0;
+}
+
+/**
+ * Apply a single operation
+ */
+static int apply_operation(journal_operation_t* op) {
+    if (!op) {
+        return -1;
+    }
+    
+    switch (op->type) {
+        case JOURNAL_OP_CREATE:
+            /* File creation is already done, just log it */
+            break;
+            
+        case JOURNAL_OP_DELETE:
+            /* File deletion is already done, just log it */
+            break;
+            
+        case JOURNAL_OP_WRITE:
+            /* Write operation - data should already be written */
+            /* Journal just ensures consistency */
+            break;
+            
+        case JOURNAL_OP_METADATA:
+            /* Metadata update - already applied */
+            break;
+    }
     
     return 0;
 }
@@ -106,26 +191,25 @@ int journal_commit_transaction(transaction_t* txn) {
     
     /* Apply operations */
     for (uint32_t i = 0; i < txn->op_count; i++) {
-        journal_operation_t* op = &txn->operations[i];
-        
-        switch (op->type) {
-            case JOURNAL_OP_CREATE:
-                /* TODO: Apply create operation */
-                break;
-            case JOURNAL_OP_DELETE:
-                /* TODO: Apply delete operation */
-                break;
-            case JOURNAL_OP_WRITE:
-                /* TODO: Apply write operation */
-                break;
-            case JOURNAL_OP_METADATA:
-                /* TODO: Apply metadata operation */
-                break;
-        }
+        apply_operation(&txn->operations[i]);
     }
     
     /* Mark as completed */
     txn->state = TRANSACTION_COMPLETED;
+    
+    /* Free allocated memory */
+    for (uint32_t i = 0; i < txn->op_count; i++) {
+        journal_operation_t* op = &txn->operations[i];
+        if (op->old_data) {
+            kfree(op->old_data);
+            op->old_data = NULL;
+        }
+        if (op->new_data) {
+            kfree(op->new_data);
+            op->new_data = NULL;
+        }
+    }
+    
     current_txn_count--;
     
     return 0;
@@ -143,6 +227,19 @@ int journal_abort_transaction(transaction_t* txn) {
         return -1; /* Transaction not in pending state */
     }
     
+    /* Free allocated memory */
+    for (uint32_t i = 0; i < txn->op_count; i++) {
+        journal_operation_t* op = &txn->operations[i];
+        if (op->old_data) {
+            kfree(op->old_data);
+            op->old_data = NULL;
+        }
+        if (op->new_data) {
+            kfree(op->new_data);
+            op->new_data = NULL;
+        }
+    }
+    
     /* Mark as aborted */
     txn->state = TRANSACTION_ABORTED;
     current_txn_count--;
@@ -158,6 +255,7 @@ int journal_replay(void) {
     /* TODO: Find uncommitted transactions */
     /* TODO: Replay operations */
     
+    /* For in-memory journal, nothing to replay on startup */
     return 0;
 }
 
@@ -187,4 +285,56 @@ int journal_checkpoint(void) {
     /* TODO: Update journal superblock */
     
     return 0;
+}
+
+/**
+ * Create a write operation for journaling
+ */
+journal_operation_t journal_create_write_op(uint32_t block_num, void* old_data, void* new_data, size_t size) {
+    journal_operation_t op;
+    op.type = JOURNAL_OP_WRITE;
+    op.block_num = block_num;
+    op.old_data = old_data;
+    op.new_data = new_data;
+    op.data_size = size;
+    return op;
+}
+
+/**
+ * Create a metadata operation for journaling
+ */
+journal_operation_t journal_create_metadata_op(uint32_t block_num, void* old_data, void* new_data, size_t size) {
+    journal_operation_t op;
+    op.type = JOURNAL_OP_METADATA;
+    op.block_num = block_num;
+    op.old_data = old_data;
+    op.new_data = new_data;
+    op.data_size = size;
+    return op;
+}
+
+/**
+ * Create a create operation for journaling
+ */
+journal_operation_t journal_create_create_op(uint32_t block_num) {
+    journal_operation_t op;
+    op.type = JOURNAL_OP_CREATE;
+    op.block_num = block_num;
+    op.old_data = NULL;
+    op.new_data = NULL;
+    op.data_size = 0;
+    return op;
+}
+
+/**
+ * Create a delete operation for journaling
+ */
+journal_operation_t journal_create_delete_op(uint32_t block_num) {
+    journal_operation_t op;
+    op.type = JOURNAL_OP_DELETE;
+    op.block_num = block_num;
+    op.old_data = NULL;
+    op.new_data = NULL;
+    op.data_size = 0;
+    return op;
 }
