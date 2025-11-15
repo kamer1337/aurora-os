@@ -42,4 +42,7 @@ int ramdisk_create(size_t size);
 /* Get ramdisk file system operations */
 fs_ops_t* ramdisk_get_ops(void);
 
+/* Get ramdisk file operations */
+file_ops_t* ramdisk_get_file_ops(void);
+
 #endif /* AURORA_RAMDISK_H */
