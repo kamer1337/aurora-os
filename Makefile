@@ -21,9 +21,10 @@ KERNEL_SOURCES = $(wildcard $(KERNEL_DIR)/core/*.c) \
                  $(wildcard $(KERNEL_DIR)/memory/*.c) \
                  $(wildcard $(KERNEL_DIR)/process/*.c) \
                  $(wildcard $(KERNEL_DIR)/drivers/*.c) \
-                 $(wildcard $(KERNEL_DIR)/security/*.c)
-                 $(wildcard $(KERNEL_DIR)/interrupt/*.c) \
-                 $(wildcard $(KERNEL_DIR)/drivers/*.c)
+                 $(wildcard $(KERNEL_DIR)/security/*.c) \
+                 $(wildcard $(KERNEL_DIR)/interrupt/*.c)
+
+ASM_SOURCES = $(KERNEL_DIR)/core/boot.s
 
 VFS_SOURCES = $(wildcard $(FS_DIR)/vfs/*.c) \
               $(wildcard $(FS_DIR)/ramdisk/*.c) \
@@ -33,10 +34,11 @@ TEST_SOURCES = $(wildcard $(TEST_DIR)/*.c)
 
 # Object files
 KERNEL_OBJECTS = $(patsubst %.c,$(BUILD_DIR)/%.o,$(KERNEL_SOURCES))
+ASM_OBJECTS = $(patsubst %.s,$(BUILD_DIR)/%.o,$(ASM_SOURCES))
 VFS_OBJECTS = $(patsubst %.c,$(BUILD_DIR)/%.o,$(VFS_SOURCES))
 TEST_OBJECTS = $(patsubst %.c,$(BUILD_DIR)/%.o,$(TEST_SOURCES))
 
-ALL_OBJECTS = $(KERNEL_OBJECTS) $(VFS_OBJECTS) $(TEST_OBJECTS)
+ALL_OBJECTS = $(ASM_OBJECTS) $(KERNEL_OBJECTS) $(VFS_OBJECTS) $(TEST_OBJECTS)
 
 # Output
 KERNEL_BIN = $(BUILD_DIR)/aurora-kernel.bin
@@ -59,6 +61,10 @@ directories:
 
 $(BUILD_DIR)/%.o: %.c
 	@echo "Compiling $<"
+	@$(CC) $(CFLAGS) -c $< -o $@
+
+$(BUILD_DIR)/%.o: %.s
+	@echo "Assembling $<"
 	@$(CC) $(CFLAGS) -c $< -o $@
 
 $(KERNEL_BIN): $(ALL_OBJECTS)

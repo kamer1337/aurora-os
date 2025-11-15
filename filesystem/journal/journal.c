@@ -6,6 +6,7 @@
 
 #include "journal.h"
 #include "../../kernel/memory/memory.h"
+#include "../../kernel/drivers/timer.h"
 #include <stddef.h>
 
 /* Journal state */
@@ -13,6 +14,11 @@ static journal_superblock_t journal_sb;
 static transaction_t transactions[JOURNAL_MAX_TRANSACTIONS];
 static uint32_t current_txn_count = 0;
 static uint32_t journal_enabled = 0;
+
+/* Journal buffer for persistence simulation */
+#define JOURNAL_BUFFER_SIZE (JOURNAL_BLOCK_SIZE * 1024) /* 512KB journal */
+static uint8_t journal_buffer[JOURNAL_BUFFER_SIZE];
+static uint32_t journal_buffer_offset = 0;
 
 /**
  * Initialize journaling subsystem
@@ -22,7 +28,7 @@ void journal_init(void) {
     journal_sb.magic = 0x4A524E4C; /* 'JRNL' */
     journal_sb.version = 1;
     journal_sb.block_size = JOURNAL_BLOCK_SIZE;
-    journal_sb.total_blocks = 0;
+    journal_sb.total_blocks = JOURNAL_BUFFER_SIZE / JOURNAL_BLOCK_SIZE;
     journal_sb.next_txn_id = 1;
     
     /* Initialize transaction array */
@@ -32,6 +38,12 @@ void journal_init(void) {
         transactions[i].timestamp = 0;
         transactions[i].op_count = 0;
     }
+    
+    /* Initialize journal buffer */
+    for (uint32_t i = 0; i < JOURNAL_BUFFER_SIZE; i++) {
+        journal_buffer[i] = 0;
+    }
+    journal_buffer_offset = 0;
     
     current_txn_count = 0;
     journal_enabled = 1;
@@ -83,7 +95,7 @@ transaction_t* journal_begin_transaction(void) {
     /* Initialize transaction */
     txn->txn_id = journal_sb.next_txn_id++;
     txn->state = TRANSACTION_PENDING;
-    txn->timestamp = 0; /* TODO: Get current time */
+    txn->timestamp = timer_get_ticks(); /* Use timer ticks as timestamp */
     txn->op_count = 0;
     
     current_txn_count++;
@@ -172,6 +184,141 @@ static int apply_operation(journal_operation_t* op) {
 }
 
 /**
+ * Write transaction to journal buffer
+ */
+static int journal_write_transaction(transaction_t* txn) {
+    if (!txn) {
+        return -1;
+    }
+    
+    /* Calculate space needed: header + operations */
+    uint32_t header_size = sizeof(uint32_t) * 4; /* txn_id, state, timestamp, op_count */
+    uint32_t needed_space = header_size;
+    
+    for (uint32_t i = 0; i < txn->op_count; i++) {
+        journal_operation_t* op = &txn->operations[i];
+        needed_space += sizeof(uint32_t) * 3; /* type, block_num, data_size */
+        needed_space += op->data_size; /* actual data */
+    }
+    
+    /* Check if we have enough space */
+    if (journal_buffer_offset + needed_space > JOURNAL_BUFFER_SIZE) {
+        /* Wrap around or fail - for simplicity, we'll wrap */
+        journal_buffer_offset = 0;
+    }
+    
+    /* Write transaction header */
+    uint8_t* ptr = journal_buffer + journal_buffer_offset;
+    
+    /* Write txn_id */
+    *(uint32_t*)ptr = txn->txn_id;
+    ptr += sizeof(uint32_t);
+    
+    /* Write state */
+    *(uint32_t*)ptr = (uint32_t)txn->state;
+    ptr += sizeof(uint32_t);
+    
+    /* Write timestamp */
+    *(uint32_t*)ptr = txn->timestamp;
+    ptr += sizeof(uint32_t);
+    
+    /* Write operation count */
+    *(uint32_t*)ptr = txn->op_count;
+    ptr += sizeof(uint32_t);
+    
+    /* Write operations */
+    for (uint32_t i = 0; i < txn->op_count; i++) {
+        journal_operation_t* op = &txn->operations[i];
+        
+        /* Write operation type */
+        *(uint32_t*)ptr = (uint32_t)op->type;
+        ptr += sizeof(uint32_t);
+        
+        /* Write block number */
+        *(uint32_t*)ptr = op->block_num;
+        ptr += sizeof(uint32_t);
+        
+        /* Write data size */
+        *(uint32_t*)ptr = (uint32_t)op->data_size;
+        ptr += sizeof(uint32_t);
+        
+        /* Write data if present */
+        if (op->new_data && op->data_size > 0) {
+            uint8_t* src = (uint8_t*)op->new_data;
+            for (size_t j = 0; j < op->data_size; j++) {
+                *ptr++ = *src++;
+            }
+        }
+    }
+    
+    journal_buffer_offset += needed_space;
+    
+    return 0;
+}
+
+/**
+ * Read transaction from journal buffer
+ */
+static int journal_read_transaction(uint32_t offset, transaction_t* txn) {
+    if (!txn || offset >= JOURNAL_BUFFER_SIZE) {
+        return -1;
+    }
+    
+    uint8_t* ptr = journal_buffer + offset;
+    
+    /* Read transaction header */
+    txn->txn_id = *(uint32_t*)ptr;
+    ptr += sizeof(uint32_t);
+    
+    txn->state = (transaction_state_t)(*(uint32_t*)ptr);
+    ptr += sizeof(uint32_t);
+    
+    txn->timestamp = *(uint32_t*)ptr;
+    ptr += sizeof(uint32_t);
+    
+    txn->op_count = *(uint32_t*)ptr;
+    ptr += sizeof(uint32_t);
+    
+    /* Validate operation count */
+    if (txn->op_count > JOURNAL_MAX_OPERATIONS) {
+        return -1;
+    }
+    
+    /* Read operations */
+    for (uint32_t i = 0; i < txn->op_count; i++) {
+        journal_operation_t* op = &txn->operations[i];
+        
+        /* Read operation type */
+        op->type = (journal_op_type_t)(*(uint32_t*)ptr);
+        ptr += sizeof(uint32_t);
+        
+        /* Read block number */
+        op->block_num = *(uint32_t*)ptr;
+        ptr += sizeof(uint32_t);
+        
+        /* Read data size */
+        op->data_size = *(uint32_t*)ptr;
+        ptr += sizeof(uint32_t);
+        
+        /* Allocate and read data if present */
+        if (op->data_size > 0) {
+            op->new_data = kmalloc(op->data_size);
+            if (op->new_data) {
+                uint8_t* dst = (uint8_t*)op->new_data;
+                for (size_t j = 0; j < op->data_size; j++) {
+                    *dst++ = *ptr++;
+                }
+            }
+        } else {
+            op->new_data = NULL;
+        }
+        op->old_data = NULL;
+    }
+    
+    return 0;
+}
+
+/**
  * Commit transaction
  */
 int journal_commit_transaction(transaction_t* txn) {
@@ -184,7 +331,9 @@ int journal_commit_transaction(transaction_t* txn) {
     }
     
     /* Write transaction to journal */
-    /* TODO: Write journal blocks to disk */
+    if (journal_write_transaction(txn) != 0) {
+        return -1;
+    }
     
     /* Mark as committed */
     txn->state = TRANSACTION_COMMITTED;
@@ -251,12 +400,41 @@ int journal_abort_transaction(transaction_t* txn) {
  * Replay journal for recovery
  */
 int journal_replay(void) {
-    /* TODO: Read journal from disk */
-    /* TODO: Find uncommitted transactions */
-    /* TODO: Replay operations */
+    /* Scan journal buffer for uncommitted transactions */
+    uint32_t offset = 0;
+    int replayed = 0;
     
-    /* For in-memory journal, nothing to replay on startup */
-    return 0;
+    while (offset < journal_buffer_offset) {
+        transaction_t txn;
+        
+        /* Try to read transaction at current offset */
+        if (journal_read_transaction(offset, &txn) == 0) {
+            /* Check if transaction needs to be replayed */
+            if (txn.state == TRANSACTION_COMMITTED && txn.txn_id > 0) {
+                /* Replay operations */
+                for (uint32_t i = 0; i < txn.op_count; i++) {
+                    apply_operation(&txn.operations[i]);
+                    
+                    /* Free allocated memory from read */
+                    if (txn.operations[i].new_data) {
+                        kfree(txn.operations[i].new_data);
+                    }
+                }
+                replayed++;
+            }
+            
+            /* Move to next transaction (simplified - assumes fixed size) */
+            offset += sizeof(uint32_t) * 4; /* header */
+            for (uint32_t i = 0; i < txn.op_count; i++) {
+                offset += sizeof(uint32_t) * 3; /* op header */
+                offset += txn.operations[i].data_size; /* op data */
+            }
+        } else {
+            break; /* Invalid transaction or end of journal */
+        }
+    }
+    
+    return replayed;
 }
 
 /**
@@ -281,8 +459,21 @@ int journal_checkpoint(void) {
         }
     }
     
-    /* TODO: Flush journal to disk */
-    /* TODO: Update journal superblock */
+    /* In a real implementation, this would flush journal to disk */
+    /* For our in-memory journal, we simulate a checkpoint by marking */
+    /* that all data up to current buffer offset is stable */
+    
+    /* Write journal superblock to buffer start */
+    uint8_t* sb_ptr = journal_buffer;
+    *(uint32_t*)sb_ptr = journal_sb.magic;
+    sb_ptr += sizeof(uint32_t);
+    *(uint32_t*)sb_ptr = journal_sb.version;
+    sb_ptr += sizeof(uint32_t);
+    *(uint32_t*)sb_ptr = journal_sb.block_size;
+    sb_ptr += sizeof(uint32_t);
+    *(uint32_t*)sb_ptr = journal_sb.total_blocks;
+    sb_ptr += sizeof(uint32_t);
+    *(uint32_t*)sb_ptr = journal_sb.next_txn_id;
     
     return 0;
 }

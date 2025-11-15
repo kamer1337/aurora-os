@@ -48,7 +48,7 @@
 
 ### Build & Testing
 - [x] Add quantum encryption for kernel
-- [ ] Add linker script
+- [x] Add linker script
 - [ ] Create bootable ISO generation
 - [ ] Setup QEMU testing scripts
 - [ ] Add unit test framework

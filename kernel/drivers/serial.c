@@ -5,26 +5,7 @@
  */
 
 #include "serial.h"
-
-/**
- * Write byte to port
- */
-static inline void outb(uint16_t port, uint8_t value) {
-    /* In a real implementation, this would use inline assembly */
-    /* For now, this is a stub */
-    (void)port;
-    (void)value;
-}
-
-/**
- * Read byte from port
- */
-static inline uint8_t inb(uint16_t port) {
-    /* In a real implementation, this would use inline assembly */
-    /* For now, return 0 */
-    (void)port;
-    return 0;
-}
+#include "../core/port_io.h"
 
 /**
  * Initialize serial port
