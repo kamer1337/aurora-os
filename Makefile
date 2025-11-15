@@ -21,9 +21,8 @@ KERNEL_SOURCES = $(wildcard $(KERNEL_DIR)/core/*.c) \
                  $(wildcard $(KERNEL_DIR)/memory/*.c) \
                  $(wildcard $(KERNEL_DIR)/process/*.c) \
                  $(wildcard $(KERNEL_DIR)/drivers/*.c) \
-                 $(wildcard $(KERNEL_DIR)/security/*.c)
-                 $(wildcard $(KERNEL_DIR)/interrupt/*.c) \
-                 $(wildcard $(KERNEL_DIR)/drivers/*.c)
+                 $(wildcard $(KERNEL_DIR)/security/*.c) \
+                 $(wildcard $(KERNEL_DIR)/interrupt/*.c)
 
 VFS_SOURCES = $(wildcard $(FS_DIR)/vfs/*.c) \
               $(wildcard $(FS_DIR)/ramdisk/*.c) \
