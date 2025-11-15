@@ -208,4 +208,24 @@ int gui_point_in_rect(int32_t x, int32_t y, rect_t* rect);
  */
 void gui_draw_taskbar(void);
 
+/**
+ * Initialize input handling (mouse and keyboard)
+ */
+void gui_init_input(void);
+
+/**
+ * Process input events and update GUI
+ */
+void gui_handle_input(void);
+
+/**
+ * Draw mouse cursor
+ */
+void gui_draw_cursor(void);
+
+/**
+ * Get cursor position
+ */
+void gui_get_cursor_pos(int32_t* x, int32_t* y);
+
 #endif // GUI_H

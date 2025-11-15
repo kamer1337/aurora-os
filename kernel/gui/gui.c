@@ -7,6 +7,8 @@
 #include "gui.h"
 #include "framebuffer.h"
 #include "../memory/memory.h"
+#include "../drivers/mouse.h"
+#include "../drivers/keyboard.h"
 #include <stddef.h>
 
 // String functions (minimal implementations)
@@ -32,6 +34,11 @@ static char* strdup(const char* str) {
 static window_t* window_list = NULL;
 static window_t* focused_window = NULL;
 static int gui_initialized = 0;
+
+// Input state
+static int32_t cursor_x = 0;
+static int32_t cursor_y = 0;
+static uint8_t prev_mouse_buttons = 0;
 
 int gui_init(void) {
     if (gui_initialized) {
@@ -84,6 +91,9 @@ void gui_update(void) {
     
     // Draw taskbar
     gui_draw_taskbar();
+    
+    // Draw cursor last (on top of everything)
+    gui_draw_cursor();
 }
 
 void gui_process_event(event_t* event) {
@@ -423,4 +433,138 @@ void gui_draw_taskbar(void) {
     framebuffer_draw_rect(5, taskbar_y + 5, 80, 30, (color_t){0, 120, 215, 255});
     framebuffer_draw_string(15, taskbar_y + 13, "Aurora OS", COLOR_WHITE,
                           (color_t){0, 120, 215, 255});
+}
+
+void gui_init_input(void) {
+    framebuffer_info_t* fb = framebuffer_get_info();
+    if (!fb) return;
+    
+    // Initialize mouse driver
+    mouse_init();
+    mouse_set_bounds(fb->width, fb->height);
+    
+    // Initialize keyboard driver
+    keyboard_init();
+    
+    // Set initial cursor position
+    cursor_x = fb->width / 2;
+    cursor_y = fb->height / 2;
+    prev_mouse_buttons = 0;
+}
+
+void gui_handle_input(void) {
+    if (!gui_initialized) return;
+    
+    // Get mouse state
+    mouse_state_t* mouse = mouse_get_state();
+    if (mouse) {
+        // Update cursor position
+        cursor_x = mouse->x;
+        cursor_y = mouse->y;
+        
+        // Handle mouse button events
+        uint8_t buttons = mouse->buttons;
+        
+        // Left button pressed
+        if ((buttons & MOUSE_LEFT_BUTTON) && !(prev_mouse_buttons & MOUSE_LEFT_BUTTON)) {
+            event_t event = {
+                .type = EVENT_MOUSE_DOWN,
+                .x = cursor_x,
+                .y = cursor_y,
+                .button = 0,
+                .key = 0,
+                .data = NULL
+            };
+            gui_process_event(&event);
+        }
+        
+        // Left button released
+        if (!(buttons & MOUSE_LEFT_BUTTON) && (prev_mouse_buttons & MOUSE_LEFT_BUTTON)) {
+            event_t event = {
+                .type = EVENT_MOUSE_UP,
+                .x = cursor_x,
+                .y = cursor_y,
+                .button = 0,
+                .key = 0,
+                .data = NULL
+            };
+            gui_process_event(&event);
+        }
+        
+        // Mouse moved
+        if (mouse->delta_x != 0 || mouse->delta_y != 0) {
+            event_t event = {
+                .type = EVENT_MOUSE_MOVE,
+                .x = cursor_x,
+                .y = cursor_y,
+                .button = 0,
+                .key = 0,
+                .data = NULL
+            };
+            gui_process_event(&event);
+        }
+        
+        prev_mouse_buttons = buttons;
+    }
+    
+    // Handle keyboard input
+    if (keyboard_has_input()) {
+        char c = keyboard_getchar();
+        
+        event_t event = {
+            .type = EVENT_KEY_DOWN,
+            .x = 0,
+            .y = 0,
+            .button = 0,
+            .key = (uint32_t)c,
+            .data = NULL
+        };
+        gui_process_event(&event);
+    }
+}
+
+void gui_draw_cursor(void) {
+    if (!gui_initialized) return;
+    
+    // Draw a simple arrow cursor (11x16 pixels)
+    int32_t x = cursor_x;
+    int32_t y = cursor_y;
+    
+    // Cursor shape (simple arrow)
+    static const uint8_t cursor_shape[16] = {
+        0x80, 0xC0, 0xE0, 0xF0, 0xF8, 0xFC, 0xFE, 0xFF,
+        0xF8, 0xD8, 0x8C, 0x0C, 0x06, 0x06, 0x03, 0x00
+    };
+    
+    color_t cursor_color = COLOR_WHITE;
+    color_t outline_color = COLOR_BLACK;
+    
+    // Draw cursor outline (black)
+    for (int32_t cy = 0; cy < 16; cy++) {
+        uint8_t row = cursor_shape[cy];
+        for (int32_t cx = 0; cx < 8; cx++) {
+            if (row & (0x80 >> cx)) {
+                // Draw outline pixels
+                framebuffer_draw_pixel(x + cx - 1, y + cy, outline_color);
+                framebuffer_draw_pixel(x + cx + 1, y + cy, outline_color);
+                framebuffer_draw_pixel(x + cx, y + cy - 1, outline_color);
+                framebuffer_draw_pixel(x + cx, y + cy + 1, outline_color);
+            }
+        }
+    }
+    
+    // Draw cursor (white)
+    for (int32_t cy = 0; cy < 16; cy++) {
+        uint8_t row = cursor_shape[cy];
+        for (int32_t cx = 0; cx < 8; cx++) {
+            if (row & (0x80 >> cx)) {
+                framebuffer_draw_pixel(x + cx, y + cy, cursor_color);
+            }
+        }
+    }
+}
+
+void gui_get_cursor_pos(int32_t* x, int32_t* y) {
+    if (x) *x = cursor_x;
+    if (y) *y = cursor_y;
 }
