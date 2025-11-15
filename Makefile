@@ -23,7 +23,10 @@ KERNEL_SOURCES = $(wildcard $(KERNEL_DIR)/core/*.c) \
                  $(wildcard $(KERNEL_DIR)/drivers/*.c) \
                  $(wildcard $(KERNEL_DIR)/security/*.c) \
                  $(wildcard $(KERNEL_DIR)/interrupt/*.c) \
-                 $(wildcard $(KERNEL_DIR)/gui/*.c)
+                 $(wildcard $(KERNEL_DIR)/gui/*.c) \
+                 $(wildcard $(KERNEL_DIR)/smp/*.c) \
+                 $(wildcard $(KERNEL_DIR)/network/*.c) \
+                 $(wildcard $(KERNEL_DIR)/usb/*.c)
 
 ASM_SOURCES = $(KERNEL_DIR)/core/boot.s
 
@@ -56,6 +59,9 @@ directories:
 	@mkdir -p $(BUILD_DIR)/$(KERNEL_DIR)/drivers
 	@mkdir -p $(BUILD_DIR)/$(KERNEL_DIR)/security
 	@mkdir -p $(BUILD_DIR)/$(KERNEL_DIR)/gui
+	@mkdir -p $(BUILD_DIR)/$(KERNEL_DIR)/smp
+	@mkdir -p $(BUILD_DIR)/$(KERNEL_DIR)/network
+	@mkdir -p $(BUILD_DIR)/$(KERNEL_DIR)/usb
 	@mkdir -p $(BUILD_DIR)/$(FS_DIR)/vfs
 	@mkdir -p $(BUILD_DIR)/$(FS_DIR)/ramdisk
 	@mkdir -p $(BUILD_DIR)/$(FS_DIR)/journal
