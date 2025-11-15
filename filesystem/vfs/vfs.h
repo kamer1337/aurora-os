@@ -70,6 +70,9 @@ typedef struct file_ops {
     int (*write)(inode_t* inode, const void* buffer, size_t size, uint32_t offset);
 } file_ops_t;
 
+/* Directory entry structure (forward declaration) */
+typedef struct dirent dirent_t;
+
 /* File system operations */
 typedef struct fs_ops {
     int (*mount)(const char* device);
@@ -77,14 +80,15 @@ typedef struct fs_ops {
     inode_t* (*lookup)(const char* path);
     int (*create)(const char* path, file_type_t type);
     int (*unlink)(const char* path);
+    int (*readdir)(inode_t* dir, dirent_t* entry, uint32_t index);
 } fs_ops_t;
 
 /* Directory entry structure */
-typedef struct dirent {
+struct dirent {
     uint32_t ino;
     char name[MAX_FILENAME_LENGTH];
     file_type_t type;
-} dirent_t;
+};
 
 /* VFS functions */
 void vfs_init(void);

@@ -5,20 +5,11 @@
  */
 
 #include "timer.h"
+#include "../core/port_io.h"
 
 /* Timer state */
 static volatile uint32_t timer_ticks = 0;
 static uint32_t timer_frequency = 0;
-
-/**
- * Write byte to port
- */
-static inline void outb(uint16_t port, uint8_t value) {
-    /* In a real implementation, this would use inline assembly */
-    /* For now, this is a stub */
-    (void)port;
-    (void)value;
-}
 
 /**
  * Initialize timer

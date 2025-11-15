@@ -32,6 +32,7 @@ static int ramdisk_create_file(const char* path, file_type_t type);
 static int ramdisk_unlink(const char* path);
 static int ramdisk_read(inode_t* inode, void* buffer, size_t size, uint32_t offset);
 static int ramdisk_write(inode_t* inode, const void* buffer, size_t size, uint32_t offset);
+static int ramdisk_readdir(inode_t* dir, dirent_t* entry, uint32_t index);
 
 /* File operations */
 static file_ops_t ramdisk_file_ops = {
@@ -47,7 +48,8 @@ static fs_ops_t ramdisk_ops = {
     .unmount = ramdisk_unmount,
     .lookup = ramdisk_lookup,
     .create = ramdisk_create_file,
-    .unlink = ramdisk_unlink
+    .unlink = ramdisk_unlink,
+    .readdir = ramdisk_readdir
 };
 
 /**
@@ -476,4 +478,57 @@ static int ramdisk_write(inode_t* inode, const void* buffer, size_t size, uint32
     }
     
     return (int)bytes_written;
+}
+
+/**
+ * Read directory entries
+ */
+static int ramdisk_readdir(inode_t* dir, dirent_t* entry, uint32_t index) {
+    if (!dir || !entry) {
+        return -1;
+    }
+    
+    /* Verify this is a directory */
+    if (dir->type != FILE_TYPE_DIRECTORY) {
+        return -1;
+    }
+    
+    /* Special case for root directory - list all files */
+    if (dir->ino == 0) {
+        uint32_t count = 0;
+        
+        /* Iterate through file table to find entries */
+        for (uint32_t i = 0; i < RAMDISK_MAX_FILES; i++) {
+            if (file_table[i].used) {
+                if (count == index) {
+                    /* Found the entry at the requested index */
+                    entry->ino = file_table[i].inode_num;
+                    
+                    /* Copy filename */
+                    int j = 0;
+                    while (file_table[i].name[j] && j < MAX_FILENAME_LENGTH - 1) {
+                        entry->name[j] = file_table[i].name[j];
+                        j++;
+                    }
+                    entry->name[j] = '\0';
+                    
+                    /* Get file type from inode */
+                    if (inodes[file_table[i].inode_num].used) {
+                        entry->type = inodes[file_table[i].inode_num].type;
+                    } else {
+                        entry->type = FILE_TYPE_REGULAR;
+                    }
+                    
+                    return 0; /* Success */
+                }
+                count++;
+            }
+        }
+        
+        /* Index out of range */
+        return -1;
+    }
+    
+    /* For non-root directories, we don't support subdirectories yet */
+    return -1;
 }

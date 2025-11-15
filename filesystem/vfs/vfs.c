@@ -366,7 +366,18 @@ int vfs_readdir(int fd, dirent_t* entry) {
         return -1;
     }
     
-    /* TODO: Implement directory reading */
+    /* Use file system specific readdir if available */
+    if (root_fs && root_fs->ops && root_fs->ops->readdir) {
+        /* Call fs-specific readdir with current offset as index */
+        int result = root_fs->ops->readdir(file->inode, entry, file->offset);
+        
+        if (result == 0) {
+            /* Successfully read an entry, increment offset for next read */
+            file->offset++;
+            return 0;
+        }
+    }
+    
     return -1;
 }
 
