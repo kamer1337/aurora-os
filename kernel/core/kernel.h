@@ -27,4 +27,7 @@ typedef uint32_t thread_id_t;
 void kernel_init(void);
 void kernel_main(void);
 
+/* Driver initialization */
+void drivers_init(void);
+
 #endif /* AURORA_KERNEL_H */

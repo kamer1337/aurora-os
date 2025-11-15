@@ -26,17 +26,17 @@
 - [ ] Add basic IPC mechanisms
 
 ### File System
-- [ ] Complete VFS implementation
-- [ ] Create initial ramdisk support
-- [ ] Implement basic file operations
-- [ ] Add directory operations
-- [ ] Design journaling layer
+- [x] Complete VFS implementation
+- [x] Create initial ramdisk support
+- [x] Implement basic file operations
+- [x] Add directory operations
+- [x] Design journaling layer
 
 ### Device Drivers
-- [ ] Implement VGA text mode driver
-- [ ] Add keyboard driver
-- [ ] Create timer driver (PIT)
-- [ ] Implement serial port driver (for debugging)
+- [x] Implement VGA text mode driver
+- [x] Add keyboard driver
+- [x] Create timer driver (PIT)
+- [x] Implement serial port driver (for debugging)
 
 ### Build & Testing
 - [ ] Add linker script
