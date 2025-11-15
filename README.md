@@ -75,6 +75,9 @@ To develop a modern, secure, and highly efficient operating system that surpasse
   
 - **Security & Authentication Module**  
   Manages user accounts, permissions, encryption, and secure sessions.
+  
+- **Quantum Cryptography Module**  
+  Provides quantum-resistant encryption, quantum random number generation, and secure key management for kernel-level security operations.
 
 ---
 
@@ -169,14 +172,16 @@ To develop a modern, secure, and highly efficient operating system that surpasse
 - ✅ Basic kernel framework (core, memory, process modules)
 - ✅ VFS layer foundation
 - ✅ Build system (Makefile)
+- ✅ Quantum encryption module for kernel security
 
 **In Progress:**
+- 🔄 Build & Testing phase
 - 🔄 Kernel core implementation
 
 **Next Up:**
-- ⏭️ Bootloader development (GRUB multiboot)
-- ⏭️ Interrupt handling (IDT, GDT)
-- ⏭️ Memory paging implementation
+- ⏭️ Bootable ISO generation
+- ⏭️ QEMU testing infrastructure
+- ⏭️ Unit test framework
 
 ---
 
@@ -192,6 +197,7 @@ To develop a modern, secure, and highly efficient operating system that surpasse
 
 - **[Getting Started Guide](docs/GETTING_STARTED.md)** - Setup development environment and build instructions
 - **[Project Structure](docs/PROJECT_STRUCTURE.md)** - Overview of code organization
+- **[Quantum Encryption](docs/QUANTUM_ENCRYPTION.md)** - Quantum cryptography module documentation
 - **[TODO List](TODO.md)** - Current tasks and priorities
 
 ### **Quick Start**
