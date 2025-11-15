@@ -5,6 +5,7 @@
  */
 
 #include "process.h"
+#include <stddef.h>
 
 static process_t* current_process = NULL;
 static process_t* ready_queue = NULL;

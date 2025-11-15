@@ -9,21 +9,21 @@
 - [x] Add documentation
 - [x] Setup .gitignore
 
-### Kernel Development (Next Up)
-- [ ] Implement bootloader (GRUB multiboot)
-- [ ] Add interrupt descriptor table (IDT)
-- [ ] Implement basic interrupt handlers
-- [ ] Create GDT (Global Descriptor Table)
-- [ ] Setup paging for virtual memory
-- [ ] Implement basic heap allocator
-- [ ] Add kernel logging/debug output
+### Kernel Development ✅
+- [x] Implement bootloader (GRUB multiboot)
+- [x] Add interrupt descriptor table (IDT)
+- [x] Implement basic interrupt handlers
+- [x] Create GDT (Global Descriptor Table)
+- [x] Setup paging for virtual memory
+- [x] Implement basic heap allocator
+- [x] Add kernel logging/debug output
 
-### Process Management
-- [ ] Implement context switching
-- [ ] Create round-robin scheduler
-- [ ] Add process creation/termination
-- [ ] Implement system call interface
-- [ ] Add basic IPC mechanisms
+### Process Management ✅
+- [x] Implement context switching
+- [x] Create round-robin scheduler
+- [x] Add process creation/termination
+- [x] Implement system call interface
+- [x] Add basic IPC mechanisms
 
 ### File System
 - [ ] Complete VFS implementation
