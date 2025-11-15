@@ -169,18 +169,25 @@ To develop a modern, secure, and highly efficient operating system that surpasse
 - ✅ Requirements specification
 - ✅ Initial project structure setup
 - ✅ Development environment configuration
-- ✅ Basic kernel framework (core, memory, process modules)
-- ✅ VFS layer foundation
-- ✅ Build system (Makefile)
+- ✅ Phase 2: Kernel core implementation (memory, process, interrupt)
+- ✅ Phase 3: File systems (VFS, ramdisk, journaling)
+- ✅ Build & Testing (ISO generation, QEMU testing)
 - ✅ Quantum encryption module for kernel security
+- ✅ Bootable ISO generation scripts
+- ✅ QEMU testing infrastructure
 
 **In Progress:**
-- 🔄 Build & Testing phase
-- 🔄 Kernel core implementation
+- 🔄 Phase 4: User Interface
+  - ✅ Framebuffer driver
+  - ✅ Basic GUI framework
+  - ✅ Window management
+  - ✅ Widget system
+  - 🔄 Input device integration
 
 **Next Up:**
-- ⏭️ Bootable ISO generation
-- ⏭️ QEMU testing infrastructure
+- ⏭️ Mouse and keyboard input for GUI
+- ⏭️ Advanced window manager features
+- ⏭️ Desktop environment components
 - ⏭️ Unit test framework
 
 ---
@@ -197,6 +204,8 @@ To develop a modern, secure, and highly efficient operating system that surpasse
 
 - **[Getting Started Guide](docs/GETTING_STARTED.md)** - Setup development environment and build instructions
 - **[Project Structure](docs/PROJECT_STRUCTURE.md)** - Overview of code organization
+- **[Phase 2 & 3 Implementation](docs/PHASE2_PHASE3_IMPLEMENTATION.md)** - Kernel and filesystem documentation
+- **[Phase 4 Implementation](docs/PHASE4_IMPLEMENTATION.md)** - GUI framework documentation
 - **[Quantum Encryption](docs/QUANTUM_ENCRYPTION.md)** - Quantum cryptography module documentation
 - **[TODO List](TODO.md)** - Current tasks and priorities
 
@@ -210,18 +219,28 @@ cd aurora-os
 # Build the kernel
 make all
 
-# Run in QEMU (when bootloader is implemented)
-qemu-system-i386 -kernel build/aurora-kernel.bin
+# Create bootable ISO
+make iso
+
+# Run in QEMU with ISO
+make run
+
+# Or run kernel directly in QEMU
+make test
 ```
 
 ### **Project Status**
 
-The project is currently in the **initial implementation phase**. We have:
-- ✅ Completed project planning and architecture design
-- ✅ Created initial directory structure
-- ✅ Implemented basic kernel framework (stub functions)
-- ✅ Setup build system
-- 🔄 Working on kernel core implementation
+The project is currently in **Phase 4 - User Interface development**. We have:
+- ✅ Completed Phase 2 (Kernel Implementation)
+- ✅ Completed Phase 3 (File System & I/O)
+- ✅ Completed Build & Testing infrastructure
+- ✅ Implemented framebuffer driver and basic GUI framework
+- 🔄 Working on Phase 4: User Interface
+  - ✅ Framebuffer driver for graphics mode
+  - ✅ GUI framework with windows and widgets
+  - ✅ Basic window management
+  - ⏭️ Input device integration (next)
 
 See the [roadmap](#5-development-roadmap) above for detailed progress and upcoming milestones.
 

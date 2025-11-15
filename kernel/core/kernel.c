@@ -13,6 +13,7 @@
 #include "../drivers/timer.h"
 #include "../drivers/serial.h"
 #include "../security/quantum_crypto.h"
+#include "../gui/gui_demo.h"
 #include "../../filesystem/vfs/vfs.h"
 #include "../../filesystem/ramdisk/ramdisk.h"
 #include "../../filesystem/journal/journal.h"
@@ -104,6 +105,14 @@ void kernel_main(void) {
     
     /* Run test suite to validate implementations */
     run_tests();
+    
+    vga_write("\n=== Starting GUI Demo ===\n");
+    
+    /* Initialize and display GUI demo */
+    gui_demo_init();
+    
+    vga_write("GUI Demo initialized - Switching to framebuffer mode\n");
+    vga_write("(Note: In real hardware, VGA text would be replaced by framebuffer)\n");
     
     /* TODO: Start scheduler */
     /* TODO: Enter main kernel loop */
