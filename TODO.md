@@ -60,10 +60,10 @@
 - [x] Basic memory management (heap allocator)
 - [x] Process management with scheduler
 - [x] Interrupt handling and system calls
-- [ ] Multi-core support
-- [ ] Advanced memory management (demand paging)
-- [ ] Network stack
-- [ ] USB support
+- [x] Multi-core support
+- [x] Advanced memory management (demand paging)
+- [x] Network stack
+- [x] USB support
 
 ### Phase 3: File Systems ✅
 - [x] VFS implementation

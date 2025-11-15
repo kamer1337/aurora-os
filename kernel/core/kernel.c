@@ -22,6 +22,7 @@
 #include "../../filesystem/ramdisk/ramdisk.h"
 #include "../../filesystem/journal/journal.h"
 #include "../../tests/test_suite.h"
+#include "../../tests/advanced_tests.h"
 
 /**
  * Initialize device drivers
@@ -125,6 +126,9 @@ void kernel_main(void) {
     
     /* Run test suite to validate implementations */
     run_tests();
+    
+    /* Run advanced feature tests */
+    run_advanced_tests();
     
     vga_write("\n=== Starting GUI Demo ===\n");
     
