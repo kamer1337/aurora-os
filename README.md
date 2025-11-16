@@ -20,6 +20,8 @@ Aurora OS uses GRUB as its bootloader, providing a clean boot interface:
 
 Aurora OS features a modern desktop environment with advanced visual effects:
 
+![Aurora OS Desktop](screenshots/aurora-os-desktop.png)
+
 **Key GUI Features:**
 - **Framebuffer Graphics**: 1024x768x32 resolution with full RGBA color support
 - **Window Management**: Draggable windows with title bars, borders, and close buttons
@@ -30,13 +32,31 @@ Aurora OS features a modern desktop environment with advanced visual effects:
 - **Desktop Environment**: Wallpaper support, taskbar, start menu, and context menus
 - **Performance**: Software-rendered at ~125 FPS
 
+### Window Management
+
+Multiple windows can be displayed simultaneously with smooth overlapping and focus management:
+
+![Aurora OS Window Management](screenshots/aurora-os-windows.png)
+
+### Start Menu
+
+Interactive start menu for launching applications and accessing system features:
+
+![Aurora OS Start Menu](screenshots/aurora-os-startmenu.png)
+
+### Advanced Visual Effects
+
+3D/4D/5D effects demonstration including gradients, particle systems, glow effects, and animations:
+
+![Aurora OS Visual Effects](screenshots/aurora-os-effects.png)
+
 The desktop environment includes:
 - Interactive start menu for launching applications
 - Taskbar showing running applications and system status
 - Window decorations with modern visual effects
 - Customizable wallpaper and themes
 
-*Note: The GUI requires proper VGA/VESA BIOS support. Screenshots shown above are from the boot sequence. The GUI framework is fully implemented and functional on compatible hardware.*
+*Note: The GUI requires proper VGA/VESA BIOS support. The screenshots above demonstrate the fully implemented GUI framework running on compatible hardware.*
 
 ---
 
@@ -240,15 +260,21 @@ The desktop environment includes:
   - ✅ Zero external dependencies
   - ✅ Cross-platform (Windows/Linux/macOS)
 - ✅ Aurora OS on Aurora VM - Integration Testing Complete
-  - ✅ 10 integration tests for OS components on VM
-  - ✅ 7 issues identified and documented
-  - ✅ Comprehensive testing reports generated
-  - ✅ GitHub issue templates prepared
+  - ✅ 75 VM unit tests - 100% passing (arithmetic, memory, control flow, syscalls, device I/O, debugger)
+  - ✅ 46 VM extension tests - 100% passing (atomic ops, floating-point stubs, SIMD stubs)
+  - ✅ 10 OS integration tests - 50% passing (5 passed, 5 failed)
+  - ✅ 4 high-priority issues identified and documented
+  - ✅ Comprehensive testing reports: TESTING_SUMMARY.md, AURORA_VM_TEST_ISSUES.md
+  - ✅ GitHub issue templates prepared in AURORA_VM_GITHUB_ISSUES.md
 
 **Next Up:**
-- ⏭️ Fix memory allocation and interrupt handling issues
-- ⏭️ Implement floating-point and SIMD operations
+- ⏭️ Fix memory allocation issues (Issue #1: Memory Read/Write Consistency)
+- ⏭️ Fix interrupt handling (Issue #2: Interrupt Not Marked as Pending)
+- ⏭️ Implement network device functionality (Issue #3: Network Device Implementation)
+- ⏭️ Complete atomic operation implementations (Issue #4: XCHG Operation)
+- ⏭️ Implement floating-point and SIMD operations (currently stubbed)
 - ⏭️ Complete JIT code generation backend
+- ⏭️ Resolve 5 failing OS integration tests
 - ⏭️ Release candidate preparation
 
 ---
@@ -270,6 +296,7 @@ For comprehensive documentation, see **[DOCUMENTATION_INDEX.md](DOCUMENTATION_IN
 - **[TODO List](TODO.md)** - Current tasks and priorities
 - **[Implementation Summary](IMPLEMENTATION_SUMMARY.md)** - Overall project statistics
 - **[Release Candidate Summary](RELEASE_CANDIDATE_SUMMARY.md)** - Current release status
+- **[VM v2 Implementation](VM_V2_IMPLEMENTATION_SUMMARY.md)** - Aurora VM v2.0 features and status
 - **[Testing Summary](TESTING_SUMMARY.md)** - Aurora OS on Aurora VM test results
 - **[Test Issues Report](AURORA_VM_TEST_ISSUES.md)** - Detailed issue analysis
 - **[GitHub Issues](AURORA_VM_GITHUB_ISSUES.md)** - Ready-to-file issue templates
