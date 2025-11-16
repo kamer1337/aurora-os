@@ -1,0 +1,47 @@
+# Aurora VM - Standalone Build System
+# Build the Aurora VM library and test suite independently from the kernel
+
+CC = gcc
+CFLAGS = -Wall -Wextra -std=c99 -I include
+LDFLAGS = 
+
+# Source files
+VM_SRC = src/platform/aurora_vm.c
+EXAMPLE_SRC = examples/example_aurora_vm.c
+
+# Output
+VM_LIB = lib/libaurora_vm.a
+VM_TEST = bin/aurora_vm_test
+
+# Directories
+DIRS = bin lib
+
+.PHONY: all clean test
+
+all: $(DIRS) $(VM_TEST)
+
+$(DIRS):
+	@mkdir -p $@
+
+# Build test executable
+$(VM_TEST): $(VM_SRC) $(EXAMPLE_SRC) | $(DIRS)
+	@echo "Building Aurora VM test suite..."
+	@$(CC) $(CFLAGS) -o $@ $(VM_SRC) $(EXAMPLE_SRC) $(LDFLAGS)
+	@echo "Build complete: $@"
+
+# Build static library (optional)
+$(VM_LIB): $(VM_SRC) | $(DIRS)
+	@echo "Building Aurora VM library..."
+	@$(CC) $(CFLAGS) -c $(VM_SRC) -o lib/aurora_vm.o
+	@ar rcs $@ lib/aurora_vm.o
+	@echo "Library built: $@"
+
+# Run tests
+test: $(VM_TEST)
+	@echo "Running Aurora VM tests..."
+	@./$(VM_TEST)
+
+# Clean build artifacts
+clean:
+	@rm -rf bin lib
+	@echo "Clean complete"
