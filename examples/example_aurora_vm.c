@@ -416,6 +416,7 @@ void test_syscall_get_time(void) {
     PASS();
 }
 
+/* Removed: Device syscall tests - no memory-mapped I/O in simplified model
 void test_syscall_pixel(void) {
     TEST("Syscalls: PIXEL (draw pixel)");
     
@@ -423,12 +424,12 @@ void test_syscall_pixel(void) {
     ASSERT(vm != NULL);
     ASSERT(aurora_vm_init(vm) == 0);
     
-    /* Program: draw a pixel */
+    // Program: draw a pixel
     uint32_t program[] = {
         aurora_encode_i_type(AURORA_OP_LOADI, 0, AURORA_SYSCALL_PIXEL),
-        aurora_encode_i_type(AURORA_OP_LOADI, 1, 100),     /* X = 100 */
-        aurora_encode_i_type(AURORA_OP_LOADI, 2, 100),     /* Y = 100 */
-        aurora_encode_i_type(AURORA_OP_LOADI, 3, 255),     /* Red color (0xFF0000FF) - using small imm */
+        aurora_encode_i_type(AURORA_OP_LOADI, 1, 100),     // X = 100
+        aurora_encode_i_type(AURORA_OP_LOADI, 2, 100),     // Y = 100
+        aurora_encode_i_type(AURORA_OP_LOADI, 3, 255),     // Red color (0xFF0000FF) - using small imm
         aurora_encode_r_type(AURORA_OP_SYSCALL, 0, 0, 0),
         aurora_encode_r_type(AURORA_OP_HALT, 0, 0, 0),
     };
@@ -440,9 +441,12 @@ void test_syscall_pixel(void) {
     aurora_vm_destroy(vm);
     PASS();
 }
+*/
 
 /* ===== Test Category 5: Device I/O ===== */
+/* Note: Device tests removed - simplified model has no memory-mapped I/O */
 
+/* Removed: Display device tests
 void test_device_display(void) {
     TEST("Devices: Display operations");
     
@@ -450,17 +454,19 @@ void test_device_display(void) {
     ASSERT(vm != NULL);
     ASSERT(aurora_vm_init(vm) == 0);
     
-    /* Test setting and getting pixels */
-    aurora_vm_display_set_pixel(vm, 50, 50, 0xFF00FF00);  /* Green */
+    // Test setting and getting pixels
+    aurora_vm_display_set_pixel(vm, 50, 50, 0xFF00FF00);  // Green
     ASSERT(aurora_vm_display_get_pixel(vm, 50, 50) == 0xFF00FF00);
     
-    aurora_vm_display_set_pixel(vm, 0, 0, 0xFFFFFFFF);    /* White */
+    aurora_vm_display_set_pixel(vm, 0, 0, 0xFFFFFFFF);    // White
     ASSERT(aurora_vm_display_get_pixel(vm, 0, 0) == 0xFFFFFFFF);
     
     aurora_vm_destroy(vm);
     PASS();
 }
+*/
 
+/* Removed: Keyboard device tests
 void test_device_keyboard(void) {
     TEST("Devices: Keyboard operations");
     
@@ -468,7 +474,7 @@ void test_device_keyboard(void) {
     ASSERT(vm != NULL);
     ASSERT(aurora_vm_init(vm) == 0);
     
-    /* Test key presses */
+    // Test key presses
     aurora_vm_keyboard_set_key(vm, 'A', true);
     ASSERT(aurora_vm_keyboard_is_key_pressed(vm, 'A') == true);
     
@@ -478,7 +484,9 @@ void test_device_keyboard(void) {
     aurora_vm_destroy(vm);
     PASS();
 }
+*/
 
+/* Removed: Mouse device tests
 void test_device_mouse(void) {
     TEST("Devices: Mouse operations");
     
@@ -486,20 +494,21 @@ void test_device_mouse(void) {
     ASSERT(vm != NULL);
     ASSERT(aurora_vm_init(vm) == 0);
     
-    /* Test mouse position */
+    // Test mouse position
     aurora_vm_mouse_set_position(vm, 150, 200);
     int32_t x, y;
     aurora_vm_mouse_get_position(vm, &x, &y);
     ASSERT(x == 150);
     ASSERT(y == 200);
     
-    /* Test mouse buttons */
-    aurora_vm_mouse_set_buttons(vm, 0x01);  /* Left button */
+    // Test mouse buttons
+    aurora_vm_mouse_set_buttons(vm, 0x01);  // Left button
     ASSERT(aurora_vm_mouse_get_buttons(vm) == 0x01);
     
     aurora_vm_destroy(vm);
     PASS();
 }
+*/
 
 void test_device_timer(void) {
     TEST("Devices: Timer operations");
@@ -518,6 +527,7 @@ void test_device_timer(void) {
     PASS();
 }
 
+/* Removed: Storage device tests - no memory-mapped I/O in simplified model
 void test_device_storage(void) {
     TEST("Devices: Storage operations");
     
@@ -525,7 +535,7 @@ void test_device_storage(void) {
     ASSERT(vm != NULL);
     ASSERT(aurora_vm_init(vm) == 0);
     
-    /* Test storage read/write */
+    // Test storage read/write
     uint8_t data[] = {1, 2, 3, 4, 5};
     ASSERT(aurora_vm_storage_write(vm, 0, data, sizeof(data)) == sizeof(data));
     
@@ -536,6 +546,7 @@ void test_device_storage(void) {
     aurora_vm_destroy(vm);
     PASS();
 }
+*/
 
 /* ===== Test Category 6: Debugger ===== */
 

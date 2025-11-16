@@ -85,11 +85,11 @@ static uint32_t heap_alloc(aurora_heap_t *heap, uint32_t size) {
 }
 
 /**
- * Free memory (simplified - just for API compatibility)
+ * Free memory (no-op for bump allocator - no free list support)
  */
 static void heap_free(aurora_heap_t *heap, uint32_t addr) {
-    /* In a real implementation, this would maintain a free list */
-    /* For simplicity, we just validate the address is in heap range */
+    /* Bump allocator doesn't support freeing individual allocations */
+    /* This is intentionally a no-op as per simplified requirements */
     (void)heap;
     (void)addr;
 }
@@ -151,9 +151,9 @@ static int handle_syscall(AuroraVM *vm) {
         
         case AURORA_SYSCALL_SLEEP: {
             uint32_t milliseconds = vm->cpu.registers[1];
-            uint64_t ticks = (milliseconds * vm->timer.frequency) / 1000;
-            vm->timer.ticks += ticks;
-            vm->debugger.cycle_count += ticks;
+            /* Simple simulation - just advance timer ticks */
+            vm->timer.ticks += milliseconds;
+            vm->debugger.cycle_count += milliseconds;
             return 0;
         }
         
@@ -166,22 +166,9 @@ static int handle_syscall(AuroraVM *vm) {
         
         case AURORA_SYSCALL_FREE: {
             uint32_t addr = vm->cpu.registers[1];
+            /* No-op for bump allocator - doesn't support free */
             heap_free(&vm->heap, addr);
             vm->cpu.registers[0] = 0;
-            return 0;
-        }
-        
-        case AURORA_SYSCALL_PIXEL: {
-            uint32_t x = vm->cpu.registers[1];
-            uint32_t y = vm->cpu.registers[2];
-            uint32_t color = vm->cpu.registers[3];
-            
-            if (x < AURORA_VM_DISPLAY_WIDTH && y < AURORA_VM_DISPLAY_HEIGHT) {
-                aurora_vm_display_set_pixel(vm, x, y, color);
-                vm->cpu.registers[0] = 0;
-            } else {
-                vm->cpu.registers[0] = (uint32_t)-1;
-            }
             return 0;
         }
         
@@ -189,7 +176,7 @@ static int handle_syscall(AuroraVM *vm) {
         case AURORA_SYSCALL_CLOSE:
         case AURORA_SYSCALL_READ_FILE:
         case AURORA_SYSCALL_WRITE_FILE:
-            /* File I/O syscalls - placeholder implementation */
+            /* File I/O syscalls - stub implementation (not fully implemented) */
             vm->cpu.registers[0] = (uint32_t)-1;
             return 0;
         
@@ -473,14 +460,6 @@ AuroraVM *aurora_vm_create(void) {
     AuroraVM *vm = (AuroraVM *)calloc(1, sizeof(AuroraVM));
     if (!vm) return NULL;
     
-    /* Allocate storage */
-    vm->storage.data = (uint8_t *)calloc(1, AURORA_VM_STORAGE_SIZE);
-    if (!vm->storage.data) {
-        free(vm);
-        return NULL;
-    }
-    vm->storage.size = AURORA_VM_STORAGE_SIZE;
-    
     return vm;
 }
 
@@ -503,7 +482,7 @@ int aurora_vm_init(AuroraVM *vm) {
         vm->pages[i].protection = AURORA_PAGE_READ | AURORA_PAGE_EXEC | AURORA_PAGE_PRESENT;
     }
     
-    /* Set up heap section (next 32KB - read/write) */
+    /* Set up heap section (next 32KB - read/write) - bump allocator */
     vm->heap.base = 16 * 1024;
     vm->heap.size = AURORA_VM_HEAP_SIZE;
     vm->heap.used = 0;
@@ -516,15 +495,8 @@ int aurora_vm_init(AuroraVM *vm) {
         vm->pages[i].protection = AURORA_PAGE_READ | AURORA_PAGE_WRITE | AURORA_PAGE_PRESENT;
     }
     
-    /* Initialize devices */
-    memset(&vm->display, 0, sizeof(aurora_display_t));
-    memset(&vm->keyboard, 0, sizeof(aurora_keyboard_t));
-    memset(&vm->mouse, 0, sizeof(aurora_mouse_t));
-    
+    /* Initialize simple timer */
     vm->timer.ticks = 0;
-    vm->timer.frequency = AURORA_VM_TIMER_FREQ;
-    
-    memset(vm->storage.data, 0, vm->storage.size);
     
     /* Initialize debugger */
     vm->debugger.enabled = false;
@@ -542,11 +514,6 @@ int aurora_vm_init(AuroraVM *vm) {
 
 void aurora_vm_destroy(AuroraVM *vm) {
     if (!vm) return;
-    
-    if (vm->storage.data) {
-        free(vm->storage.data);
-    }
-    
     free(vm);
 }
 
@@ -893,59 +860,7 @@ uint32_t aurora_encode_j_type(aurora_opcode_t opcode, int32_t imm) {
     return ((uint32_t)opcode << 24) | (imm & 0x00FFFFFF);
 }
 
-/* ===== Device API Implementation ===== */
-
-uint32_t aurora_vm_display_get_pixel(const AuroraVM *vm, uint32_t x, uint32_t y) {
-    if (!vm || x >= AURORA_VM_DISPLAY_WIDTH || y >= AURORA_VM_DISPLAY_HEIGHT) return 0;
-    return vm->display.pixels[y * AURORA_VM_DISPLAY_WIDTH + x];
-}
-
-void aurora_vm_display_set_pixel(AuroraVM *vm, uint32_t x, uint32_t y, uint32_t color) {
-    if (!vm || x >= AURORA_VM_DISPLAY_WIDTH || y >= AURORA_VM_DISPLAY_HEIGHT) return;
-    vm->display.pixels[y * AURORA_VM_DISPLAY_WIDTH + x] = color;
-    vm->display.dirty = true;
-}
-
-bool aurora_vm_keyboard_is_key_pressed(const AuroraVM *vm, uint8_t key) {
-    if (!vm) return false;
-    return vm->keyboard.keys[key];
-}
-
-void aurora_vm_keyboard_set_key(AuroraVM *vm, uint8_t key, bool pressed) {
-    if (!vm) return;
-    vm->keyboard.keys[key] = pressed;
-    
-    /* Add to buffer if pressed */
-    if (pressed) {
-        uint32_t next_head = (vm->keyboard.buffer_head + 1) % 256;
-        if (next_head != vm->keyboard.buffer_tail) {
-            vm->keyboard.buffer[vm->keyboard.buffer_head] = key;
-            vm->keyboard.buffer_head = next_head;
-        }
-    }
-}
-
-void aurora_vm_mouse_get_position(const AuroraVM *vm, int32_t *x, int32_t *y) {
-    if (!vm || !x || !y) return;
-    *x = vm->mouse.x;
-    *y = vm->mouse.y;
-}
-
-void aurora_vm_mouse_set_position(AuroraVM *vm, int32_t x, int32_t y) {
-    if (!vm) return;
-    vm->mouse.x = x;
-    vm->mouse.y = y;
-}
-
-uint8_t aurora_vm_mouse_get_buttons(const AuroraVM *vm) {
-    if (!vm) return 0;
-    return vm->mouse.buttons;
-}
-
-void aurora_vm_mouse_set_buttons(AuroraVM *vm, uint8_t buttons) {
-    if (!vm) return;
-    vm->mouse.buttons = buttons;
-}
+/* ===== Timer API Implementation ===== */
 
 uint64_t aurora_vm_timer_get_ticks(const AuroraVM *vm) {
     if (!vm) return 0;
@@ -955,20 +870,4 @@ uint64_t aurora_vm_timer_get_ticks(const AuroraVM *vm) {
 void aurora_vm_timer_advance(AuroraVM *vm, uint64_t ticks) {
     if (!vm) return;
     vm->timer.ticks += ticks;
-}
-
-int aurora_vm_storage_read(const AuroraVM *vm, uint32_t offset, void *buffer, size_t size) {
-    if (!vm || !buffer) return -1;
-    if (offset + size > vm->storage.size) return -1;
-    
-    memcpy(buffer, &vm->storage.data[offset], size);
-    return (int)size;
-}
-
-int aurora_vm_storage_write(AuroraVM *vm, uint32_t offset, const void *buffer, size_t size) {
-    if (!vm || !buffer) return -1;
-    if (offset + size > vm->storage.size) return -1;
-    
-    memcpy(&vm->storage.data[offset], buffer, size);
-    return (int)size;
 }

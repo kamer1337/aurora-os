@@ -162,32 +162,18 @@ void* kmalloc(size_t size) {
 }
 
 /**
- * Free kernel memory
+ * Free kernel memory (no-op for simplified bump allocator)
  */
 void kfree(void* ptr) {
+    /* Simplified bump allocator does not support freeing */
+    /* This is intentionally a no-op as per requirements */
+    (void)ptr;
     if (!ptr || !heap_initialized) {
         return;
     }
     
-    mem_block_t* block = (mem_block_t*)((uint8_t*)ptr - sizeof(mem_block_t));
-    block->free = 1;
-    
-    /* Coalesce with next block if it's free */
-    if (block->next && block->next->free) {
-        block->size += sizeof(mem_block_t) + block->next->size;
-        block->next = block->next->next;
-    }
-    
-    /* Coalesce with previous block if it's free */
-    mem_block_t* current = heap_start;
-    while (current && current->next != block) {
-        current = current->next;
-    }
-    
-    if (current && current->free) {
-        current->size += sizeof(mem_block_t) + block->size;
-        current->next = block->next;
-    }
+    /* In bump allocator, we don't track individual frees */
+    /* Memory fragmentation is expected as stated in requirements */
 }
 
 /**
