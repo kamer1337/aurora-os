@@ -30,6 +30,9 @@ void gui_demo_init(void) {
         return;
     }
     
+    // Initialize input handling (mouse and keyboard)
+    gui_init_input();
+    
     // Create a welcome window
     window_t* welcome_win = gui_create_window("Welcome to Aurora OS", 150, 100, 500, 350);
     if (welcome_win) {

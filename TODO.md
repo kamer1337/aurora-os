@@ -81,11 +81,14 @@
 - [x] Basic drawing primitives
 - [x] Window management (basic)
 - [x] Widget system (buttons, labels, panels)
-- [ ] Advanced window manager
-- [ ] Desktop environment
-- [ ] Mouse cursor support
-- [ ] Keyboard input for GUI
-- [ ] Menu system
+- [x] Mouse cursor support
+- [x] Keyboard input for GUI
+- [x] Advanced window manager (window dragging, focus)
+- [ ] Desktop environment (partial)
+- [ ] Menu system (widget types added)
+- [ ] Minimize/maximize buttons
+- [ ] Context menus
+- [ ] Window list in taskbar
 
 ## Notes
 

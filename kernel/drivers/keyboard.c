@@ -5,6 +5,7 @@
  */
 
 #include "keyboard.h"
+#include "../core/port_io.h"
 #include <stddef.h>
 
 /* Keyboard buffer */
@@ -41,25 +42,21 @@ static const char scancode_to_ascii_shift[] = {
  * Read byte from keyboard data port
  */
 static inline uint8_t keyboard_read_data(void) {
-    /* In a real implementation, this would use inb() */
-    /* For now, return 0 as we don't have port I/O yet */
-    return 0;
+    return inb(KEYBOARD_DATA_PORT);
 }
 
 /**
  * Read byte from keyboard status port
  */
 static inline uint8_t keyboard_read_status(void) {
-    /* In a real implementation, this would use inb() */
-    return 0;
+    return inb(KEYBOARD_STATUS_PORT);
 }
 
 /**
  * Write byte to keyboard command port
  */
 static inline void keyboard_write_command(uint8_t command) {
-    /* In a real implementation, this would use outb() */
-    (void)command;
+    outb(KEYBOARD_COMMAND_PORT, command);
 }
 
 /**
