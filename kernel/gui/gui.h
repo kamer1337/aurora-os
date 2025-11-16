@@ -84,6 +84,7 @@ struct window {
     uint8_t has_titlebar;
     uint8_t minimized;
     uint8_t maximized;
+    uint8_t transparency;  // Window transparency (0-100, 0=fully transparent, 100=opaque)
     widget_t* widgets;
     window_t* next;
 };
@@ -293,5 +294,19 @@ void gui_set_focused_window(window_t* window);
  * @param window Window to bring to front
  */
 void gui_bring_to_front(window_t* window);
+
+/**
+ * Set window transparency
+ * @param window Window to set transparency for
+ * @param transparency Transparency level (0-100, 0=fully transparent, 100=opaque)
+ */
+void gui_set_window_transparency(window_t* window, uint8_t transparency);
+
+/**
+ * Get window transparency
+ * @param window Window to get transparency for
+ * @return Transparency level (0-100)
+ */
+uint8_t gui_get_window_transparency(window_t* window);
 
 #endif // GUI_H

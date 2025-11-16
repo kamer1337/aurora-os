@@ -516,6 +516,7 @@ window_t* gui_create_window(const char* title, int32_t x, int32_t y, uint32_t wi
     window->has_titlebar = 1;
     window->minimized = 0;
     window->maximized = 0;
+    window->transparency = 100;  // Fully opaque by default
     window->widgets = NULL;
     window->next = window_list;
     
@@ -1294,4 +1295,20 @@ void gui_bring_to_front(window_t* window) {
     // Add to front of list
     window->next = window_list;
     window_list = window;
+}
+
+void gui_set_window_transparency(window_t* window, uint8_t transparency) {
+    if (!window) return;
+    
+    // Clamp transparency to 0-100 range
+    if (transparency > 100) {
+        transparency = 100;
+    }
+    
+    window->transparency = transparency;
+}
+
+uint8_t gui_get_window_transparency(window_t* window) {
+    if (!window) return 100;
+    return window->transparency;
 }

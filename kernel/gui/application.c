@@ -31,6 +31,9 @@ static int launch_system_info(void);
 static int launch_text_editor(void);
 static int launch_calculator(void);
 static int launch_disk_manager(void);
+static int launch_paint_editor(void);
+static int launch_image_viewer(void);
+static int launch_notebook(void);
 
 void app_init(void) {
     if (app_framework_initialized) return;
@@ -92,6 +95,30 @@ void app_init(void) {
         .running = 0
     };
     
+    applications[APP_PAINT_EDITOR] = (application_t){
+        .type = APP_PAINT_EDITOR,
+        .name = "Paint Editor",
+        .description = "Create and edit images",
+        .window = NULL,
+        .running = 0
+    };
+    
+    applications[APP_IMAGE_VIEWER] = (application_t){
+        .type = APP_IMAGE_VIEWER,
+        .name = "Image Viewer",
+        .description = "View image files",
+        .window = NULL,
+        .running = 0
+    };
+    
+    applications[APP_NOTEBOOK] = (application_t){
+        .type = APP_NOTEBOOK,
+        .name = "Notebook",
+        .description = "Take notes and organize tasks",
+        .window = NULL,
+        .running = 0
+    };
+    
     app_framework_initialized = 1;
 }
 
@@ -130,6 +157,15 @@ int app_launch(app_type_t type) {
             break;
         case APP_DISK_MANAGER:
             result = launch_disk_manager();
+            break;
+        case APP_PAINT_EDITOR:
+            result = launch_paint_editor();
+            break;
+        case APP_IMAGE_VIEWER:
+            result = launch_image_viewer();
+            break;
+        case APP_NOTEBOOK:
+            result = launch_notebook();
             break;
         default:
             return -1;
@@ -170,12 +206,20 @@ static int launch_file_manager(void) {
     
     applications[APP_FILE_MANAGER].window = window;
     
-    /* Add file manager interface */
+    /* Add file manager interface with tabs support */
     gui_create_label(window, "File Manager", 20, 20);
-    gui_create_label(window, "Location: /", 20, 50);
+    
+    /* Tab bar for folder navigation */
+    gui_create_label(window, "Tabs:", 20, 50);
+    gui_create_button(window, "/ (Root)", 70, 45, 80, 30);
+    gui_create_button(window, "Home", 155, 45, 70, 30);
+    gui_create_button(window, "+ New Tab", 230, 45, 90, 30);
+    
+    /* Location bar */
+    gui_create_label(window, "Location: /", 20, 85);
     
     /* Add storage device information */
-    gui_create_label(window, "Storage Devices:", 20, 90);
+    gui_create_label(window, "Storage Devices:", 20, 115);
     
     /* Try to initialize and detect storage devices */
     storage_init();
@@ -183,7 +227,7 @@ static int launch_file_manager(void) {
     
     if (device_count > 0) {
         char info_text[128];
-        int y_offset = 120;
+        int y_offset = 145;
         
         for (int i = 0; i < device_count && i < 4; i++) {
             storage_device_t* device = storage_get_device(i);
@@ -236,8 +280,21 @@ static int launch_file_manager(void) {
             }
         }
     } else {
-        gui_create_label(window, "No storage devices detected", 40, 120);
+        gui_create_label(window, "No storage devices detected", 40, 145);
     }
+    
+    /* File operations toolbar */
+    gui_create_label(window, "File Operations:", 20, 245);
+    gui_create_button(window, "Copy", 20, 270, 70, 30);
+    gui_create_button(window, "Move", 100, 270, 70, 30);
+    gui_create_button(window, "Delete", 180, 270, 70, 30);
+    gui_create_button(window, "Rename", 260, 270, 70, 30);
+    gui_create_button(window, "New Folder", 340, 270, 100, 30);
+    
+    /* Drive management */
+    gui_create_label(window, "Drive Management:", 20, 315);
+    gui_create_button(window, "Mount", 20, 340, 70, 30);
+    gui_create_button(window, "Unmount", 100, 340, 80, 30);
     
     /* Add file operation buttons */
     gui_create_button(window, "Refresh", 20, 350, 80, 30);
@@ -654,6 +711,129 @@ static int launch_disk_manager(void) {
     /* Action buttons */
     gui_create_button(window, "Refresh", 20, 450, 90, 30);
     gui_create_button(window, "Close", 590, 450, 90, 30);
+    
+    gui_show_window(window);
+    gui_focus_window(window);
+    
+    return 0;
+}
+
+static int launch_paint_editor(void) {
+    window_t* window = gui_create_window("Paint Editor", 120, 100, 700, 550);
+    if (!window) return -1;
+    
+    applications[APP_PAINT_EDITOR].window = window;
+    
+    /* Add paint editor interface */
+    gui_create_label(window, "Paint Editor - Drawing Canvas", 20, 20);
+    
+    /* Tool palette */
+    gui_create_label(window, "Tools:", 20, 60);
+    gui_create_button(window, "Brush", 20, 85, 80, 30);
+    gui_create_button(window, "Pencil", 20, 120, 80, 30);
+    gui_create_button(window, "Eraser", 20, 155, 80, 30);
+    gui_create_button(window, "Fill", 20, 190, 80, 30);
+    gui_create_button(window, "Line", 20, 225, 80, 30);
+    gui_create_button(window, "Rectangle", 20, 260, 80, 30);
+    gui_create_button(window, "Circle", 20, 295, 80, 30);
+    gui_create_button(window, "Text", 20, 330, 80, 30);
+    
+    /* Color palette */
+    gui_create_label(window, "Colors:", 20, 375);
+    gui_create_button(window, "Black", 20, 400, 40, 25);
+    gui_create_button(window, "White", 65, 400, 40, 25);
+    gui_create_button(window, "Red", 20, 430, 40, 25);
+    gui_create_button(window, "Green", 65, 430, 40, 25);
+    gui_create_button(window, "Blue", 20, 460, 40, 25);
+    gui_create_button(window, "Yellow", 65, 460, 40, 25);
+    
+    /* Canvas area indicator */
+    gui_create_label(window, "Canvas Area (Click and drag to draw)", 120, 60);
+    
+    /* File operations */
+    gui_create_button(window, "New", 120, 495, 70, 30);
+    gui_create_button(window, "Open", 200, 495, 70, 30);
+    gui_create_button(window, "Save", 280, 495, 70, 30);
+    gui_create_button(window, "Clear", 360, 495, 70, 30);
+    
+    gui_show_window(window);
+    gui_focus_window(window);
+    
+    return 0;
+}
+
+static int launch_image_viewer(void) {
+    window_t* window = gui_create_window("Image Viewer", 140, 120, 680, 520);
+    if (!window) return -1;
+    
+    applications[APP_IMAGE_VIEWER].window = window;
+    
+    /* Add image viewer interface */
+    gui_create_label(window, "Image Viewer", 20, 20);
+    gui_create_label(window, "Supported formats: BMP, PNG, JPG, GIF", 20, 45);
+    
+    /* Image display area indicator */
+    gui_create_label(window, "Image Display Area", 250, 200);
+    gui_create_label(window, "(No image loaded)", 260, 230);
+    
+    /* Image controls */
+    gui_create_label(window, "Zoom:", 20, 80);
+    gui_create_button(window, "Fit", 70, 75, 60, 30);
+    gui_create_button(window, "100%", 140, 75, 60, 30);
+    gui_create_button(window, "Zoom In", 210, 75, 80, 30);
+    gui_create_button(window, "Zoom Out", 300, 75, 80, 30);
+    
+    /* Navigation controls */
+    gui_create_button(window, "Previous", 20, 465, 90, 30);
+    gui_create_button(window, "Next", 120, 465, 90, 30);
+    gui_create_button(window, "Rotate Left", 220, 465, 100, 30);
+    gui_create_button(window, "Rotate Right", 330, 465, 100, 30);
+    
+    /* File operations */
+    gui_create_button(window, "Open Image", 540, 465, 110, 30);
+    
+    gui_show_window(window);
+    gui_focus_window(window);
+    
+    return 0;
+}
+
+static int launch_notebook(void) {
+    window_t* window = gui_create_window("Notebook", 160, 140, 650, 500);
+    if (!window) return -1;
+    
+    applications[APP_NOTEBOOK].window = window;
+    
+    /* Add notebook interface with tabs support */
+    gui_create_label(window, "Notebook - Organize Your Notes", 20, 20);
+    
+    /* Tab bar */
+    gui_create_label(window, "Tabs:", 20, 50);
+    gui_create_button(window, "Note 1", 70, 45, 80, 30);
+    gui_create_button(window, "Note 2", 155, 45, 80, 30);
+    gui_create_button(window, "Note 3", 240, 45, 80, 30);
+    gui_create_button(window, "+ New Tab", 325, 45, 90, 30);
+    
+    /* Editor area */
+    gui_create_label(window, "Title: Untitled Note", 20, 90);
+    gui_create_label(window, "Content:", 20, 120);
+    gui_create_label(window, "(Type your notes here)", 20, 150);
+    
+    /* Formatting toolbar */
+    gui_create_label(window, "Format:", 20, 380);
+    gui_create_button(window, "Bold", 80, 375, 60, 30);
+    gui_create_button(window, "Italic", 145, 375, 60, 30);
+    gui_create_button(window, "List", 210, 375, 60, 30);
+    gui_create_button(window, "Heading", 275, 375, 75, 30);
+    
+    /* Note management buttons */
+    gui_create_button(window, "Save", 20, 430, 80, 30);
+    gui_create_button(window, "Save As", 110, 430, 80, 30);
+    gui_create_button(window, "Delete Note", 200, 430, 100, 30);
+    gui_create_button(window, "Export", 310, 430, 80, 30);
+    
+    /* Battery indicator placeholder */
+    gui_create_label(window, "Battery: 85%", 520, 430);
     
     gui_show_window(window);
     gui_focus_window(window);
