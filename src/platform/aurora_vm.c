@@ -698,29 +698,146 @@ static int execute_instruction(AuroraVM *vm, uint32_t instruction) {
             vm->cpu.halted = true;
             return 1;
         
-        /* Floating-point operations (simplified - use integer representation) */
-        case AURORA_OP_FADD:
-        case AURORA_OP_FSUB:
-        case AURORA_OP_FMUL:
-        case AURORA_OP_FDIV:
-        case AURORA_OP_FCMP:
-        case AURORA_OP_FCVT:
-        case AURORA_OP_ICVT:
-        case AURORA_OP_FMOV:
-            /* Float operations not yet implemented - stub */
+        /* Floating-point operations (IEEE 754 single-precision) */
+        case AURORA_OP_FADD: {
             decode_r_type(instruction, &rd, &rs1, &rs2);
-            vm->cpu.registers[rd] = 0;
+            float f1, f2, result;
+            memcpy(&f1, &vm->cpu.registers[rs1], sizeof(float));
+            memcpy(&f2, &vm->cpu.registers[rs2], sizeof(float));
+            result = f1 + f2;
+            memcpy(&vm->cpu.registers[rd], &result, sizeof(float));
             break;
+        }
         
-        /* SIMD/Vector operations (simplified) */
-        case AURORA_OP_VADD:
-        case AURORA_OP_VSUB:
-        case AURORA_OP_VMUL:
-        case AURORA_OP_VDOT:
-            /* Vector operations not yet implemented - stub */
+        case AURORA_OP_FSUB: {
             decode_r_type(instruction, &rd, &rs1, &rs2);
-            vm->cpu.registers[rd] = 0;
+            float f1, f2, result;
+            memcpy(&f1, &vm->cpu.registers[rs1], sizeof(float));
+            memcpy(&f2, &vm->cpu.registers[rs2], sizeof(float));
+            result = f1 - f2;
+            memcpy(&vm->cpu.registers[rd], &result, sizeof(float));
             break;
+        }
+        
+        case AURORA_OP_FMUL: {
+            decode_r_type(instruction, &rd, &rs1, &rs2);
+            float f1, f2, result;
+            memcpy(&f1, &vm->cpu.registers[rs1], sizeof(float));
+            memcpy(&f2, &vm->cpu.registers[rs2], sizeof(float));
+            result = f1 * f2;
+            memcpy(&vm->cpu.registers[rd], &result, sizeof(float));
+            break;
+        }
+        
+        case AURORA_OP_FDIV: {
+            decode_r_type(instruction, &rd, &rs1, &rs2);
+            float f1, f2, result;
+            memcpy(&f1, &vm->cpu.registers[rs1], sizeof(float));
+            memcpy(&f2, &vm->cpu.registers[rs2], sizeof(float));
+            result = f1 / f2;
+            memcpy(&vm->cpu.registers[rd], &result, sizeof(float));
+            break;
+        }
+        
+        case AURORA_OP_FCMP: {
+            decode_r_type(instruction, &rd, &rs1, &rs2);
+            float f1, f2;
+            memcpy(&f1, &vm->cpu.registers[rs1], sizeof(float));
+            memcpy(&f2, &vm->cpu.registers[rs2], sizeof(float));
+            /* Set flags based on comparison */
+            vm->cpu.flags = 0;
+            if (f1 == f2) vm->cpu.flags |= AURORA_FLAG_ZERO;
+            if (f1 < f2) vm->cpu.flags |= AURORA_FLAG_NEGATIVE;
+            break;
+        }
+        
+        case AURORA_OP_FCVT: {
+            decode_r_type(instruction, &rd, &rs1, &rs2);
+            (void)rs2;  /* Unused for this operation */
+            float result = (float)(int32_t)vm->cpu.registers[rs1];
+            memcpy(&vm->cpu.registers[rd], &result, sizeof(float));
+            break;
+        }
+        
+        case AURORA_OP_ICVT: {
+            decode_r_type(instruction, &rd, &rs1, &rs2);
+            (void)rs2;  /* Unused for this operation */
+            float f;
+            memcpy(&f, &vm->cpu.registers[rs1], sizeof(float));
+            vm->cpu.registers[rd] = (uint32_t)(int32_t)f;
+            break;
+        }
+        
+        case AURORA_OP_FMOV: {
+            decode_r_type(instruction, &rd, &rs1, &rs2);
+            (void)rs2;  /* Unused for this operation */
+            vm->cpu.registers[rd] = vm->cpu.registers[rs1];
+            break;
+        }
+        
+        /* SIMD/Vector operations (4x8-bit packed operations) */
+        case AURORA_OP_VADD: {
+            decode_r_type(instruction, &rd, &rs1, &rs2);
+            uint32_t v1 = vm->cpu.registers[rs1];
+            uint32_t v2 = vm->cpu.registers[rs2];
+            uint32_t result = 0;
+            /* Add each byte independently */
+            for (int i = 0; i < 4; i++) {
+                uint8_t b1 = (v1 >> (i * 8)) & 0xFF;
+                uint8_t b2 = (v2 >> (i * 8)) & 0xFF;
+                uint8_t sum = b1 + b2;
+                result |= ((uint32_t)sum << (i * 8));
+            }
+            vm->cpu.registers[rd] = result;
+            break;
+        }
+        
+        case AURORA_OP_VSUB: {
+            decode_r_type(instruction, &rd, &rs1, &rs2);
+            uint32_t v1 = vm->cpu.registers[rs1];
+            uint32_t v2 = vm->cpu.registers[rs2];
+            uint32_t result = 0;
+            /* Subtract each byte independently */
+            for (int i = 0; i < 4; i++) {
+                uint8_t b1 = (v1 >> (i * 8)) & 0xFF;
+                uint8_t b2 = (v2 >> (i * 8)) & 0xFF;
+                uint8_t diff = b1 - b2;
+                result |= ((uint32_t)diff << (i * 8));
+            }
+            vm->cpu.registers[rd] = result;
+            break;
+        }
+        
+        case AURORA_OP_VMUL: {
+            decode_r_type(instruction, &rd, &rs1, &rs2);
+            uint32_t v1 = vm->cpu.registers[rs1];
+            uint32_t v2 = vm->cpu.registers[rs2];
+            uint32_t result = 0;
+            /* Multiply each byte independently (with truncation) */
+            for (int i = 0; i < 4; i++) {
+                uint8_t b1 = (v1 >> (i * 8)) & 0xFF;
+                uint8_t b2 = (v2 >> (i * 8)) & 0xFF;
+                uint8_t prod = (uint8_t)((b1 * b2) & 0xFF);
+                result |= ((uint32_t)prod << (i * 8));
+            }
+            vm->cpu.registers[rd] = result;
+            break;
+        }
+        
+        case AURORA_OP_VDOT: {
+            decode_r_type(instruction, &rd, &rs1, &rs2);
+            uint32_t v1 = vm->cpu.registers[rs1];
+            uint32_t v2 = vm->cpu.registers[rs2];
+            uint32_t sum = 0;
+            /* Compute dot product of 4 bytes */
+            for (int i = 0; i < 4; i++) {
+                uint8_t b1 = (v1 >> (i * 8)) & 0xFF;
+                uint8_t b2 = (v2 >> (i * 8)) & 0xFF;
+                sum += b1 * b2;
+            }
+            vm->cpu.registers[rd] = sum;
+            break;
+        }
         
         /* Atomic operations */
         case AURORA_OP_XCHG:
@@ -1394,17 +1511,6 @@ int aurora_vm_irq_trigger(AuroraVM *vm, uint32_t irq) {
     /* Mark interrupt as pending - will be dispatched in next VM step */
     vm->irq_ctrl.interrupts[irq].pending = true;
     vm->irq_ctrl.active |= (1 << irq);
-    
-    /* Simple interrupt handling - save state and jump to handler */
-    if (vm->irq_ctrl.interrupts[irq].handler != 0) {
-        /* Push PC to stack */
-        vm->cpu.sp -= 4;
-        if (check_memory_access(vm, vm->cpu.sp, 4, AURORA_PAGE_WRITE)) {
-            memcpy(&vm->memory[vm->cpu.sp], &vm->cpu.pc, 4);
-            vm->cpu.pc = vm->irq_ctrl.interrupts[irq].handler;
-            /* Note: pending flag remains true until interrupt is explicitly cleared */
-        }
-    }
     
     return 0;
 }
