@@ -27,6 +27,7 @@
 #include "../../tests/advanced_tests.h"
 #include "../../tests/plugin_tests.h"
 #include "../../tests/phase5_tests.h"
+#include "../../tests/font_tests.h"
 
 /* External plugin registration functions */
 extern void register_boot_diagnostic_plugin(void);
@@ -161,6 +162,9 @@ void kernel_main(void) {
     /* Run Phase 5 comprehensive tests */
     vga_write("\n=== Phase 5: Testing & Debugging ===\n");
     phase5_run_all_tests();
+    
+    /* Run font tests */
+    run_font_tests();
     
     vga_write("\n=== Starting GUI Demo ===\n");
     
