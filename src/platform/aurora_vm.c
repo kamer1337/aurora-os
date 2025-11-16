@@ -193,6 +193,75 @@ static int handle_syscall(AuroraVM *vm) {
             vm->cpu.registers[0] = (uint32_t)-1;
             return 0;
         
+        /* Network syscalls */
+        case AURORA_SYSCALL_NET_SEND: {
+            uint32_t addr = vm->cpu.registers[1];
+            uint32_t len = vm->cpu.registers[2];
+            
+            if (!check_memory_access(vm, addr, len, AURORA_PAGE_READ)) {
+                vm->cpu.registers[0] = (uint32_t)-1;
+                return -1;
+            }
+            
+            int sent = aurora_vm_net_send(vm, &vm->memory[addr], len);
+            vm->cpu.registers[0] = sent;
+            return 0;
+        }
+        
+        case AURORA_SYSCALL_NET_RECV: {
+            uint32_t addr = vm->cpu.registers[1];
+            uint32_t max_len = vm->cpu.registers[2];
+            
+            if (!check_memory_access(vm, addr, max_len, AURORA_PAGE_WRITE)) {
+                vm->cpu.registers[0] = (uint32_t)-1;
+                return -1;
+            }
+            
+            int received = aurora_vm_net_recv(vm, &vm->memory[addr], max_len);
+            vm->cpu.registers[0] = received;
+            return 0;
+        }
+        
+        case AURORA_SYSCALL_NET_CONNECT:
+        case AURORA_SYSCALL_NET_LISTEN:
+            /* Network connection syscalls - placeholder */
+            vm->network.connected = true;
+            vm->cpu.registers[0] = 0;
+            return 0;
+        
+        /* Thread syscalls */
+        case AURORA_SYSCALL_THREAD_CREATE: {
+            uint32_t entry_point = vm->cpu.registers[1];
+            uint32_t arg = vm->cpu.registers[2];
+            int tid = aurora_vm_thread_create(vm, entry_point, arg);
+            vm->cpu.registers[0] = tid;
+            return 0;
+        }
+        
+        case AURORA_SYSCALL_THREAD_EXIT:
+            vm->scheduler.threads[vm->scheduler.current].active = false;
+            aurora_vm_thread_yield(vm);
+            return 0;
+        
+        case AURORA_SYSCALL_THREAD_JOIN: {
+            uint32_t tid = vm->cpu.registers[1];
+            if (tid < AURORA_VM_MAX_THREADS && vm->scheduler.threads[tid].active) {
+                vm->scheduler.threads[vm->scheduler.current].waiting = true;
+                vm->scheduler.threads[vm->scheduler.current].wait_target = tid;
+                aurora_vm_thread_yield(vm);
+            }
+            vm->cpu.registers[0] = 0;
+            return 0;
+        }
+        
+        case AURORA_SYSCALL_MUTEX_LOCK:
+        case AURORA_SYSCALL_MUTEX_UNLOCK:
+        case AURORA_SYSCALL_SEM_WAIT:
+        case AURORA_SYSCALL_SEM_POST:
+            /* Synchronization primitives - placeholder */
+            vm->cpu.registers[0] = 0;
+            return 0;
+        
         default:
             /* Unknown syscall */
             vm->cpu.registers[0] = (uint32_t)-1;
@@ -207,7 +276,7 @@ static int execute_instruction(AuroraVM *vm, uint32_t instruction) {
     uint8_t rd, rs1, rs2;
     int16_t imm16;
     int32_t imm32;
-    uint32_t result, operand1, operand2;
+    uint32_t result, operand1, operand2, addr;
     uint64_t result64;
     bool carry, overflow;
     
@@ -458,6 +527,79 @@ static int execute_instruction(AuroraVM *vm, uint32_t instruction) {
         case AURORA_OP_HALT:
             vm->cpu.halted = true;
             return 1;
+        
+        /* Floating-point operations (simplified - use integer representation) */
+        case AURORA_OP_FADD:
+        case AURORA_OP_FSUB:
+        case AURORA_OP_FMUL:
+        case AURORA_OP_FDIV:
+        case AURORA_OP_FCMP:
+        case AURORA_OP_FCVT:
+        case AURORA_OP_ICVT:
+        case AURORA_OP_FMOV:
+            /* Float operations not yet implemented - stub */
+            decode_r_type(instruction, &rd, &rs1, &rs2);
+            vm->cpu.registers[rd] = 0;
+            break;
+        
+        /* SIMD/Vector operations (simplified) */
+        case AURORA_OP_VADD:
+        case AURORA_OP_VSUB:
+        case AURORA_OP_VMUL:
+        case AURORA_OP_VDOT:
+            /* Vector operations not yet implemented - stub */
+            decode_r_type(instruction, &rd, &rs1, &rs2);
+            vm->cpu.registers[rd] = 0;
+            break;
+        
+        /* Atomic operations */
+        case AURORA_OP_XCHG:
+            decode_r_type(instruction, &rd, &rs1, &rs2);
+            addr = vm->cpu.registers[rs1];
+            if (check_memory_access(vm, addr, 4, AURORA_PAGE_READ | AURORA_PAGE_WRITE)) {
+                uint32_t temp;
+                memcpy(&temp, &vm->memory[addr], 4);
+                vm->cpu.registers[rd] = temp;
+                memcpy(&vm->memory[addr], &vm->cpu.registers[rs2], 4);
+            } else {
+                return -1;
+            }
+            break;
+        
+        case AURORA_OP_CAS:
+            decode_r_type(instruction, &rd, &rs1, &rs2);
+            addr = vm->cpu.registers[rs1];
+            if (check_memory_access(vm, addr, 4, AURORA_PAGE_READ | AURORA_PAGE_WRITE)) {
+                uint32_t current;
+                memcpy(&current, &vm->memory[addr], 4);
+                if (current == vm->cpu.registers[rd]) {
+                    memcpy(&vm->memory[addr], &vm->cpu.registers[rs2], 4);
+                    vm->cpu.registers[rd] = 1;  /* Success */
+                } else {
+                    vm->cpu.registers[rd] = 0;  /* Failed */
+                }
+            } else {
+                return -1;
+            }
+            break;
+        
+        case AURORA_OP_FADD_ATOMIC:
+            decode_r_type(instruction, &rd, &rs1, &rs2);
+            addr = vm->cpu.registers[rs1];
+            if (check_memory_access(vm, addr, 4, AURORA_PAGE_READ | AURORA_PAGE_WRITE)) {
+                uint32_t old_value;
+                memcpy(&old_value, &vm->memory[addr], 4);
+                vm->cpu.registers[rd] = old_value;
+                uint32_t new_value = old_value + vm->cpu.registers[rs2];
+                memcpy(&vm->memory[addr], &new_value, 4);
+            } else {
+                return -1;
+            }
+            break;
+        
+        case AURORA_OP_LOCK:
+            /* Lock prefix - just a hint for atomic operations */
+            break;
             
         default:
             /* Invalid opcode */
@@ -525,6 +667,36 @@ int aurora_vm_init(AuroraVM *vm) {
     vm->timer.frequency = AURORA_VM_TIMER_FREQ;
     
     memset(vm->storage.data, 0, vm->storage.size);
+    
+    /* Initialize network device */
+    memset(&vm->network, 0, sizeof(aurora_network_t));
+    vm->network.connected = false;
+    
+    /* Initialize interrupt controller */
+    memset(&vm->irq_ctrl, 0, sizeof(aurora_irq_ctrl_t));
+    vm->irq_ctrl.enabled = false;
+    
+    /* Initialize scheduler */
+    memset(&vm->scheduler, 0, sizeof(aurora_scheduler_t));
+    vm->scheduler.current = 0;
+    vm->scheduler.count = 1;  /* Main thread */
+    vm->scheduler.threads[0].id = 0;
+    vm->scheduler.threads[0].active = true;
+    vm->scheduler.threads[0].waiting = false;
+    
+    /* Initialize JIT compiler */
+    memset(&vm->jit, 0, sizeof(aurora_jit_t));
+    vm->jit.enabled = AURORA_VM_JIT_ENABLED;
+    vm->jit.cache = NULL;  /* Lazy allocation */
+    vm->jit.cache_size = AURORA_VM_JIT_CACHE_SIZE;
+    vm->jit.cache_used = 0;
+    vm->jit.num_blocks = 0;
+    
+    /* Initialize GDB server */
+    memset(&vm->gdb, 0, sizeof(aurora_gdb_server_t));
+    vm->gdb.enabled = false;
+    vm->gdb.connected = false;
+    vm->gdb.socket_fd = -1;
     
     /* Initialize debugger */
     vm->debugger.enabled = false;
@@ -971,4 +1143,221 @@ int aurora_vm_storage_write(AuroraVM *vm, uint32_t offset, const void *buffer, s
     
     memcpy(&vm->storage.data[offset], buffer, size);
     return (int)size;
+}
+
+/* ===== Interrupt API Implementation ===== */
+
+void aurora_vm_irq_enable(AuroraVM *vm, bool enabled) {
+    if (!vm) return;
+    vm->irq_ctrl.enabled = enabled;
+}
+
+int aurora_vm_irq_set_handler(AuroraVM *vm, uint32_t irq, uint32_t handler) {
+    if (!vm || irq >= AURORA_VM_MAX_INTERRUPTS) return -1;
+    vm->irq_ctrl.interrupts[irq].handler = handler;
+    vm->irq_ctrl.interrupts[irq].enabled = true;
+    return 0;
+}
+
+int aurora_vm_irq_trigger(AuroraVM *vm, uint32_t irq) {
+    if (!vm || irq >= AURORA_VM_MAX_INTERRUPTS) return -1;
+    if (!vm->irq_ctrl.enabled || !vm->irq_ctrl.interrupts[irq].enabled) return -1;
+    
+    vm->irq_ctrl.interrupts[irq].pending = true;
+    vm->irq_ctrl.active |= (1 << irq);
+    
+    /* Simple interrupt handling - save state and jump to handler */
+    if (vm->irq_ctrl.interrupts[irq].handler != 0) {
+        /* Push PC to stack */
+        vm->cpu.sp -= 4;
+        if (check_memory_access(vm, vm->cpu.sp, 4, AURORA_PAGE_WRITE)) {
+            memcpy(&vm->memory[vm->cpu.sp], &vm->cpu.pc, 4);
+            vm->cpu.pc = vm->irq_ctrl.interrupts[irq].handler;
+            vm->irq_ctrl.interrupts[irq].pending = false;
+        }
+    }
+    
+    return 0;
+}
+
+/* ===== Network API Implementation ===== */
+
+int aurora_vm_net_send(AuroraVM *vm, const uint8_t *data, uint32_t length) {
+    if (!vm || !data || length > AURORA_VM_NET_MTU) return -1;
+    if (!vm->network.connected) return -1;
+    
+    uint32_t next = (vm->network.tx_head + 1) % AURORA_VM_NET_QUEUE_SIZE;
+    if (next == vm->network.tx_tail) return -1;  /* Queue full */
+    
+    memcpy(vm->network.tx_queue[vm->network.tx_head].data, data, length);
+    vm->network.tx_queue[vm->network.tx_head].length = length;
+    vm->network.tx_head = next;
+    
+    /* Trigger network interrupt */
+    aurora_vm_irq_trigger(vm, AURORA_VM_IRQ_NETWORK);
+    
+    return (int)length;
+}
+
+int aurora_vm_net_recv(AuroraVM *vm, uint8_t *buffer, uint32_t max_length) {
+    if (!vm || !buffer) return -1;
+    if (vm->network.rx_head == vm->network.rx_tail) return 0;  /* Queue empty */
+    
+    uint32_t length = vm->network.rx_queue[vm->network.rx_tail].length;
+    if (length > max_length) length = max_length;
+    
+    memcpy(buffer, vm->network.rx_queue[vm->network.rx_tail].data, length);
+    vm->network.rx_tail = (vm->network.rx_tail + 1) % AURORA_VM_NET_QUEUE_SIZE;
+    
+    return (int)length;
+}
+
+bool aurora_vm_net_is_connected(const AuroraVM *vm) {
+    if (!vm) return false;
+    return vm->network.connected;
+}
+
+/* ===== Thread API Implementation ===== */
+
+int aurora_vm_thread_create(AuroraVM *vm, uint32_t entry_point, uint32_t arg) {
+    if (!vm || vm->scheduler.count >= AURORA_VM_MAX_THREADS) return -1;
+    
+    uint32_t tid = vm->scheduler.count++;
+    aurora_thread_t *thread = &vm->scheduler.threads[tid];
+    
+    memset(thread, 0, sizeof(aurora_thread_t));
+    thread->id = tid;
+    thread->active = true;
+    thread->waiting = false;
+    thread->pc = entry_point;
+    thread->sp = AURORA_VM_THREAD_STACK_SIZE - 4;
+    thread->fp = thread->sp;
+    thread->registers[1] = arg;  /* First argument */
+    
+    return (int)tid;
+}
+
+uint32_t aurora_vm_thread_current(const AuroraVM *vm) {
+    if (!vm) return 0;
+    return vm->scheduler.current;
+}
+
+void aurora_vm_thread_yield(AuroraVM *vm) {
+    if (!vm || vm->scheduler.count <= 1) return;
+    
+    /* Save current thread state */
+    uint32_t current = vm->scheduler.current;
+    aurora_thread_t *curr_thread = &vm->scheduler.threads[current];
+    
+    if (curr_thread->active) {
+        memcpy(curr_thread->registers, vm->cpu.registers, sizeof(vm->cpu.registers));
+        curr_thread->pc = vm->cpu.pc;
+        curr_thread->sp = vm->cpu.sp;
+        curr_thread->fp = vm->cpu.fp;
+        curr_thread->flags = vm->cpu.flags;
+    }
+    
+    /* Find next runnable thread */
+    uint32_t next = (current + 1) % vm->scheduler.count;
+    while (next != current) {
+        if (vm->scheduler.threads[next].active && !vm->scheduler.threads[next].waiting) {
+            break;
+        }
+        next = (next + 1) % vm->scheduler.count;
+    }
+    
+    /* Restore next thread state */
+    vm->scheduler.current = next;
+    aurora_thread_t *next_thread = &vm->scheduler.threads[next];
+    
+    memcpy(vm->cpu.registers, next_thread->registers, sizeof(vm->cpu.registers));
+    vm->cpu.pc = next_thread->pc;
+    vm->cpu.sp = next_thread->sp;
+    vm->cpu.fp = next_thread->fp;
+    vm->cpu.flags = next_thread->flags;
+}
+
+/* ===== JIT API Implementation ===== */
+
+void aurora_vm_jit_enable(AuroraVM *vm, bool enabled) {
+    if (!vm) return;
+    vm->jit.enabled = enabled;
+    
+    if (enabled && !vm->jit.cache) {
+        /* Lazy allocate JIT cache */
+        vm->jit.cache = (uint8_t *)malloc(vm->jit.cache_size);
+        if (vm->jit.cache) {
+            memset(vm->jit.cache, 0, vm->jit.cache_size);
+        }
+    }
+}
+
+int aurora_vm_jit_compile_block(AuroraVM *vm, uint32_t addr) {
+    if (!vm || !vm->jit.enabled || !vm->jit.cache) return -1;
+    if (vm->jit.num_blocks >= 256) return -1;
+    
+    /* Simple JIT compilation stub - would need platform-specific code generation */
+    aurora_jit_block_t *block = &vm->jit.blocks[vm->jit.num_blocks];
+    block->start_addr = addr;
+    block->length = 64;  /* Assume 16 instructions */
+    block->native_code = NULL;  /* Would point to JIT cache */
+    block->native_length = 0;
+    block->exec_count = 0;
+    block->compiled = false;  /* Not actually compiled yet */
+    
+    vm->jit.num_blocks++;
+    return 0;
+}
+
+void aurora_vm_jit_clear_cache(AuroraVM *vm) {
+    if (!vm) return;
+    
+    if (vm->jit.cache) {
+        memset(vm->jit.cache, 0, vm->jit.cache_size);
+    }
+    vm->jit.cache_used = 0;
+    vm->jit.num_blocks = 0;
+    memset(vm->jit.blocks, 0, sizeof(vm->jit.blocks));
+}
+
+/* ===== GDB Server API Implementation ===== */
+
+int aurora_vm_gdb_start(AuroraVM *vm, int port) {
+    if (!vm) return -1;
+    
+    /* GDB server implementation requires socket programming */
+    /* This is a placeholder that just marks it as enabled */
+    vm->gdb.enabled = true;
+    vm->gdb.connected = false;
+    vm->gdb.socket_fd = -1;  /* Would be actual socket */
+    vm->gdb.break_requested = false;
+    
+    (void)port;  /* Suppress unused parameter warning */
+    return 0;
+}
+
+void aurora_vm_gdb_stop(AuroraVM *vm) {
+    if (!vm) return;
+    
+    vm->gdb.enabled = false;
+    vm->gdb.connected = false;
+    if (vm->gdb.socket_fd >= 0) {
+        /* Would close socket here */
+        vm->gdb.socket_fd = -1;
+    }
+}
+
+int aurora_vm_gdb_handle(AuroraVM *vm) {
+    if (!vm || !vm->gdb.enabled) return -1;
+    
+    /* GDB RSP protocol handling would go here */
+    /* This is a placeholder implementation */
+    
+    if (vm->gdb.break_requested) {
+        vm->cpu.halted = true;
+        vm->gdb.break_requested = false;
+        return 1;  /* Break */
+    }
+    
+    return 0;
 }

@@ -43,6 +43,39 @@
 /* Debugger configuration */
 #define AURORA_VM_MAX_BREAKPOINTS   16
 
+/* JIT configuration */
+#define AURORA_VM_JIT_ENABLED       1                    /* Enable JIT compilation */
+#define AURORA_VM_JIT_CACHE_SIZE    (256 * 1024)         /* 256KB JIT cache */
+#define AURORA_VM_JIT_THRESHOLD     10                   /* Compile after 10 executions */
+
+/* Interrupt configuration */
+#define AURORA_VM_MAX_INTERRUPTS    32                   /* 32 interrupt vectors */
+#define AURORA_VM_IRQ_TIMER         0                    /* Timer interrupt */
+#define AURORA_VM_IRQ_KEYBOARD      1                    /* Keyboard interrupt */
+#define AURORA_VM_IRQ_NETWORK       2                    /* Network interrupt */
+
+/* Multi-threading configuration */
+#define AURORA_VM_MAX_THREADS       8                    /* Max 8 threads */
+#define AURORA_VM_THREAD_STACK_SIZE (4 * 1024)           /* 4KB per thread stack */
+
+/* Network configuration */
+#define AURORA_VM_NET_MTU           1500                 /* Network MTU */
+#define AURORA_VM_NET_QUEUE_SIZE    64                   /* Packet queue size */
+
+/* Memory-mapped I/O regions */
+#define AURORA_VM_MMIO_BASE         0xC000               /* MMIO base address */
+#define AURORA_VM_MMIO_SIZE         0x2000               /* 8KB MMIO region */
+#define AURORA_VM_MMIO_DISPLAY      0xC000               /* Display MMIO */
+#define AURORA_VM_MMIO_KEYBOARD     0xC400               /* Keyboard MMIO */
+#define AURORA_VM_MMIO_MOUSE        0xC800               /* Mouse MMIO */
+#define AURORA_VM_MMIO_TIMER        0xCC00               /* Timer MMIO */
+#define AURORA_VM_MMIO_NETWORK      0xD000               /* Network MMIO */
+#define AURORA_VM_MMIO_IRQ_CTRL     0xD400               /* IRQ controller MMIO */
+
+/* GDB server configuration */
+#define AURORA_VM_GDB_PORT          1234                 /* Default GDB port */
+#define AURORA_VM_GDB_PACKET_SIZE   4096                 /* GDB packet buffer size */
+
 /* ===== CPU Status Flags ===== */
 #define AURORA_FLAG_ZERO            0x01    /* Zero flag */
 #define AURORA_FLAG_CARRY           0x02    /* Carry flag */
@@ -101,6 +134,28 @@ typedef enum {
     /* System operations (2) */
     AURORA_OP_SYSCALL = 0x1F,  /* System call: syscall(r0) */
     AURORA_OP_HALT = 0x20,     /* Halt execution */
+    
+    /* Instruction set extensions - Floating point (8) */
+    AURORA_OP_FADD = 0x21,     /* Float add: fd = fs1 + fs2 */
+    AURORA_OP_FSUB = 0x22,     /* Float subtract: fd = fs1 - fs2 */
+    AURORA_OP_FMUL = 0x23,     /* Float multiply: fd = fs1 * fs2 */
+    AURORA_OP_FDIV = 0x24,     /* Float divide: fd = fs1 / fs2 */
+    AURORA_OP_FCMP = 0x25,     /* Float compare: flags = fs1 - fs2 */
+    AURORA_OP_FCVT = 0x26,     /* Float convert: fd = (float)rs1 */
+    AURORA_OP_ICVT = 0x27,     /* Int convert: rd = (int)fs1 */
+    AURORA_OP_FMOV = 0x28,     /* Float move: fd = fs1 */
+    
+    /* Instruction set extensions - SIMD/Vector (4) */
+    AURORA_OP_VADD = 0x29,     /* Vector add: vd = vs1 + vs2 */
+    AURORA_OP_VSUB = 0x2A,     /* Vector subtract: vd = vs1 - vs2 */
+    AURORA_OP_VMUL = 0x2B,     /* Vector multiply: vd = vs1 * vs2 */
+    AURORA_OP_VDOT = 0x2C,     /* Vector dot product: rd = vs1 . vs2 */
+    
+    /* Instruction set extensions - Atomic (4) */
+    AURORA_OP_XCHG = 0x2D,     /* Atomic exchange: rd = mem[rs1], mem[rs1] = rs2 */
+    AURORA_OP_CAS = 0x2E,      /* Compare-and-swap: if mem[rs1]==rd then mem[rs1]=rs2 */
+    AURORA_OP_FADD_ATOMIC = 0x2F, /* Atomic fetch-add: rd = mem[rs1], mem[rs1] += rs2 */
+    AURORA_OP_LOCK = 0x30,     /* Lock prefix for next instruction */
 } aurora_opcode_t;
 
 /* ===== Instruction Formats ===== */
@@ -124,6 +179,21 @@ typedef enum {
     AURORA_SYSCALL_ALLOC = 9,       /* Allocate memory: r0 = size, returns addr */
     AURORA_SYSCALL_FREE = 10,       /* Free memory: r0 = addr */
     AURORA_SYSCALL_PIXEL = 11,      /* Draw pixel: r0 = x, r1 = y, r2 = color */
+    
+    /* Network syscalls */
+    AURORA_SYSCALL_NET_SEND = 12,   /* Send network packet: r0 = addr, r1 = len */
+    AURORA_SYSCALL_NET_RECV = 13,   /* Receive network packet: r0 = addr, r1 = max_len, returns len */
+    AURORA_SYSCALL_NET_CONNECT = 14, /* Connect to address: r0 = addr_str, r1 = port */
+    AURORA_SYSCALL_NET_LISTEN = 15,  /* Listen on port: r0 = port */
+    
+    /* Thread syscalls */
+    AURORA_SYSCALL_THREAD_CREATE = 16, /* Create thread: r0 = entry_point, r1 = arg */
+    AURORA_SYSCALL_THREAD_EXIT = 17,   /* Exit current thread */
+    AURORA_SYSCALL_THREAD_JOIN = 18,   /* Join thread: r0 = thread_id */
+    AURORA_SYSCALL_MUTEX_LOCK = 19,    /* Lock mutex: r0 = mutex_addr */
+    AURORA_SYSCALL_MUTEX_UNLOCK = 20,  /* Unlock mutex: r0 = mutex_addr */
+    AURORA_SYSCALL_SEM_WAIT = 21,      /* Wait on semaphore: r0 = sem_addr */
+    AURORA_SYSCALL_SEM_POST = 22,      /* Post semaphore: r0 = sem_addr */
 } aurora_syscall_t;
 
 /* ===== VM Structures ===== */
@@ -194,6 +264,100 @@ typedef struct {
     uint64_t cycle_count;                       /* Cycle counter */
 } aurora_debugger_t;
 
+/* Network packet */
+typedef struct {
+    uint8_t data[AURORA_VM_NET_MTU];            /* Packet data */
+    uint32_t length;                            /* Packet length */
+} aurora_net_packet_t;
+
+/* Network device */
+typedef struct {
+    aurora_net_packet_t rx_queue[AURORA_VM_NET_QUEUE_SIZE];  /* RX queue */
+    aurora_net_packet_t tx_queue[AURORA_VM_NET_QUEUE_SIZE];  /* TX queue */
+    uint32_t rx_head;                           /* RX queue head */
+    uint32_t rx_tail;                           /* RX queue tail */
+    uint32_t tx_head;                           /* TX queue head */
+    uint32_t tx_tail;                           /* TX queue tail */
+    bool connected;                             /* Connection status */
+} aurora_network_t;
+
+/* Interrupt descriptor */
+typedef struct {
+    uint32_t handler;                           /* Handler address */
+    bool enabled;                               /* Interrupt enabled */
+    bool pending;                               /* Interrupt pending */
+} aurora_interrupt_t;
+
+/* Interrupt controller */
+typedef struct {
+    aurora_interrupt_t interrupts[AURORA_VM_MAX_INTERRUPTS]; /* Interrupt vectors */
+    bool enabled;                               /* Global interrupt enable */
+    uint32_t active;                            /* Active interrupt mask */
+} aurora_irq_ctrl_t;
+
+/* Thread context */
+typedef struct {
+    uint32_t id;                                /* Thread ID */
+    uint32_t registers[AURORA_VM_NUM_REGISTERS]; /* Register state */
+    uint32_t pc;                                /* Program counter */
+    uint32_t sp;                                /* Stack pointer */
+    uint32_t fp;                                /* Frame pointer */
+    uint32_t flags;                             /* CPU flags */
+    uint8_t stack[AURORA_VM_THREAD_STACK_SIZE]; /* Thread stack */
+    bool active;                                /* Thread is active */
+    bool waiting;                               /* Thread is waiting */
+    uint32_t wait_target;                       /* Wait target (join/mutex) */
+} aurora_thread_t;
+
+/* Thread scheduler */
+typedef struct {
+    aurora_thread_t threads[AURORA_VM_MAX_THREADS]; /* Thread contexts */
+    uint32_t current;                           /* Current thread */
+    uint32_t count;                             /* Thread count */
+} aurora_scheduler_t;
+
+/* Mutex */
+typedef struct {
+    uint32_t owner;                             /* Owner thread ID */
+    bool locked;                                /* Lock state */
+} aurora_mutex_t;
+
+/* Semaphore */
+typedef struct {
+    int32_t value;                              /* Semaphore value */
+    uint32_t waiting[AURORA_VM_MAX_THREADS];    /* Waiting threads */
+    uint32_t wait_count;                        /* Number waiting */
+} aurora_semaphore_t;
+
+/* JIT basic block */
+typedef struct {
+    uint32_t start_addr;                        /* Block start address */
+    uint32_t length;                            /* Block length in bytes */
+    uint8_t *native_code;                       /* Compiled native code */
+    uint32_t native_length;                     /* Native code length */
+    uint32_t exec_count;                        /* Execution count */
+    bool compiled;                              /* Is compiled */
+} aurora_jit_block_t;
+
+/* JIT compiler state */
+typedef struct {
+    bool enabled;                               /* JIT enabled */
+    uint8_t *cache;                             /* JIT code cache */
+    uint32_t cache_size;                        /* Cache size */
+    uint32_t cache_used;                        /* Cache used */
+    aurora_jit_block_t blocks[256];             /* Compiled blocks */
+    uint32_t num_blocks;                        /* Number of blocks */
+} aurora_jit_t;
+
+/* GDB server state */
+typedef struct {
+    bool enabled;                               /* GDB server enabled */
+    bool connected;                             /* Client connected */
+    int socket_fd;                              /* Socket file descriptor */
+    char packet_buffer[AURORA_VM_GDB_PACKET_SIZE]; /* Packet buffer */
+    bool break_requested;                       /* Break request */
+} aurora_gdb_server_t;
+
 /* Virtual machine instance */
 typedef struct {
     /* Core components */
@@ -208,6 +372,13 @@ typedef struct {
     aurora_mouse_t mouse;
     aurora_timer_t timer;
     aurora_storage_t storage;
+    aurora_network_t network;
+    
+    /* Advanced features */
+    aurora_irq_ctrl_t irq_ctrl;
+    aurora_scheduler_t scheduler;
+    aurora_jit_t jit;
+    aurora_gdb_server_t gdb;
     
     /* Debugger */
     aurora_debugger_t debugger;
@@ -510,5 +681,128 @@ int aurora_vm_storage_read(const AuroraVM *vm, uint32_t offset, void *buffer, si
  * @return Bytes written or -1 on error
  */
 int aurora_vm_storage_write(AuroraVM *vm, uint32_t offset, const void *buffer, size_t size);
+
+/* ===== Interrupt API ===== */
+
+/**
+ * Enable/disable interrupts
+ * @param vm VM instance
+ * @param enabled Enable flag
+ */
+void aurora_vm_irq_enable(AuroraVM *vm, bool enabled);
+
+/**
+ * Set interrupt handler
+ * @param vm VM instance
+ * @param irq Interrupt number
+ * @param handler Handler address
+ * @return 0 on success, -1 on failure
+ */
+int aurora_vm_irq_set_handler(AuroraVM *vm, uint32_t irq, uint32_t handler);
+
+/**
+ * Trigger interrupt
+ * @param vm VM instance
+ * @param irq Interrupt number
+ * @return 0 on success, -1 on failure
+ */
+int aurora_vm_irq_trigger(AuroraVM *vm, uint32_t irq);
+
+/* ===== Network API ===== */
+
+/**
+ * Send network packet
+ * @param vm VM instance
+ * @param data Packet data
+ * @param length Packet length
+ * @return Bytes sent or -1 on error
+ */
+int aurora_vm_net_send(AuroraVM *vm, const uint8_t *data, uint32_t length);
+
+/**
+ * Receive network packet
+ * @param vm VM instance
+ * @param buffer Output buffer
+ * @param max_length Maximum length
+ * @return Bytes received or -1 on error
+ */
+int aurora_vm_net_recv(AuroraVM *vm, uint8_t *buffer, uint32_t max_length);
+
+/**
+ * Check if network is connected
+ * @param vm VM instance
+ * @return true if connected
+ */
+bool aurora_vm_net_is_connected(const AuroraVM *vm);
+
+/* ===== Thread API ===== */
+
+/**
+ * Create a new thread
+ * @param vm VM instance
+ * @param entry_point Thread entry point address
+ * @param arg Thread argument
+ * @return Thread ID or -1 on failure
+ */
+int aurora_vm_thread_create(AuroraVM *vm, uint32_t entry_point, uint32_t arg);
+
+/**
+ * Get current thread ID
+ * @param vm VM instance
+ * @return Current thread ID
+ */
+uint32_t aurora_vm_thread_current(const AuroraVM *vm);
+
+/**
+ * Yield to scheduler
+ * @param vm VM instance
+ */
+void aurora_vm_thread_yield(AuroraVM *vm);
+
+/* ===== JIT API ===== */
+
+/**
+ * Enable/disable JIT compilation
+ * @param vm VM instance
+ * @param enabled Enable flag
+ */
+void aurora_vm_jit_enable(AuroraVM *vm, bool enabled);
+
+/**
+ * Compile a basic block
+ * @param vm VM instance
+ * @param addr Block address
+ * @return 0 on success, -1 on failure
+ */
+int aurora_vm_jit_compile_block(AuroraVM *vm, uint32_t addr);
+
+/**
+ * Clear JIT cache
+ * @param vm VM instance
+ */
+void aurora_vm_jit_clear_cache(AuroraVM *vm);
+
+/* ===== GDB Server API ===== */
+
+/**
+ * Start GDB server
+ * @param vm VM instance
+ * @param port Port number
+ * @return 0 on success, -1 on failure
+ */
+int aurora_vm_gdb_start(AuroraVM *vm, int port);
+
+/**
+ * Stop GDB server
+ * @param vm VM instance
+ */
+void aurora_vm_gdb_stop(AuroraVM *vm);
+
+/**
+ * Handle GDB server events
+ * @param vm VM instance
+ * @return 0 on success, -1 on error
+ */
+int aurora_vm_gdb_handle(AuroraVM *vm);
 
 #endif /* AURORA_VM_H */
