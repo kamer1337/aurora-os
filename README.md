@@ -241,6 +241,7 @@ The desktop environment includes:
 - **[Phase 4 Implementation](docs/PHASE4_IMPLEMENTATION.md)** - GUI framework documentation
 - **[3D/4D/5D Visual Effects](docs/3D_4D_5D_GUI_IMPLEMENTATION.md)** - Advanced effects API and usage
 - **[Quantum Encryption](docs/QUANTUM_ENCRYPTION.md)** - Quantum cryptography module documentation
+- **[Plugin System](docs/PLUGIN_SYSTEM.md)** - Bootloader plugin system for extensibility
 - **[TODO List](TODO.md)** - Current tasks and priorities
 
 ### **Quick Start**

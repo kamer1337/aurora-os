@@ -44,4 +44,8 @@ void vga_write_color(const char* str, vga_color_t fg, vga_color_t bg);
 void vga_set_color(vga_color_t fg, vga_color_t bg);
 void vga_set_cursor(uint8_t x, uint8_t y);
 
+/* Helper functions for number output */
+void vga_write_hex(uint32_t value);
+void vga_write_dec(int value);
+
 #endif /* AURORA_VGA_H */

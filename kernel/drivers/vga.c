@@ -161,3 +161,50 @@ void vga_set_cursor(uint8_t x, uint8_t y) {
         vga_row = y;
     }
 }
+
+/**
+ * Write hexadecimal value
+ */
+void vga_write_hex(uint32_t value) {
+    char hex_str[11]; /* "0x" + 8 digits + null */
+    const char hex_chars[] = "0123456789ABCDEF";
+    
+    hex_str[0] = '0';
+    hex_str[1] = 'x';
+    
+    for (int i = 7; i >= 0; i--) {
+        hex_str[9 - i] = hex_chars[(value >> (i * 4)) & 0xF];
+    }
+    hex_str[10] = '\0';
+    
+    vga_write(hex_str);
+}
+
+/**
+ * Write decimal value
+ */
+void vga_write_dec(int value) {
+    if (value == 0) {
+        vga_putchar('0');
+        return;
+    }
+    
+    if (value < 0) {
+        vga_putchar('-');
+        value = -value;
+    }
+    
+    char buffer[12]; /* Max 10 digits + sign + null */
+    int i = 0;
+    
+    while (value > 0) {
+        buffer[i++] = '0' + (value % 10);
+        value /= 10;
+    }
+    
+    /* Reverse and print */
+    while (i > 0) {
+        vga_putchar(buffer[--i]);
+    }
+}
+
