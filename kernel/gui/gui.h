@@ -75,12 +75,15 @@ struct widget {
 struct window {
     char* title;
     rect_t bounds;
+    rect_t normal_bounds;  // Saved bounds for restore after maximize
     color_t bg_color;
     color_t title_color;
     uint8_t visible;
     uint8_t focused;
     uint8_t has_border;
     uint8_t has_titlebar;
+    uint8_t minimized;
+    uint8_t maximized;
     widget_t* widgets;
     window_t* next;
 };
@@ -229,5 +232,20 @@ void gui_draw_cursor(void);
  * Get cursor position
  */
 void gui_get_cursor_pos(int32_t* x, int32_t* y);
+
+/**
+ * Minimize a window
+ */
+void gui_minimize_window(window_t* window);
+
+/**
+ * Maximize a window
+ */
+void gui_maximize_window(window_t* window);
+
+/**
+ * Restore a window from minimized/maximized state
+ */
+void gui_restore_window(window_t* window);
 
 #endif // GUI_H
