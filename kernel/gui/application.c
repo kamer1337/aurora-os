@@ -7,6 +7,7 @@
 #include "application.h"
 #include "gui.h"
 #include "framebuffer.h"
+#include "desktop_config.h"
 #include "../memory/memory.h"
 #include "../drivers/storage.h"
 #include <stddef.h>
@@ -279,6 +280,10 @@ static int launch_terminal(void) {
 }
 
 static int launch_settings(void) {
+    // Use the desktop configuration system instead
+    desktop_config_show_settings();
+    
+    // Also create the traditional settings window
     window_t* window = gui_create_window("System Settings", 180, 100, 550, 500);
     if (!window) return -1;
     
@@ -288,13 +293,16 @@ static int launch_settings(void) {
     gui_create_label(window, "System Settings", 20, 20);
     gui_create_label(window, "Configure your Aurora OS system", 20, 45);
     
+    /* Desktop Appearance Button */
+    gui_create_button(window, "Desktop Appearance", 30, 80, 180, 35);
+    
     /* Display Settings Section */
-    gui_create_label(window, "Display Settings", 30, 80);
-    gui_create_label(window, "  Resolution: 1920x1080x32", 50, 105);
-    gui_create_label(window, "  Color Depth: 32-bit RGBA", 50, 125);
+    gui_create_label(window, "Display Settings", 30, 130);
+    gui_create_label(window, "  Resolution: 1920x1080x32", 50, 155);
+    gui_create_label(window, "  Color Depth: 32-bit RGBA", 50, 175);
     
     /* Storage Settings Section */
-    gui_create_label(window, "Storage Settings", 30, 160);
+    gui_create_label(window, "Storage Settings", 30, 210);
     storage_init();
     int device_count = storage_detect_devices();
     
@@ -304,7 +312,7 @@ static int launch_settings(void) {
     while (*prefix) storage_text[pos++] = *prefix++;
     storage_text[pos++] = '0' + device_count;
     storage_text[pos] = '\0';
-    gui_create_label(window, storage_text, 50, 185);
+    gui_create_label(window, storage_text, 50, 235);
     
     if (device_count > 0) {
         storage_device_t* device = storage_get_device(0);
@@ -324,21 +332,20 @@ static int launch_settings(void) {
             primary_text[pos++] = 'G';
             primary_text[pos++] = 'B';
             primary_text[pos] = '\0';
-            gui_create_label(window, primary_text, 50, 205);
+            gui_create_label(window, primary_text, 50, 255);
         }
     }
     
-    gui_create_button(window, "Manage Storage", 50, 235, 140, 30);
+    gui_create_button(window, "Manage Storage", 50, 285, 140, 30);
     
     /* Network Settings Section */
-    gui_create_label(window, "Network Settings", 30, 285);
-    gui_create_label(window, "  Network Interface: Enabled", 50, 310);
-    gui_create_label(window, "  Status: Not Connected", 50, 330);
+    gui_create_label(window, "Network Settings", 30, 335);
+    gui_create_label(window, "  Network Interface: Enabled", 50, 360);
+    gui_create_label(window, "  Status: Not Connected", 50, 380);
     
     /* Power Settings Section */
-    gui_create_label(window, "Power Settings", 30, 370);
-    gui_create_label(window, "  Power Mode: Balanced", 50, 395);
-    gui_create_label(window, "  Display Timeout: Never", 50, 415);
+    gui_create_label(window, "Power Settings", 30, 420);
+    gui_create_label(window, "  Power Mode: Balanced", 50, 445);
     
     /* Action buttons */
     gui_create_button(window, "Apply", 30, 450, 80, 30);

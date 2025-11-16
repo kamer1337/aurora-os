@@ -8,6 +8,8 @@
 #include "framebuffer.h"
 #include "gui_effects.h"
 #include "application.h"
+#include "font_manager.h"
+#include "desktop_config.h"
 #include "../memory/memory.h"
 #include "../drivers/mouse.h"
 #include "../drivers/keyboard.h"
@@ -95,6 +97,10 @@ int gui_init(void) {
     if (framebuffer_init(0, 0, 0) != 0) {
         return -1;
     }
+    
+    // Initialize font manager and desktop configuration
+    font_manager_init();
+    desktop_config_init();
     
     window_list = NULL;
     focused_window = NULL;
@@ -619,10 +625,10 @@ void gui_draw_window(window_t* window) {
         // Draw window title with shadow for depth
         if (window->title) {
             // Draw text shadow
-            framebuffer_draw_string(window->bounds.x + 9, window->bounds.y + 9,
+            font_manager_draw_string(window->bounds.x + 9, window->bounds.y + 9,
                                   window->title, COLOR_BLACK, title_color1);
             // Draw text
-            framebuffer_draw_string(window->bounds.x + 8, window->bounds.y + 8,
+            font_manager_draw_string(window->bounds.x + 8, window->bounds.y + 8,
                                   window->title, COLOR_WHITE, title_color1);
         }
         
@@ -635,7 +641,7 @@ void gui_draw_window(window_t* window) {
         uint32_t close_x = window->bounds.x + window->bounds.width - 20;
         color_t vivid_red = (color_t){255, 60, 60, 255};  // Brighter red
         gui_draw_3d_button(close_x, button_y, button_size, button_size, vivid_red, 0);
-        framebuffer_draw_string(close_x + 4, button_y + 4, "X", COLOR_WHITE, vivid_red);
+        font_manager_draw_string(close_x + 4, button_y + 4, "X", COLOR_WHITE, vivid_red);
         
         // Maximize button (square) with 3D effect
         uint32_t max_x = close_x - button_size - button_spacing;
@@ -700,8 +706,8 @@ widget_t* gui_create_label(window_t* window, const char* text, int32_t x, int32_
     widget->type = WIDGET_LABEL;
     widget->bounds.x = x;
     widget->bounds.y = y;
-    widget->bounds.width = strlen(text) * 8;
-    widget->bounds.height = 8;
+    widget->bounds.width = strlen(text) * font_manager_get_char_advance();
+    widget->bounds.height = font_manager_get_char_height();
     widget->bg_color = COLOR_WHITE;
     widget->fg_color = COLOR_BLACK;
     widget->text = strdup(text);
@@ -763,15 +769,15 @@ void gui_draw_widget(widget_t* widget, int32_t window_x, int32_t window_y) {
             
             // Draw button text (centered) with shadow for depth
             if (widget->text) {
-                uint32_t text_width = strlen(widget->text) * 8;
+                uint32_t text_width = strlen(widget->text) * font_manager_get_char_width();
                 uint32_t text_x = abs_x + (widget->bounds.width - text_width) / 2;
-                uint32_t text_y = abs_y + (widget->bounds.height - 8) / 2;
+                uint32_t text_y = abs_y + (widget->bounds.height - font_manager_get_char_height()) / 2;
                 
                 // Draw text shadow for depth
-                framebuffer_draw_string(text_x + 1, text_y + 1, widget->text,
+                font_manager_draw_string(text_x + 1, text_y + 1, widget->text,
                                       COLOR_DARK_GRAY, widget->bg_color);
                 // Draw text
-                framebuffer_draw_string(text_x, text_y, widget->text,
+                font_manager_draw_string(text_x, text_y, widget->text,
                                       widget->fg_color, widget->bg_color);
             }
             break;
@@ -779,7 +785,7 @@ void gui_draw_widget(widget_t* widget, int32_t window_x, int32_t window_y) {
         case WIDGET_LABEL:
             // Draw label text
             if (widget->text) {
-                framebuffer_draw_string(abs_x, abs_y, widget->text,
+                font_manager_draw_string(abs_x, abs_y, widget->text,
                                       widget->fg_color, widget->bg_color);
             }
             break;
@@ -821,9 +827,10 @@ void gui_draw_desktop(void) {
     
     // Draw desktop title
     const char* os_name = "Aurora OS Desktop";
-    uint32_t text_x = fb->width / 2 - (strlen(os_name) * 8) / 2;
+    uint32_t text_width = strlen(os_name) * font_manager_get_char_width();
+    uint32_t text_x = fb->width / 2 - text_width / 2;
     uint32_t text_y = 20;
-    framebuffer_draw_string(text_x, text_y, os_name, COLOR_WHITE, 
+    font_manager_draw_string(text_x, text_y, os_name, COLOR_WHITE, 
                           (color_t){0, 0, 0, 0});  // Transparent background
     
     // Draw desktop icons
@@ -849,7 +856,7 @@ void gui_draw_taskbar(void) {
     
     // Draw "Start" button with vivid color and rounded corners
     gui_draw_rounded_rect(5, taskbar_y + 5, 80, 30, 4, (color_t){20, 140, 230, 255});  // Vivid blue
-    framebuffer_draw_string(15, taskbar_y + 13, "Aurora OS", COLOR_WHITE,
+    font_manager_draw_string(15, taskbar_y + 13, "Aurora OS", COLOR_WHITE,
                           (color_t){20, 140, 230, 255});
     
     // Draw window list (taskbar buttons for open windows)
@@ -886,9 +893,9 @@ void gui_draw_taskbar(void) {
                 truncated[16] = '.';
                 truncated[17] = '.';
                 truncated[18] = '\0';
-                framebuffer_draw_string(button_x + 5, taskbar_y + 13, truncated, COLOR_WHITE, btn_color);
+                font_manager_draw_string(button_x + 5, taskbar_y + 13, truncated, COLOR_WHITE, btn_color);
             } else {
-                framebuffer_draw_string(button_x + 5, taskbar_y + 13, window->title, COLOR_WHITE, btn_color);
+                font_manager_draw_string(button_x + 5, taskbar_y + 13, window->title, COLOR_WHITE, btn_color);
             }
         }
         
@@ -898,7 +905,7 @@ void gui_draw_taskbar(void) {
     
     // Draw system tray area (placeholder)
     uint32_t tray_x = fb->width - 100;
-    framebuffer_draw_string(tray_x, taskbar_y + 13, "12:00 PM", COLOR_WHITE, 
+    font_manager_draw_string(tray_x, taskbar_y + 13, "12:00 PM", COLOR_WHITE, 
                           (color_t){45, 45, 48, 255});
 }
 
@@ -1110,9 +1117,9 @@ static void gui_draw_start_menu(void) {
     // Draw menu header
     framebuffer_draw_rect(menu_x, menu_y, menu_width, 60,
                         (color_t){0, 120, 215, 255});
-    framebuffer_draw_string(menu_x + 10, menu_y + 10, "Aurora OS", COLOR_WHITE,
+    font_manager_draw_string(menu_x + 10, menu_y + 10, "Aurora OS", COLOR_WHITE,
                           (color_t){0, 120, 215, 255});
-    framebuffer_draw_string(menu_x + 10, menu_y + 30, "Start Menu", 
+    font_manager_draw_string(menu_x + 10, menu_y + 30, "Start Menu", 
                           (color_t){200, 200, 200, 255},
                           (color_t){0, 120, 215, 255});
     
@@ -1141,7 +1148,7 @@ static void gui_draw_start_menu(void) {
                             item_bg);
         
         // Draw item text
-        framebuffer_draw_string(menu_x + 15, item_y + 12, items[i],
+        font_manager_draw_string(menu_x + 15, item_y + 12, items[i],
                               COLOR_WHITE, item_bg);
         
         item_y += item_height + 5;
@@ -1171,7 +1178,7 @@ static void gui_draw_context_menu(void) {
     
     for (int i = 0; i < 4; i++) {
         // Draw item text
-        framebuffer_draw_string(context_menu_x + 10, item_y + 8, items[i],
+        font_manager_draw_string(context_menu_x + 10, item_y + 8, items[i],
                               COLOR_WHITE, (color_t){50, 50, 55, 255});
         
         // Draw separator line
@@ -1225,7 +1232,7 @@ static void gui_draw_desktop_icon(desktop_icon_t* icon) {
                          3, (color_t){0, 0, 0, 128});
     
     // Draw label text
-    framebuffer_draw_string(label_x, label_y, icon->label, COLOR_WHITE,
+    font_manager_draw_string(label_x, label_y, icon->label, COLOR_WHITE,
                           (color_t){0, 0, 0, 0});
 }
 

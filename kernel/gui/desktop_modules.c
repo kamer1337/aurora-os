@@ -197,19 +197,23 @@ desktop_module_t* desktop_module_get(desktop_module_type_t type) {
 
 // Placeholder implementations for module-specific functions
 static void taskbar_module_init(void) {
-    // Taskbar initialization is handled in gui.c
+    // Taskbar initialization
+    // Set up taskbar data structures if needed
 }
 
 static void taskbar_module_update(void) {
     // Taskbar update logic
+    // Update taskbar state, time display, etc.
 }
 
 static void taskbar_module_draw(void) {
     // Taskbar drawing is handled in gui.c via gui_draw_taskbar()
+    // This function can be used for additional taskbar elements
 }
 
 static void taskbar_module_shutdown(void) {
     // Taskbar cleanup
+    // Free any taskbar-specific resources
 }
 
 /* Desktop icons data structure */
@@ -262,16 +266,19 @@ static void desktop_icons_module_init(void) {
 }
 
 static void desktop_icons_module_update(void) {
-    // Desktop icons update logic (check for clicks, etc.)
+    // Desktop icons update logic
+    // Handle icon selection, drag and drop, etc.
+    // This would be called on each frame to process icon interactions
 }
 
 static void desktop_icons_module_draw(void) {
-    // Desktop icons drawing - would need framebuffer access
-    // This is a placeholder showing that icons exist
+    // Desktop icons drawing
+    // Draw each icon with its label and graphical representation
     desktop_icon_t* icon = desktop_icons;
     while (icon) {
         // In a full implementation, we would draw the icon here
-        // For now, this is handled by the main GUI system
+        // This includes the icon graphic and label
+        // For now, this is handled by the main GUI system in gui.c
         icon = icon->next;
     }
 }
@@ -287,16 +294,20 @@ static void desktop_icons_module_shutdown(void) {
 
 static void start_menu_module_init(void) {
     // Start menu initialization
+    // Set up start menu data structures and default items
 }
 
 static void start_menu_module_update(void) {
     // Start menu update logic
+    // Handle menu item animations, transitions, etc.
 }
 
 static void start_menu_module_draw(void) {
     // Start menu drawing is handled in gui.c
+    // This function can be used for additional menu decorations
 }
 
 static void start_menu_module_shutdown(void) {
     // Start menu cleanup
+    // Free start menu resources
 }
