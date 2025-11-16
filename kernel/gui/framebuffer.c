@@ -5,6 +5,7 @@
  */
 
 #include "framebuffer.h"
+#include "../../include/multiboot.h"
 #include <stdint.h>
 #include <stddef.h>
 
@@ -15,7 +16,7 @@
 #define DEFAULT_FB_BPP    32
 
 // 8x8 bitmap font (simplified ASCII font)
-static const uint8_t font8x8[128][8] = {
+const uint8_t font8x8[128][8] = {
     // Space (32)
     [32] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
     // ! (33)
@@ -43,7 +44,7 @@ static const uint8_t font8x8[128][8] = {
 // Each character is encoded in 7 bytes, with 5 bits used per byte (bits 0-4)
 // Note: Characters 0-31 and 127 (control characters) are intentionally left zero-initialized
 // as they are not typically rendered. Access to these will render as blank characters.
-static const uint8_t font5x7[128][7] = {
+const uint8_t font5x7[128][7] = {
     // Space (32)
     [32] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
     // ! (33) - Sharp exclamation
@@ -269,6 +270,53 @@ int framebuffer_init(uint32_t width, uint32_t height, uint8_t bpp) {
     fb_info.blue_mask_size = 8;
     
     fb_available = 1;
+    front_buffer = fb_info.address;
+    current_draw_buffer = fb_info.address;
+    
+    // Clear the screen to black
+    framebuffer_clear(COLOR_BLACK);
+    
+    return 0;
+}
+
+int framebuffer_init_from_multiboot(void* mbi) {
+    if (!mbi) {
+        // Fall back to default initialization
+        return framebuffer_init(0, 0, 0);
+    }
+    
+    multiboot_info_t* mb_info = (multiboot_info_t*)mbi;
+    
+    // Check if framebuffer info is available
+    if (!(mb_info->flags & MULTIBOOT_FLAG_FB)) {
+        // No framebuffer info, use defaults
+        return framebuffer_init(0, 0, 0);
+    }
+    
+    // Validate framebuffer type (we only support RGB framebuffer)
+    if (mb_info->framebuffer_type != MULTIBOOT_FRAMEBUFFER_TYPE_RGB) {
+        // Unsupported framebuffer type, use defaults
+        return framebuffer_init(0, 0, 0);
+    }
+    
+    // Set up framebuffer info from multiboot
+    fb_info.address = (uint32_t*)(uintptr_t)mb_info->framebuffer_addr;
+    fb_info.width = mb_info->framebuffer_width;
+    fb_info.height = mb_info->framebuffer_height;
+    fb_info.pitch = mb_info->framebuffer_pitch;
+    fb_info.bpp = mb_info->framebuffer_bpp;
+    
+    // Set color field information
+    fb_info.red_position = mb_info->framebuffer_red_field_position;
+    fb_info.red_mask_size = mb_info->framebuffer_red_mask_size;
+    fb_info.green_position = mb_info->framebuffer_green_field_position;
+    fb_info.green_mask_size = mb_info->framebuffer_green_mask_size;
+    fb_info.blue_position = mb_info->framebuffer_blue_field_position;
+    fb_info.blue_mask_size = mb_info->framebuffer_blue_mask_size;
+    
+    fb_available = 1;
+    front_buffer = fb_info.address;
+    current_draw_buffer = fb_info.address;
     
     // Clear the screen to black
     framebuffer_clear(COLOR_BLACK);

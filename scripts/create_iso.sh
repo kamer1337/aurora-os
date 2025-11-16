@@ -60,13 +60,26 @@ cat > "$GRUB_DIR/grub.cfg" << 'EOF'
 set timeout=5
 set default=0
 
+# Set graphics mode for VESA/VBE support
+set gfxmode=1920x1080x32
+set gfxpayload=keep
+terminal_output gfxterm
+
 menuentry "Aurora OS" {
     multiboot /boot/aurora-kernel.bin
     boot
 }
 
-menuentry "Aurora OS (Safe Mode)" {
+menuentry "Aurora OS (Safe Mode - Text Mode)" {
+    terminal_output console
     multiboot /boot/aurora-kernel.bin safe
+    boot
+}
+
+menuentry "Aurora OS (800x600)" {
+    set gfxmode=800x600x32
+    set gfxpayload=keep
+    multiboot /boot/aurora-kernel.bin
     boot
 }
 EOF

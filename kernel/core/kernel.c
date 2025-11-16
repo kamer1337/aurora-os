@@ -18,12 +18,14 @@
 #include "../security/quantum_crypto.h"
 #include "../gui/gui.h"
 #include "../gui/gui_demo.h"
+#include "../gui/framebuffer.h"
 #include "../smp/smp.h"
 #include "../network/network.h"
 #include "../usb/usb.h"
 #include "../../filesystem/vfs/vfs.h"
 #include "../../filesystem/ramdisk/ramdisk.h"
 #include "../../filesystem/journal/journal.h"
+#include "../../include/multiboot.h"
 #include "../../tests/test_suite.h"
 #include "../../tests/advanced_tests.h"
 #include "../../tests/plugin_tests.h"
@@ -37,6 +39,9 @@ extern void register_hw_setup_plugin(void);
 extern void register_ml_optimization_plugin(void);
 extern void register_quantum_compute_plugin(void);
 extern void register_system_optimization_plugin(void);
+
+/* Global multiboot info pointer */
+static multiboot_info_t* g_multiboot_info = 0;
 
 /**
  * Initialize device drivers
@@ -57,6 +62,43 @@ void drivers_init(void) {
     /* Initialize timer (100 Hz) */
     timer_init(100);
     vga_write("Timer driver initialized\n");
+}
+
+/**
+ * Initialize framebuffer from multiboot info
+ */
+static void init_framebuffer_from_multiboot(void) {
+    if (!g_multiboot_info) {
+        vga_write("WARNING: No multiboot info available\n");
+        /* Fall back to default framebuffer settings */
+        framebuffer_init(0, 0, 0);
+        return;
+    }
+    
+    /* Check if framebuffer info is available */
+    if (g_multiboot_info->flags & MULTIBOOT_FLAG_FB) {
+        vga_write("Multiboot framebuffer info detected\n");
+        vga_write("  Address: ");
+        vga_write_hex((uint32_t)g_multiboot_info->framebuffer_addr);
+        vga_write("\n  Resolution: ");
+        vga_write_dec(g_multiboot_info->framebuffer_width);
+        vga_write("x");
+        vga_write_dec(g_multiboot_info->framebuffer_height);
+        vga_write("x");
+        vga_write_dec(g_multiboot_info->framebuffer_bpp);
+        vga_write("\n");
+        
+        /* Initialize framebuffer with multiboot info */
+        framebuffer_init_from_multiboot(g_multiboot_info);
+    } else if (g_multiboot_info->flags & MULTIBOOT_FLAG_VBE) {
+        vga_write("VBE info available but framebuffer info not present\n");
+        vga_write("Using default framebuffer settings\n");
+        framebuffer_init(0, 0, 0);
+    } else {
+        vga_write("No video mode info from bootloader\n");
+        vga_write("Using default framebuffer settings\n");
+        framebuffer_init(0, 0, 0);
+    }
 }
 
 /**
@@ -162,8 +204,27 @@ void kernel_init(void) {
 /**
  * Main kernel loop
  */
-void kernel_main(void) {
+void kernel_main(uint32_t magic, uint32_t multiboot_addr) {
+    /* Verify multiboot magic number */
+    if (magic != MULTIBOOT_MAGIC) {
+        vga_init();
+        vga_write("ERROR: Invalid multiboot magic number!\n");
+        vga_write("Expected: ");
+        vga_write_hex(MULTIBOOT_MAGIC);
+        vga_write("\nReceived: ");
+        vga_write_hex(magic);
+        vga_write("\n");
+        /* Continue anyway for compatibility */
+    }
+    
+    /* Save multiboot info pointer */
+    g_multiboot_info = (multiboot_info_t*)multiboot_addr;
+    
     kernel_init();
+    
+    /* Initialize framebuffer with multiboot info */
+    vga_write("\n=== Initializing Graphics ===\n");
+    init_framebuffer_from_multiboot();
     
     /* Run test suite to validate implementations */
     run_tests();
