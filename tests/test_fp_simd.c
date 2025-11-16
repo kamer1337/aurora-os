@@ -4,28 +4,32 @@
  */
 
 #include "../include/platform/aurora_vm.h"
-#include <stdio.h>
-#include <string.h>
-#include <math.h>
+#include <stdint.h>
 
 static int tests_passed = 0;
 static int tests_failed = 0;
 
+// Simple printf replacement for testing without stdio
+static void test_printf(const char* str) {
+    (void)str;  // Silence unused warning
+}
+
 #define TEST_START(name) \
-    printf("\n[TEST] %s\n", name);
+    test_printf(name);
 
 #define TEST_ASSERT(condition, message) \
     if (condition) { \
-        printf("  ✓ %s\n", message); \
+        test_printf(message); \
         tests_passed++; \
     } else { \
-        printf("  ✗ %s\n", message); \
+        test_printf(message); \
         tests_failed++; \
     }
 
 /* Helper to compare floats with tolerance */
 static int float_equal(float a, float b, float epsilon) {
-    return fabs(a - b) < epsilon;
+    float diff = (a > b) ? (a - b) : (b - a);
+    return diff < epsilon;
 }
 
 void test_floating_point_operations(void) {
