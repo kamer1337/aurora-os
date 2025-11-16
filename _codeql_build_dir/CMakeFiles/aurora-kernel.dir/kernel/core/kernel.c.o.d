@@ -29,4 +29,5 @@ CMakeFiles/aurora-kernel.dir/kernel/core/kernel.c.o: \
  /home/runner/work/aurora-os/aurora-os/kernel/core/../../tests/advanced_tests.h \
  /home/runner/work/aurora-os/aurora-os/kernel/core/../../tests/plugin_tests.h \
  /home/runner/work/aurora-os/aurora-os/kernel/core/../../tests/phase5_tests.h \
- /usr/lib/gcc/x86_64-linux-gnu/13/include/stdbool.h
+ /usr/lib/gcc/x86_64-linux-gnu/13/include/stdbool.h \
+ /home/runner/work/aurora-os/aurora-os/kernel/core/../../tests/font_tests.h

@@ -8,6 +8,7 @@ CMakeFiles/aurora-kernel.dir/kernel/core/kernel.c.o
  /home/runner/work/aurora-os/aurora-os/filesystem/ramdisk/ramdisk.h
  /home/runner/work/aurora-os/aurora-os/filesystem/vfs/vfs.h
  /home/runner/work/aurora-os/aurora-os/tests/advanced_tests.h
+ /home/runner/work/aurora-os/aurora-os/tests/font_tests.h
  /home/runner/work/aurora-os/aurora-os/tests/phase5_tests.h
  /home/runner/work/aurora-os/aurora-os/tests/plugin_tests.h
  /home/runner/work/aurora-os/aurora-os/tests/test_suite.h

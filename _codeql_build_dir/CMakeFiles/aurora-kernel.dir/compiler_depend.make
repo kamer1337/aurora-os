@@ -7,6 +7,7 @@ CMakeFiles/aurora-kernel.dir/kernel/core/kernel.c.o: /home/runner/work/aurora-os
   /home/runner/work/aurora-os/aurora-os/filesystem/ramdisk/ramdisk.h \
   /home/runner/work/aurora-os/aurora-os/filesystem/vfs/vfs.h \
   /home/runner/work/aurora-os/aurora-os/tests/advanced_tests.h \
+  /home/runner/work/aurora-os/aurora-os/tests/font_tests.h \
   /home/runner/work/aurora-os/aurora-os/tests/phase5_tests.h \
   /home/runner/work/aurora-os/aurora-os/tests/plugin_tests.h \
   /home/runner/work/aurora-os/aurora-os/tests/test_suite.h \
@@ -33,8 +34,6 @@ CMakeFiles/aurora-kernel.dir/kernel/core/kernel.c.o: /home/runner/work/aurora-os
   /usr/lib/gcc/x86_64-linux-gnu/13/include/stdint.h
 
 
-/usr/lib/gcc/x86_64-linux-gnu/13/include/stdint-gcc.h:
-
 /usr/lib/gcc/x86_64-linux-gnu/13/include/stddef.h:
 
 /home/runner/work/aurora-os/aurora-os/kernel/core/kernel.h:
@@ -49,15 +48,27 @@ CMakeFiles/aurora-kernel.dir/kernel/core/kernel.c.o: /home/runner/work/aurora-os
 
 /home/runner/work/aurora-os/aurora-os/kernel/network/network.h:
 
-/home/runner/work/aurora-os/aurora-os/kernel/memory/memory.h:
+/usr/lib/gcc/x86_64-linux-gnu/13/include/stdint-gcc.h:
 
-/home/runner/work/aurora-os/aurora-os/tests/phase5_tests.h:
+/home/runner/work/aurora-os/aurora-os/tests/font_tests.h:
 
 /home/runner/work/aurora-os/aurora-os/filesystem/ramdisk/ramdisk.h:
 
 /home/runner/work/aurora-os/aurora-os/kernel/usb/usb.h:
 
 /home/runner/work/aurora-os/aurora-os/kernel/core/kernel.c:
+
+/home/runner/work/aurora-os/aurora-os/kernel/memory/memory.h:
+
+/home/runner/work/aurora-os/aurora-os/tests/phase5_tests.h:
+
+/home/runner/work/aurora-os/aurora-os/kernel/gui/framebuffer.h:
+
+/home/runner/work/aurora-os/aurora-os/tests/advanced_tests.h:
+
+/home/runner/work/aurora-os/aurora-os/filesystem/vfs/vfs.h:
+
+/home/runner/work/aurora-os/aurora-os/kernel/drivers/vga.h:
 
 /home/runner/work/aurora-os/aurora-os/kernel/memory/paging.h:
 
@@ -71,13 +82,9 @@ CMakeFiles/aurora-kernel.dir/kernel/core/kernel.c.o: /home/runner/work/aurora-os
 
 /home/runner/work/aurora-os/aurora-os/kernel/drivers/keyboard.h:
 
-/home/runner/work/aurora-os/aurora-os/kernel/drivers/vga.h:
+/home/runner/work/aurora-os/aurora-os/kernel/interrupt/interrupt.h:
 
-/home/runner/work/aurora-os/aurora-os/tests/advanced_tests.h:
-
-/home/runner/work/aurora-os/aurora-os/filesystem/vfs/vfs.h:
-
-/home/runner/work/aurora-os/aurora-os/kernel/gui/framebuffer.h:
+/home/runner/work/aurora-os/aurora-os/kernel/drivers/timer.h:
 
 /usr/lib/gcc/x86_64-linux-gnu/13/include/stdbool.h:
 
@@ -86,7 +93,3 @@ CMakeFiles/aurora-kernel.dir/kernel/core/kernel.c.o: /home/runner/work/aurora-os
 /home/runner/work/aurora-os/aurora-os/kernel/gui/gui.h:
 
 /home/runner/work/aurora-os/aurora-os/kernel/gui/gui_demo.h:
-
-/home/runner/work/aurora-os/aurora-os/kernel/drivers/timer.h:
-
-/home/runner/work/aurora-os/aurora-os/kernel/interrupt/interrupt.h:

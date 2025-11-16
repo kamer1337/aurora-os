@@ -501,6 +501,30 @@ kernel/core/plugin_usage_example.c.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/aurora-kernel.dir/build.make CMakeFiles/aurora-kernel.dir/kernel/core/plugin_usage_example.c.s
 .PHONY : kernel/core/plugin_usage_example.c.s
 
+kernel/drivers/hdmi.o: kernel/drivers/hdmi.c.o
+.PHONY : kernel/drivers/hdmi.o
+
+# target to build an object file
+kernel/drivers/hdmi.c.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/aurora-kernel.dir/build.make CMakeFiles/aurora-kernel.dir/kernel/drivers/hdmi.c.o
+.PHONY : kernel/drivers/hdmi.c.o
+
+kernel/drivers/hdmi.i: kernel/drivers/hdmi.c.i
+.PHONY : kernel/drivers/hdmi.i
+
+# target to preprocess a source file
+kernel/drivers/hdmi.c.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/aurora-kernel.dir/build.make CMakeFiles/aurora-kernel.dir/kernel/drivers/hdmi.c.i
+.PHONY : kernel/drivers/hdmi.c.i
+
+kernel/drivers/hdmi.s: kernel/drivers/hdmi.c.s
+.PHONY : kernel/drivers/hdmi.s
+
+# target to generate assembly for a file
+kernel/drivers/hdmi.c.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/aurora-kernel.dir/build.make CMakeFiles/aurora-kernel.dir/kernel/drivers/hdmi.c.s
+.PHONY : kernel/drivers/hdmi.c.s
+
 kernel/drivers/keyboard.o: kernel/drivers/keyboard.c.o
 .PHONY : kernel/drivers/keyboard.o
 
@@ -573,6 +597,30 @@ kernel/drivers/serial.c.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/aurora-kernel.dir/build.make CMakeFiles/aurora-kernel.dir/kernel/drivers/serial.c.s
 .PHONY : kernel/drivers/serial.c.s
 
+kernel/drivers/storage.o: kernel/drivers/storage.c.o
+.PHONY : kernel/drivers/storage.o
+
+# target to build an object file
+kernel/drivers/storage.c.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/aurora-kernel.dir/build.make CMakeFiles/aurora-kernel.dir/kernel/drivers/storage.c.o
+.PHONY : kernel/drivers/storage.c.o
+
+kernel/drivers/storage.i: kernel/drivers/storage.c.i
+.PHONY : kernel/drivers/storage.i
+
+# target to preprocess a source file
+kernel/drivers/storage.c.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/aurora-kernel.dir/build.make CMakeFiles/aurora-kernel.dir/kernel/drivers/storage.c.i
+.PHONY : kernel/drivers/storage.c.i
+
+kernel/drivers/storage.s: kernel/drivers/storage.c.s
+.PHONY : kernel/drivers/storage.s
+
+# target to generate assembly for a file
+kernel/drivers/storage.c.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/aurora-kernel.dir/build.make CMakeFiles/aurora-kernel.dir/kernel/drivers/storage.c.s
+.PHONY : kernel/drivers/storage.c.s
+
 kernel/drivers/timer.o: kernel/drivers/timer.c.o
 .PHONY : kernel/drivers/timer.o
 
@@ -620,6 +668,30 @@ kernel/drivers/vga.s: kernel/drivers/vga.c.s
 kernel/drivers/vga.c.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/aurora-kernel.dir/build.make CMakeFiles/aurora-kernel.dir/kernel/drivers/vga.c.s
 .PHONY : kernel/drivers/vga.c.s
+
+kernel/drivers/wifi.o: kernel/drivers/wifi.c.o
+.PHONY : kernel/drivers/wifi.o
+
+# target to build an object file
+kernel/drivers/wifi.c.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/aurora-kernel.dir/build.make CMakeFiles/aurora-kernel.dir/kernel/drivers/wifi.c.o
+.PHONY : kernel/drivers/wifi.c.o
+
+kernel/drivers/wifi.i: kernel/drivers/wifi.c.i
+.PHONY : kernel/drivers/wifi.i
+
+# target to preprocess a source file
+kernel/drivers/wifi.c.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/aurora-kernel.dir/build.make CMakeFiles/aurora-kernel.dir/kernel/drivers/wifi.c.i
+.PHONY : kernel/drivers/wifi.c.i
+
+kernel/drivers/wifi.s: kernel/drivers/wifi.c.s
+.PHONY : kernel/drivers/wifi.s
+
+# target to generate assembly for a file
+kernel/drivers/wifi.c.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/aurora-kernel.dir/build.make CMakeFiles/aurora-kernel.dir/kernel/drivers/wifi.c.s
+.PHONY : kernel/drivers/wifi.c.s
 
 kernel/gui/application.o: kernel/gui/application.c.o
 .PHONY : kernel/gui/application.o
@@ -1005,6 +1077,30 @@ tests/advanced_tests.c.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/aurora-kernel.dir/build.make CMakeFiles/aurora-kernel.dir/tests/advanced_tests.c.s
 .PHONY : tests/advanced_tests.c.s
 
+tests/font_tests.o: tests/font_tests.c.o
+.PHONY : tests/font_tests.o
+
+# target to build an object file
+tests/font_tests.c.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/aurora-kernel.dir/build.make CMakeFiles/aurora-kernel.dir/tests/font_tests.c.o
+.PHONY : tests/font_tests.c.o
+
+tests/font_tests.i: tests/font_tests.c.i
+.PHONY : tests/font_tests.i
+
+# target to preprocess a source file
+tests/font_tests.c.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/aurora-kernel.dir/build.make CMakeFiles/aurora-kernel.dir/tests/font_tests.c.i
+.PHONY : tests/font_tests.c.i
+
+tests/font_tests.s: tests/font_tests.c.s
+.PHONY : tests/font_tests.s
+
+# target to generate assembly for a file
+tests/font_tests.c.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/aurora-kernel.dir/build.make CMakeFiles/aurora-kernel.dir/tests/font_tests.c.s
+.PHONY : tests/font_tests.c.s
+
 tests/phase5_tests.o: tests/phase5_tests.c.o
 .PHONY : tests/phase5_tests.o
 
@@ -1128,6 +1224,9 @@ help:
 	@echo "... kernel/core/plugin_usage_example.o"
 	@echo "... kernel/core/plugin_usage_example.i"
 	@echo "... kernel/core/plugin_usage_example.s"
+	@echo "... kernel/drivers/hdmi.o"
+	@echo "... kernel/drivers/hdmi.i"
+	@echo "... kernel/drivers/hdmi.s"
 	@echo "... kernel/drivers/keyboard.o"
 	@echo "... kernel/drivers/keyboard.i"
 	@echo "... kernel/drivers/keyboard.s"
@@ -1137,12 +1236,18 @@ help:
 	@echo "... kernel/drivers/serial.o"
 	@echo "... kernel/drivers/serial.i"
 	@echo "... kernel/drivers/serial.s"
+	@echo "... kernel/drivers/storage.o"
+	@echo "... kernel/drivers/storage.i"
+	@echo "... kernel/drivers/storage.s"
 	@echo "... kernel/drivers/timer.o"
 	@echo "... kernel/drivers/timer.i"
 	@echo "... kernel/drivers/timer.s"
 	@echo "... kernel/drivers/vga.o"
 	@echo "... kernel/drivers/vga.i"
 	@echo "... kernel/drivers/vga.s"
+	@echo "... kernel/drivers/wifi.o"
+	@echo "... kernel/drivers/wifi.i"
+	@echo "... kernel/drivers/wifi.s"
 	@echo "... kernel/gui/application.o"
 	@echo "... kernel/gui/application.i"
 	@echo "... kernel/gui/application.s"
@@ -1191,6 +1296,9 @@ help:
 	@echo "... tests/advanced_tests.o"
 	@echo "... tests/advanced_tests.i"
 	@echo "... tests/advanced_tests.s"
+	@echo "... tests/font_tests.o"
+	@echo "... tests/font_tests.i"
+	@echo "... tests/font_tests.s"
 	@echo "... tests/phase5_tests.o"
 	@echo "... tests/phase5_tests.i"
 	@echo "... tests/phase5_tests.s"

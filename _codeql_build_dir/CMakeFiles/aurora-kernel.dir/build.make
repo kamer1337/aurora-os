@@ -200,10 +200,24 @@ CMakeFiles/aurora-kernel.dir/kernel/core/plugin_usage_example.c.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling C source to assembly CMakeFiles/aurora-kernel.dir/kernel/core/plugin_usage_example.c.s"
 	gcc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -S /home/runner/work/aurora-os/aurora-os/kernel/core/plugin_usage_example.c -o CMakeFiles/aurora-kernel.dir/kernel/core/plugin_usage_example.c.s
 
+CMakeFiles/aurora-kernel.dir/kernel/drivers/hdmi.c.o: CMakeFiles/aurora-kernel.dir/flags.make
+CMakeFiles/aurora-kernel.dir/kernel/drivers/hdmi.c.o: /home/runner/work/aurora-os/aurora-os/kernel/drivers/hdmi.c
+CMakeFiles/aurora-kernel.dir/kernel/drivers/hdmi.c.o: CMakeFiles/aurora-kernel.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/runner/work/aurora-os/aurora-os/_codeql_build_dir/CMakeFiles --progress-num=$(CMAKE_PROGRESS_10) "Building C object CMakeFiles/aurora-kernel.dir/kernel/drivers/hdmi.c.o"
+	gcc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -MD -MT CMakeFiles/aurora-kernel.dir/kernel/drivers/hdmi.c.o -MF CMakeFiles/aurora-kernel.dir/kernel/drivers/hdmi.c.o.d -o CMakeFiles/aurora-kernel.dir/kernel/drivers/hdmi.c.o -c /home/runner/work/aurora-os/aurora-os/kernel/drivers/hdmi.c
+
+CMakeFiles/aurora-kernel.dir/kernel/drivers/hdmi.c.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing C source to CMakeFiles/aurora-kernel.dir/kernel/drivers/hdmi.c.i"
+	gcc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -E /home/runner/work/aurora-os/aurora-os/kernel/drivers/hdmi.c > CMakeFiles/aurora-kernel.dir/kernel/drivers/hdmi.c.i
+
+CMakeFiles/aurora-kernel.dir/kernel/drivers/hdmi.c.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling C source to assembly CMakeFiles/aurora-kernel.dir/kernel/drivers/hdmi.c.s"
+	gcc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -S /home/runner/work/aurora-os/aurora-os/kernel/drivers/hdmi.c -o CMakeFiles/aurora-kernel.dir/kernel/drivers/hdmi.c.s
+
 CMakeFiles/aurora-kernel.dir/kernel/drivers/keyboard.c.o: CMakeFiles/aurora-kernel.dir/flags.make
 CMakeFiles/aurora-kernel.dir/kernel/drivers/keyboard.c.o: /home/runner/work/aurora-os/aurora-os/kernel/drivers/keyboard.c
 CMakeFiles/aurora-kernel.dir/kernel/drivers/keyboard.c.o: CMakeFiles/aurora-kernel.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/runner/work/aurora-os/aurora-os/_codeql_build_dir/CMakeFiles --progress-num=$(CMAKE_PROGRESS_10) "Building C object CMakeFiles/aurora-kernel.dir/kernel/drivers/keyboard.c.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/runner/work/aurora-os/aurora-os/_codeql_build_dir/CMakeFiles --progress-num=$(CMAKE_PROGRESS_11) "Building C object CMakeFiles/aurora-kernel.dir/kernel/drivers/keyboard.c.o"
 	gcc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -MD -MT CMakeFiles/aurora-kernel.dir/kernel/drivers/keyboard.c.o -MF CMakeFiles/aurora-kernel.dir/kernel/drivers/keyboard.c.o.d -o CMakeFiles/aurora-kernel.dir/kernel/drivers/keyboard.c.o -c /home/runner/work/aurora-os/aurora-os/kernel/drivers/keyboard.c
 
 CMakeFiles/aurora-kernel.dir/kernel/drivers/keyboard.c.i: cmake_force
@@ -217,7 +231,7 @@ CMakeFiles/aurora-kernel.dir/kernel/drivers/keyboard.c.s: cmake_force
 CMakeFiles/aurora-kernel.dir/kernel/drivers/mouse.c.o: CMakeFiles/aurora-kernel.dir/flags.make
 CMakeFiles/aurora-kernel.dir/kernel/drivers/mouse.c.o: /home/runner/work/aurora-os/aurora-os/kernel/drivers/mouse.c
 CMakeFiles/aurora-kernel.dir/kernel/drivers/mouse.c.o: CMakeFiles/aurora-kernel.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/runner/work/aurora-os/aurora-os/_codeql_build_dir/CMakeFiles --progress-num=$(CMAKE_PROGRESS_11) "Building C object CMakeFiles/aurora-kernel.dir/kernel/drivers/mouse.c.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/runner/work/aurora-os/aurora-os/_codeql_build_dir/CMakeFiles --progress-num=$(CMAKE_PROGRESS_12) "Building C object CMakeFiles/aurora-kernel.dir/kernel/drivers/mouse.c.o"
 	gcc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -MD -MT CMakeFiles/aurora-kernel.dir/kernel/drivers/mouse.c.o -MF CMakeFiles/aurora-kernel.dir/kernel/drivers/mouse.c.o.d -o CMakeFiles/aurora-kernel.dir/kernel/drivers/mouse.c.o -c /home/runner/work/aurora-os/aurora-os/kernel/drivers/mouse.c
 
 CMakeFiles/aurora-kernel.dir/kernel/drivers/mouse.c.i: cmake_force
@@ -231,7 +245,7 @@ CMakeFiles/aurora-kernel.dir/kernel/drivers/mouse.c.s: cmake_force
 CMakeFiles/aurora-kernel.dir/kernel/drivers/serial.c.o: CMakeFiles/aurora-kernel.dir/flags.make
 CMakeFiles/aurora-kernel.dir/kernel/drivers/serial.c.o: /home/runner/work/aurora-os/aurora-os/kernel/drivers/serial.c
 CMakeFiles/aurora-kernel.dir/kernel/drivers/serial.c.o: CMakeFiles/aurora-kernel.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/runner/work/aurora-os/aurora-os/_codeql_build_dir/CMakeFiles --progress-num=$(CMAKE_PROGRESS_12) "Building C object CMakeFiles/aurora-kernel.dir/kernel/drivers/serial.c.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/runner/work/aurora-os/aurora-os/_codeql_build_dir/CMakeFiles --progress-num=$(CMAKE_PROGRESS_13) "Building C object CMakeFiles/aurora-kernel.dir/kernel/drivers/serial.c.o"
 	gcc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -MD -MT CMakeFiles/aurora-kernel.dir/kernel/drivers/serial.c.o -MF CMakeFiles/aurora-kernel.dir/kernel/drivers/serial.c.o.d -o CMakeFiles/aurora-kernel.dir/kernel/drivers/serial.c.o -c /home/runner/work/aurora-os/aurora-os/kernel/drivers/serial.c
 
 CMakeFiles/aurora-kernel.dir/kernel/drivers/serial.c.i: cmake_force
@@ -242,10 +256,24 @@ CMakeFiles/aurora-kernel.dir/kernel/drivers/serial.c.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling C source to assembly CMakeFiles/aurora-kernel.dir/kernel/drivers/serial.c.s"
 	gcc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -S /home/runner/work/aurora-os/aurora-os/kernel/drivers/serial.c -o CMakeFiles/aurora-kernel.dir/kernel/drivers/serial.c.s
 
+CMakeFiles/aurora-kernel.dir/kernel/drivers/storage.c.o: CMakeFiles/aurora-kernel.dir/flags.make
+CMakeFiles/aurora-kernel.dir/kernel/drivers/storage.c.o: /home/runner/work/aurora-os/aurora-os/kernel/drivers/storage.c
+CMakeFiles/aurora-kernel.dir/kernel/drivers/storage.c.o: CMakeFiles/aurora-kernel.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/runner/work/aurora-os/aurora-os/_codeql_build_dir/CMakeFiles --progress-num=$(CMAKE_PROGRESS_14) "Building C object CMakeFiles/aurora-kernel.dir/kernel/drivers/storage.c.o"
+	gcc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -MD -MT CMakeFiles/aurora-kernel.dir/kernel/drivers/storage.c.o -MF CMakeFiles/aurora-kernel.dir/kernel/drivers/storage.c.o.d -o CMakeFiles/aurora-kernel.dir/kernel/drivers/storage.c.o -c /home/runner/work/aurora-os/aurora-os/kernel/drivers/storage.c
+
+CMakeFiles/aurora-kernel.dir/kernel/drivers/storage.c.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing C source to CMakeFiles/aurora-kernel.dir/kernel/drivers/storage.c.i"
+	gcc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -E /home/runner/work/aurora-os/aurora-os/kernel/drivers/storage.c > CMakeFiles/aurora-kernel.dir/kernel/drivers/storage.c.i
+
+CMakeFiles/aurora-kernel.dir/kernel/drivers/storage.c.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling C source to assembly CMakeFiles/aurora-kernel.dir/kernel/drivers/storage.c.s"
+	gcc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -S /home/runner/work/aurora-os/aurora-os/kernel/drivers/storage.c -o CMakeFiles/aurora-kernel.dir/kernel/drivers/storage.c.s
+
 CMakeFiles/aurora-kernel.dir/kernel/drivers/timer.c.o: CMakeFiles/aurora-kernel.dir/flags.make
 CMakeFiles/aurora-kernel.dir/kernel/drivers/timer.c.o: /home/runner/work/aurora-os/aurora-os/kernel/drivers/timer.c
 CMakeFiles/aurora-kernel.dir/kernel/drivers/timer.c.o: CMakeFiles/aurora-kernel.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/runner/work/aurora-os/aurora-os/_codeql_build_dir/CMakeFiles --progress-num=$(CMAKE_PROGRESS_13) "Building C object CMakeFiles/aurora-kernel.dir/kernel/drivers/timer.c.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/runner/work/aurora-os/aurora-os/_codeql_build_dir/CMakeFiles --progress-num=$(CMAKE_PROGRESS_15) "Building C object CMakeFiles/aurora-kernel.dir/kernel/drivers/timer.c.o"
 	gcc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -MD -MT CMakeFiles/aurora-kernel.dir/kernel/drivers/timer.c.o -MF CMakeFiles/aurora-kernel.dir/kernel/drivers/timer.c.o.d -o CMakeFiles/aurora-kernel.dir/kernel/drivers/timer.c.o -c /home/runner/work/aurora-os/aurora-os/kernel/drivers/timer.c
 
 CMakeFiles/aurora-kernel.dir/kernel/drivers/timer.c.i: cmake_force
@@ -259,7 +287,7 @@ CMakeFiles/aurora-kernel.dir/kernel/drivers/timer.c.s: cmake_force
 CMakeFiles/aurora-kernel.dir/kernel/drivers/vga.c.o: CMakeFiles/aurora-kernel.dir/flags.make
 CMakeFiles/aurora-kernel.dir/kernel/drivers/vga.c.o: /home/runner/work/aurora-os/aurora-os/kernel/drivers/vga.c
 CMakeFiles/aurora-kernel.dir/kernel/drivers/vga.c.o: CMakeFiles/aurora-kernel.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/runner/work/aurora-os/aurora-os/_codeql_build_dir/CMakeFiles --progress-num=$(CMAKE_PROGRESS_14) "Building C object CMakeFiles/aurora-kernel.dir/kernel/drivers/vga.c.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/runner/work/aurora-os/aurora-os/_codeql_build_dir/CMakeFiles --progress-num=$(CMAKE_PROGRESS_16) "Building C object CMakeFiles/aurora-kernel.dir/kernel/drivers/vga.c.o"
 	gcc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -MD -MT CMakeFiles/aurora-kernel.dir/kernel/drivers/vga.c.o -MF CMakeFiles/aurora-kernel.dir/kernel/drivers/vga.c.o.d -o CMakeFiles/aurora-kernel.dir/kernel/drivers/vga.c.o -c /home/runner/work/aurora-os/aurora-os/kernel/drivers/vga.c
 
 CMakeFiles/aurora-kernel.dir/kernel/drivers/vga.c.i: cmake_force
@@ -270,10 +298,24 @@ CMakeFiles/aurora-kernel.dir/kernel/drivers/vga.c.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling C source to assembly CMakeFiles/aurora-kernel.dir/kernel/drivers/vga.c.s"
 	gcc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -S /home/runner/work/aurora-os/aurora-os/kernel/drivers/vga.c -o CMakeFiles/aurora-kernel.dir/kernel/drivers/vga.c.s
 
+CMakeFiles/aurora-kernel.dir/kernel/drivers/wifi.c.o: CMakeFiles/aurora-kernel.dir/flags.make
+CMakeFiles/aurora-kernel.dir/kernel/drivers/wifi.c.o: /home/runner/work/aurora-os/aurora-os/kernel/drivers/wifi.c
+CMakeFiles/aurora-kernel.dir/kernel/drivers/wifi.c.o: CMakeFiles/aurora-kernel.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/runner/work/aurora-os/aurora-os/_codeql_build_dir/CMakeFiles --progress-num=$(CMAKE_PROGRESS_17) "Building C object CMakeFiles/aurora-kernel.dir/kernel/drivers/wifi.c.o"
+	gcc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -MD -MT CMakeFiles/aurora-kernel.dir/kernel/drivers/wifi.c.o -MF CMakeFiles/aurora-kernel.dir/kernel/drivers/wifi.c.o.d -o CMakeFiles/aurora-kernel.dir/kernel/drivers/wifi.c.o -c /home/runner/work/aurora-os/aurora-os/kernel/drivers/wifi.c
+
+CMakeFiles/aurora-kernel.dir/kernel/drivers/wifi.c.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing C source to CMakeFiles/aurora-kernel.dir/kernel/drivers/wifi.c.i"
+	gcc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -E /home/runner/work/aurora-os/aurora-os/kernel/drivers/wifi.c > CMakeFiles/aurora-kernel.dir/kernel/drivers/wifi.c.i
+
+CMakeFiles/aurora-kernel.dir/kernel/drivers/wifi.c.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling C source to assembly CMakeFiles/aurora-kernel.dir/kernel/drivers/wifi.c.s"
+	gcc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -S /home/runner/work/aurora-os/aurora-os/kernel/drivers/wifi.c -o CMakeFiles/aurora-kernel.dir/kernel/drivers/wifi.c.s
+
 CMakeFiles/aurora-kernel.dir/kernel/gui/application.c.o: CMakeFiles/aurora-kernel.dir/flags.make
 CMakeFiles/aurora-kernel.dir/kernel/gui/application.c.o: /home/runner/work/aurora-os/aurora-os/kernel/gui/application.c
 CMakeFiles/aurora-kernel.dir/kernel/gui/application.c.o: CMakeFiles/aurora-kernel.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/runner/work/aurora-os/aurora-os/_codeql_build_dir/CMakeFiles --progress-num=$(CMAKE_PROGRESS_15) "Building C object CMakeFiles/aurora-kernel.dir/kernel/gui/application.c.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/runner/work/aurora-os/aurora-os/_codeql_build_dir/CMakeFiles --progress-num=$(CMAKE_PROGRESS_18) "Building C object CMakeFiles/aurora-kernel.dir/kernel/gui/application.c.o"
 	gcc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -MD -MT CMakeFiles/aurora-kernel.dir/kernel/gui/application.c.o -MF CMakeFiles/aurora-kernel.dir/kernel/gui/application.c.o.d -o CMakeFiles/aurora-kernel.dir/kernel/gui/application.c.o -c /home/runner/work/aurora-os/aurora-os/kernel/gui/application.c
 
 CMakeFiles/aurora-kernel.dir/kernel/gui/application.c.i: cmake_force
@@ -287,7 +329,7 @@ CMakeFiles/aurora-kernel.dir/kernel/gui/application.c.s: cmake_force
 CMakeFiles/aurora-kernel.dir/kernel/gui/framebuffer.c.o: CMakeFiles/aurora-kernel.dir/flags.make
 CMakeFiles/aurora-kernel.dir/kernel/gui/framebuffer.c.o: /home/runner/work/aurora-os/aurora-os/kernel/gui/framebuffer.c
 CMakeFiles/aurora-kernel.dir/kernel/gui/framebuffer.c.o: CMakeFiles/aurora-kernel.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/runner/work/aurora-os/aurora-os/_codeql_build_dir/CMakeFiles --progress-num=$(CMAKE_PROGRESS_16) "Building C object CMakeFiles/aurora-kernel.dir/kernel/gui/framebuffer.c.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/runner/work/aurora-os/aurora-os/_codeql_build_dir/CMakeFiles --progress-num=$(CMAKE_PROGRESS_19) "Building C object CMakeFiles/aurora-kernel.dir/kernel/gui/framebuffer.c.o"
 	gcc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -MD -MT CMakeFiles/aurora-kernel.dir/kernel/gui/framebuffer.c.o -MF CMakeFiles/aurora-kernel.dir/kernel/gui/framebuffer.c.o.d -o CMakeFiles/aurora-kernel.dir/kernel/gui/framebuffer.c.o -c /home/runner/work/aurora-os/aurora-os/kernel/gui/framebuffer.c
 
 CMakeFiles/aurora-kernel.dir/kernel/gui/framebuffer.c.i: cmake_force
@@ -301,7 +343,7 @@ CMakeFiles/aurora-kernel.dir/kernel/gui/framebuffer.c.s: cmake_force
 CMakeFiles/aurora-kernel.dir/kernel/gui/gui.c.o: CMakeFiles/aurora-kernel.dir/flags.make
 CMakeFiles/aurora-kernel.dir/kernel/gui/gui.c.o: /home/runner/work/aurora-os/aurora-os/kernel/gui/gui.c
 CMakeFiles/aurora-kernel.dir/kernel/gui/gui.c.o: CMakeFiles/aurora-kernel.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/runner/work/aurora-os/aurora-os/_codeql_build_dir/CMakeFiles --progress-num=$(CMAKE_PROGRESS_17) "Building C object CMakeFiles/aurora-kernel.dir/kernel/gui/gui.c.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/runner/work/aurora-os/aurora-os/_codeql_build_dir/CMakeFiles --progress-num=$(CMAKE_PROGRESS_20) "Building C object CMakeFiles/aurora-kernel.dir/kernel/gui/gui.c.o"
 	gcc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -MD -MT CMakeFiles/aurora-kernel.dir/kernel/gui/gui.c.o -MF CMakeFiles/aurora-kernel.dir/kernel/gui/gui.c.o.d -o CMakeFiles/aurora-kernel.dir/kernel/gui/gui.c.o -c /home/runner/work/aurora-os/aurora-os/kernel/gui/gui.c
 
 CMakeFiles/aurora-kernel.dir/kernel/gui/gui.c.i: cmake_force
@@ -315,7 +357,7 @@ CMakeFiles/aurora-kernel.dir/kernel/gui/gui.c.s: cmake_force
 CMakeFiles/aurora-kernel.dir/kernel/gui/gui_demo.c.o: CMakeFiles/aurora-kernel.dir/flags.make
 CMakeFiles/aurora-kernel.dir/kernel/gui/gui_demo.c.o: /home/runner/work/aurora-os/aurora-os/kernel/gui/gui_demo.c
 CMakeFiles/aurora-kernel.dir/kernel/gui/gui_demo.c.o: CMakeFiles/aurora-kernel.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/runner/work/aurora-os/aurora-os/_codeql_build_dir/CMakeFiles --progress-num=$(CMAKE_PROGRESS_18) "Building C object CMakeFiles/aurora-kernel.dir/kernel/gui/gui_demo.c.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/runner/work/aurora-os/aurora-os/_codeql_build_dir/CMakeFiles --progress-num=$(CMAKE_PROGRESS_21) "Building C object CMakeFiles/aurora-kernel.dir/kernel/gui/gui_demo.c.o"
 	gcc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -MD -MT CMakeFiles/aurora-kernel.dir/kernel/gui/gui_demo.c.o -MF CMakeFiles/aurora-kernel.dir/kernel/gui/gui_demo.c.o.d -o CMakeFiles/aurora-kernel.dir/kernel/gui/gui_demo.c.o -c /home/runner/work/aurora-os/aurora-os/kernel/gui/gui_demo.c
 
 CMakeFiles/aurora-kernel.dir/kernel/gui/gui_demo.c.i: cmake_force
@@ -329,7 +371,7 @@ CMakeFiles/aurora-kernel.dir/kernel/gui/gui_demo.c.s: cmake_force
 CMakeFiles/aurora-kernel.dir/kernel/gui/gui_demo_advanced.c.o: CMakeFiles/aurora-kernel.dir/flags.make
 CMakeFiles/aurora-kernel.dir/kernel/gui/gui_demo_advanced.c.o: /home/runner/work/aurora-os/aurora-os/kernel/gui/gui_demo_advanced.c
 CMakeFiles/aurora-kernel.dir/kernel/gui/gui_demo_advanced.c.o: CMakeFiles/aurora-kernel.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/runner/work/aurora-os/aurora-os/_codeql_build_dir/CMakeFiles --progress-num=$(CMAKE_PROGRESS_19) "Building C object CMakeFiles/aurora-kernel.dir/kernel/gui/gui_demo_advanced.c.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/runner/work/aurora-os/aurora-os/_codeql_build_dir/CMakeFiles --progress-num=$(CMAKE_PROGRESS_22) "Building C object CMakeFiles/aurora-kernel.dir/kernel/gui/gui_demo_advanced.c.o"
 	gcc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -MD -MT CMakeFiles/aurora-kernel.dir/kernel/gui/gui_demo_advanced.c.o -MF CMakeFiles/aurora-kernel.dir/kernel/gui/gui_demo_advanced.c.o.d -o CMakeFiles/aurora-kernel.dir/kernel/gui/gui_demo_advanced.c.o -c /home/runner/work/aurora-os/aurora-os/kernel/gui/gui_demo_advanced.c
 
 CMakeFiles/aurora-kernel.dir/kernel/gui/gui_demo_advanced.c.i: cmake_force
@@ -343,7 +385,7 @@ CMakeFiles/aurora-kernel.dir/kernel/gui/gui_demo_advanced.c.s: cmake_force
 CMakeFiles/aurora-kernel.dir/kernel/gui/gui_effects.c.o: CMakeFiles/aurora-kernel.dir/flags.make
 CMakeFiles/aurora-kernel.dir/kernel/gui/gui_effects.c.o: /home/runner/work/aurora-os/aurora-os/kernel/gui/gui_effects.c
 CMakeFiles/aurora-kernel.dir/kernel/gui/gui_effects.c.o: CMakeFiles/aurora-kernel.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/runner/work/aurora-os/aurora-os/_codeql_build_dir/CMakeFiles --progress-num=$(CMAKE_PROGRESS_20) "Building C object CMakeFiles/aurora-kernel.dir/kernel/gui/gui_effects.c.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/runner/work/aurora-os/aurora-os/_codeql_build_dir/CMakeFiles --progress-num=$(CMAKE_PROGRESS_23) "Building C object CMakeFiles/aurora-kernel.dir/kernel/gui/gui_effects.c.o"
 	gcc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -MD -MT CMakeFiles/aurora-kernel.dir/kernel/gui/gui_effects.c.o -MF CMakeFiles/aurora-kernel.dir/kernel/gui/gui_effects.c.o.d -o CMakeFiles/aurora-kernel.dir/kernel/gui/gui_effects.c.o -c /home/runner/work/aurora-os/aurora-os/kernel/gui/gui_effects.c
 
 CMakeFiles/aurora-kernel.dir/kernel/gui/gui_effects.c.i: cmake_force
@@ -357,7 +399,7 @@ CMakeFiles/aurora-kernel.dir/kernel/gui/gui_effects.c.s: cmake_force
 CMakeFiles/aurora-kernel.dir/kernel/interrupt/interrupt.c.o: CMakeFiles/aurora-kernel.dir/flags.make
 CMakeFiles/aurora-kernel.dir/kernel/interrupt/interrupt.c.o: /home/runner/work/aurora-os/aurora-os/kernel/interrupt/interrupt.c
 CMakeFiles/aurora-kernel.dir/kernel/interrupt/interrupt.c.o: CMakeFiles/aurora-kernel.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/runner/work/aurora-os/aurora-os/_codeql_build_dir/CMakeFiles --progress-num=$(CMAKE_PROGRESS_21) "Building C object CMakeFiles/aurora-kernel.dir/kernel/interrupt/interrupt.c.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/runner/work/aurora-os/aurora-os/_codeql_build_dir/CMakeFiles --progress-num=$(CMAKE_PROGRESS_24) "Building C object CMakeFiles/aurora-kernel.dir/kernel/interrupt/interrupt.c.o"
 	gcc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -MD -MT CMakeFiles/aurora-kernel.dir/kernel/interrupt/interrupt.c.o -MF CMakeFiles/aurora-kernel.dir/kernel/interrupt/interrupt.c.o.d -o CMakeFiles/aurora-kernel.dir/kernel/interrupt/interrupt.c.o -c /home/runner/work/aurora-os/aurora-os/kernel/interrupt/interrupt.c
 
 CMakeFiles/aurora-kernel.dir/kernel/interrupt/interrupt.c.i: cmake_force
@@ -371,7 +413,7 @@ CMakeFiles/aurora-kernel.dir/kernel/interrupt/interrupt.c.s: cmake_force
 CMakeFiles/aurora-kernel.dir/kernel/memory/memory.c.o: CMakeFiles/aurora-kernel.dir/flags.make
 CMakeFiles/aurora-kernel.dir/kernel/memory/memory.c.o: /home/runner/work/aurora-os/aurora-os/kernel/memory/memory.c
 CMakeFiles/aurora-kernel.dir/kernel/memory/memory.c.o: CMakeFiles/aurora-kernel.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/runner/work/aurora-os/aurora-os/_codeql_build_dir/CMakeFiles --progress-num=$(CMAKE_PROGRESS_22) "Building C object CMakeFiles/aurora-kernel.dir/kernel/memory/memory.c.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/runner/work/aurora-os/aurora-os/_codeql_build_dir/CMakeFiles --progress-num=$(CMAKE_PROGRESS_25) "Building C object CMakeFiles/aurora-kernel.dir/kernel/memory/memory.c.o"
 	gcc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -MD -MT CMakeFiles/aurora-kernel.dir/kernel/memory/memory.c.o -MF CMakeFiles/aurora-kernel.dir/kernel/memory/memory.c.o.d -o CMakeFiles/aurora-kernel.dir/kernel/memory/memory.c.o -c /home/runner/work/aurora-os/aurora-os/kernel/memory/memory.c
 
 CMakeFiles/aurora-kernel.dir/kernel/memory/memory.c.i: cmake_force
@@ -385,7 +427,7 @@ CMakeFiles/aurora-kernel.dir/kernel/memory/memory.c.s: cmake_force
 CMakeFiles/aurora-kernel.dir/kernel/memory/paging.c.o: CMakeFiles/aurora-kernel.dir/flags.make
 CMakeFiles/aurora-kernel.dir/kernel/memory/paging.c.o: /home/runner/work/aurora-os/aurora-os/kernel/memory/paging.c
 CMakeFiles/aurora-kernel.dir/kernel/memory/paging.c.o: CMakeFiles/aurora-kernel.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/runner/work/aurora-os/aurora-os/_codeql_build_dir/CMakeFiles --progress-num=$(CMAKE_PROGRESS_23) "Building C object CMakeFiles/aurora-kernel.dir/kernel/memory/paging.c.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/runner/work/aurora-os/aurora-os/_codeql_build_dir/CMakeFiles --progress-num=$(CMAKE_PROGRESS_26) "Building C object CMakeFiles/aurora-kernel.dir/kernel/memory/paging.c.o"
 	gcc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -MD -MT CMakeFiles/aurora-kernel.dir/kernel/memory/paging.c.o -MF CMakeFiles/aurora-kernel.dir/kernel/memory/paging.c.o.d -o CMakeFiles/aurora-kernel.dir/kernel/memory/paging.c.o -c /home/runner/work/aurora-os/aurora-os/kernel/memory/paging.c
 
 CMakeFiles/aurora-kernel.dir/kernel/memory/paging.c.i: cmake_force
@@ -399,7 +441,7 @@ CMakeFiles/aurora-kernel.dir/kernel/memory/paging.c.s: cmake_force
 CMakeFiles/aurora-kernel.dir/kernel/network/network.c.o: CMakeFiles/aurora-kernel.dir/flags.make
 CMakeFiles/aurora-kernel.dir/kernel/network/network.c.o: /home/runner/work/aurora-os/aurora-os/kernel/network/network.c
 CMakeFiles/aurora-kernel.dir/kernel/network/network.c.o: CMakeFiles/aurora-kernel.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/runner/work/aurora-os/aurora-os/_codeql_build_dir/CMakeFiles --progress-num=$(CMAKE_PROGRESS_24) "Building C object CMakeFiles/aurora-kernel.dir/kernel/network/network.c.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/runner/work/aurora-os/aurora-os/_codeql_build_dir/CMakeFiles --progress-num=$(CMAKE_PROGRESS_27) "Building C object CMakeFiles/aurora-kernel.dir/kernel/network/network.c.o"
 	gcc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -MD -MT CMakeFiles/aurora-kernel.dir/kernel/network/network.c.o -MF CMakeFiles/aurora-kernel.dir/kernel/network/network.c.o.d -o CMakeFiles/aurora-kernel.dir/kernel/network/network.c.o -c /home/runner/work/aurora-os/aurora-os/kernel/network/network.c
 
 CMakeFiles/aurora-kernel.dir/kernel/network/network.c.i: cmake_force
@@ -413,7 +455,7 @@ CMakeFiles/aurora-kernel.dir/kernel/network/network.c.s: cmake_force
 CMakeFiles/aurora-kernel.dir/kernel/process/process.c.o: CMakeFiles/aurora-kernel.dir/flags.make
 CMakeFiles/aurora-kernel.dir/kernel/process/process.c.o: /home/runner/work/aurora-os/aurora-os/kernel/process/process.c
 CMakeFiles/aurora-kernel.dir/kernel/process/process.c.o: CMakeFiles/aurora-kernel.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/runner/work/aurora-os/aurora-os/_codeql_build_dir/CMakeFiles --progress-num=$(CMAKE_PROGRESS_25) "Building C object CMakeFiles/aurora-kernel.dir/kernel/process/process.c.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/runner/work/aurora-os/aurora-os/_codeql_build_dir/CMakeFiles --progress-num=$(CMAKE_PROGRESS_28) "Building C object CMakeFiles/aurora-kernel.dir/kernel/process/process.c.o"
 	gcc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -MD -MT CMakeFiles/aurora-kernel.dir/kernel/process/process.c.o -MF CMakeFiles/aurora-kernel.dir/kernel/process/process.c.o.d -o CMakeFiles/aurora-kernel.dir/kernel/process/process.c.o -c /home/runner/work/aurora-os/aurora-os/kernel/process/process.c
 
 CMakeFiles/aurora-kernel.dir/kernel/process/process.c.i: cmake_force
@@ -427,7 +469,7 @@ CMakeFiles/aurora-kernel.dir/kernel/process/process.c.s: cmake_force
 CMakeFiles/aurora-kernel.dir/kernel/security/quantum_crypto.c.o: CMakeFiles/aurora-kernel.dir/flags.make
 CMakeFiles/aurora-kernel.dir/kernel/security/quantum_crypto.c.o: /home/runner/work/aurora-os/aurora-os/kernel/security/quantum_crypto.c
 CMakeFiles/aurora-kernel.dir/kernel/security/quantum_crypto.c.o: CMakeFiles/aurora-kernel.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/runner/work/aurora-os/aurora-os/_codeql_build_dir/CMakeFiles --progress-num=$(CMAKE_PROGRESS_26) "Building C object CMakeFiles/aurora-kernel.dir/kernel/security/quantum_crypto.c.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/runner/work/aurora-os/aurora-os/_codeql_build_dir/CMakeFiles --progress-num=$(CMAKE_PROGRESS_29) "Building C object CMakeFiles/aurora-kernel.dir/kernel/security/quantum_crypto.c.o"
 	gcc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -MD -MT CMakeFiles/aurora-kernel.dir/kernel/security/quantum_crypto.c.o -MF CMakeFiles/aurora-kernel.dir/kernel/security/quantum_crypto.c.o.d -o CMakeFiles/aurora-kernel.dir/kernel/security/quantum_crypto.c.o -c /home/runner/work/aurora-os/aurora-os/kernel/security/quantum_crypto.c
 
 CMakeFiles/aurora-kernel.dir/kernel/security/quantum_crypto.c.i: cmake_force
@@ -441,7 +483,7 @@ CMakeFiles/aurora-kernel.dir/kernel/security/quantum_crypto.c.s: cmake_force
 CMakeFiles/aurora-kernel.dir/kernel/security/quantum_test.c.o: CMakeFiles/aurora-kernel.dir/flags.make
 CMakeFiles/aurora-kernel.dir/kernel/security/quantum_test.c.o: /home/runner/work/aurora-os/aurora-os/kernel/security/quantum_test.c
 CMakeFiles/aurora-kernel.dir/kernel/security/quantum_test.c.o: CMakeFiles/aurora-kernel.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/runner/work/aurora-os/aurora-os/_codeql_build_dir/CMakeFiles --progress-num=$(CMAKE_PROGRESS_27) "Building C object CMakeFiles/aurora-kernel.dir/kernel/security/quantum_test.c.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/runner/work/aurora-os/aurora-os/_codeql_build_dir/CMakeFiles --progress-num=$(CMAKE_PROGRESS_30) "Building C object CMakeFiles/aurora-kernel.dir/kernel/security/quantum_test.c.o"
 	gcc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -MD -MT CMakeFiles/aurora-kernel.dir/kernel/security/quantum_test.c.o -MF CMakeFiles/aurora-kernel.dir/kernel/security/quantum_test.c.o.d -o CMakeFiles/aurora-kernel.dir/kernel/security/quantum_test.c.o -c /home/runner/work/aurora-os/aurora-os/kernel/security/quantum_test.c
 
 CMakeFiles/aurora-kernel.dir/kernel/security/quantum_test.c.i: cmake_force
@@ -455,7 +497,7 @@ CMakeFiles/aurora-kernel.dir/kernel/security/quantum_test.c.s: cmake_force
 CMakeFiles/aurora-kernel.dir/kernel/smp/smp.c.o: CMakeFiles/aurora-kernel.dir/flags.make
 CMakeFiles/aurora-kernel.dir/kernel/smp/smp.c.o: /home/runner/work/aurora-os/aurora-os/kernel/smp/smp.c
 CMakeFiles/aurora-kernel.dir/kernel/smp/smp.c.o: CMakeFiles/aurora-kernel.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/runner/work/aurora-os/aurora-os/_codeql_build_dir/CMakeFiles --progress-num=$(CMAKE_PROGRESS_28) "Building C object CMakeFiles/aurora-kernel.dir/kernel/smp/smp.c.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/runner/work/aurora-os/aurora-os/_codeql_build_dir/CMakeFiles --progress-num=$(CMAKE_PROGRESS_31) "Building C object CMakeFiles/aurora-kernel.dir/kernel/smp/smp.c.o"
 	gcc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -MD -MT CMakeFiles/aurora-kernel.dir/kernel/smp/smp.c.o -MF CMakeFiles/aurora-kernel.dir/kernel/smp/smp.c.o.d -o CMakeFiles/aurora-kernel.dir/kernel/smp/smp.c.o -c /home/runner/work/aurora-os/aurora-os/kernel/smp/smp.c
 
 CMakeFiles/aurora-kernel.dir/kernel/smp/smp.c.i: cmake_force
@@ -469,7 +511,7 @@ CMakeFiles/aurora-kernel.dir/kernel/smp/smp.c.s: cmake_force
 CMakeFiles/aurora-kernel.dir/kernel/usb/usb.c.o: CMakeFiles/aurora-kernel.dir/flags.make
 CMakeFiles/aurora-kernel.dir/kernel/usb/usb.c.o: /home/runner/work/aurora-os/aurora-os/kernel/usb/usb.c
 CMakeFiles/aurora-kernel.dir/kernel/usb/usb.c.o: CMakeFiles/aurora-kernel.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/runner/work/aurora-os/aurora-os/_codeql_build_dir/CMakeFiles --progress-num=$(CMAKE_PROGRESS_29) "Building C object CMakeFiles/aurora-kernel.dir/kernel/usb/usb.c.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/runner/work/aurora-os/aurora-os/_codeql_build_dir/CMakeFiles --progress-num=$(CMAKE_PROGRESS_32) "Building C object CMakeFiles/aurora-kernel.dir/kernel/usb/usb.c.o"
 	gcc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -MD -MT CMakeFiles/aurora-kernel.dir/kernel/usb/usb.c.o -MF CMakeFiles/aurora-kernel.dir/kernel/usb/usb.c.o.d -o CMakeFiles/aurora-kernel.dir/kernel/usb/usb.c.o -c /home/runner/work/aurora-os/aurora-os/kernel/usb/usb.c
 
 CMakeFiles/aurora-kernel.dir/kernel/usb/usb.c.i: cmake_force
@@ -483,7 +525,7 @@ CMakeFiles/aurora-kernel.dir/kernel/usb/usb.c.s: cmake_force
 CMakeFiles/aurora-kernel.dir/filesystem/journal/journal.c.o: CMakeFiles/aurora-kernel.dir/flags.make
 CMakeFiles/aurora-kernel.dir/filesystem/journal/journal.c.o: /home/runner/work/aurora-os/aurora-os/filesystem/journal/journal.c
 CMakeFiles/aurora-kernel.dir/filesystem/journal/journal.c.o: CMakeFiles/aurora-kernel.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/runner/work/aurora-os/aurora-os/_codeql_build_dir/CMakeFiles --progress-num=$(CMAKE_PROGRESS_30) "Building C object CMakeFiles/aurora-kernel.dir/filesystem/journal/journal.c.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/runner/work/aurora-os/aurora-os/_codeql_build_dir/CMakeFiles --progress-num=$(CMAKE_PROGRESS_33) "Building C object CMakeFiles/aurora-kernel.dir/filesystem/journal/journal.c.o"
 	gcc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -MD -MT CMakeFiles/aurora-kernel.dir/filesystem/journal/journal.c.o -MF CMakeFiles/aurora-kernel.dir/filesystem/journal/journal.c.o.d -o CMakeFiles/aurora-kernel.dir/filesystem/journal/journal.c.o -c /home/runner/work/aurora-os/aurora-os/filesystem/journal/journal.c
 
 CMakeFiles/aurora-kernel.dir/filesystem/journal/journal.c.i: cmake_force
@@ -497,7 +539,7 @@ CMakeFiles/aurora-kernel.dir/filesystem/journal/journal.c.s: cmake_force
 CMakeFiles/aurora-kernel.dir/filesystem/ramdisk/ramdisk.c.o: CMakeFiles/aurora-kernel.dir/flags.make
 CMakeFiles/aurora-kernel.dir/filesystem/ramdisk/ramdisk.c.o: /home/runner/work/aurora-os/aurora-os/filesystem/ramdisk/ramdisk.c
 CMakeFiles/aurora-kernel.dir/filesystem/ramdisk/ramdisk.c.o: CMakeFiles/aurora-kernel.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/runner/work/aurora-os/aurora-os/_codeql_build_dir/CMakeFiles --progress-num=$(CMAKE_PROGRESS_31) "Building C object CMakeFiles/aurora-kernel.dir/filesystem/ramdisk/ramdisk.c.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/runner/work/aurora-os/aurora-os/_codeql_build_dir/CMakeFiles --progress-num=$(CMAKE_PROGRESS_34) "Building C object CMakeFiles/aurora-kernel.dir/filesystem/ramdisk/ramdisk.c.o"
 	gcc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -MD -MT CMakeFiles/aurora-kernel.dir/filesystem/ramdisk/ramdisk.c.o -MF CMakeFiles/aurora-kernel.dir/filesystem/ramdisk/ramdisk.c.o.d -o CMakeFiles/aurora-kernel.dir/filesystem/ramdisk/ramdisk.c.o -c /home/runner/work/aurora-os/aurora-os/filesystem/ramdisk/ramdisk.c
 
 CMakeFiles/aurora-kernel.dir/filesystem/ramdisk/ramdisk.c.i: cmake_force
@@ -511,7 +553,7 @@ CMakeFiles/aurora-kernel.dir/filesystem/ramdisk/ramdisk.c.s: cmake_force
 CMakeFiles/aurora-kernel.dir/filesystem/vfs/vfs.c.o: CMakeFiles/aurora-kernel.dir/flags.make
 CMakeFiles/aurora-kernel.dir/filesystem/vfs/vfs.c.o: /home/runner/work/aurora-os/aurora-os/filesystem/vfs/vfs.c
 CMakeFiles/aurora-kernel.dir/filesystem/vfs/vfs.c.o: CMakeFiles/aurora-kernel.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/runner/work/aurora-os/aurora-os/_codeql_build_dir/CMakeFiles --progress-num=$(CMAKE_PROGRESS_32) "Building C object CMakeFiles/aurora-kernel.dir/filesystem/vfs/vfs.c.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/runner/work/aurora-os/aurora-os/_codeql_build_dir/CMakeFiles --progress-num=$(CMAKE_PROGRESS_35) "Building C object CMakeFiles/aurora-kernel.dir/filesystem/vfs/vfs.c.o"
 	gcc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -MD -MT CMakeFiles/aurora-kernel.dir/filesystem/vfs/vfs.c.o -MF CMakeFiles/aurora-kernel.dir/filesystem/vfs/vfs.c.o.d -o CMakeFiles/aurora-kernel.dir/filesystem/vfs/vfs.c.o -c /home/runner/work/aurora-os/aurora-os/filesystem/vfs/vfs.c
 
 CMakeFiles/aurora-kernel.dir/filesystem/vfs/vfs.c.i: cmake_force
@@ -525,7 +567,7 @@ CMakeFiles/aurora-kernel.dir/filesystem/vfs/vfs.c.s: cmake_force
 CMakeFiles/aurora-kernel.dir/tests/advanced_tests.c.o: CMakeFiles/aurora-kernel.dir/flags.make
 CMakeFiles/aurora-kernel.dir/tests/advanced_tests.c.o: /home/runner/work/aurora-os/aurora-os/tests/advanced_tests.c
 CMakeFiles/aurora-kernel.dir/tests/advanced_tests.c.o: CMakeFiles/aurora-kernel.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/runner/work/aurora-os/aurora-os/_codeql_build_dir/CMakeFiles --progress-num=$(CMAKE_PROGRESS_33) "Building C object CMakeFiles/aurora-kernel.dir/tests/advanced_tests.c.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/runner/work/aurora-os/aurora-os/_codeql_build_dir/CMakeFiles --progress-num=$(CMAKE_PROGRESS_36) "Building C object CMakeFiles/aurora-kernel.dir/tests/advanced_tests.c.o"
 	gcc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -MD -MT CMakeFiles/aurora-kernel.dir/tests/advanced_tests.c.o -MF CMakeFiles/aurora-kernel.dir/tests/advanced_tests.c.o.d -o CMakeFiles/aurora-kernel.dir/tests/advanced_tests.c.o -c /home/runner/work/aurora-os/aurora-os/tests/advanced_tests.c
 
 CMakeFiles/aurora-kernel.dir/tests/advanced_tests.c.i: cmake_force
@@ -536,10 +578,24 @@ CMakeFiles/aurora-kernel.dir/tests/advanced_tests.c.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling C source to assembly CMakeFiles/aurora-kernel.dir/tests/advanced_tests.c.s"
 	gcc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -S /home/runner/work/aurora-os/aurora-os/tests/advanced_tests.c -o CMakeFiles/aurora-kernel.dir/tests/advanced_tests.c.s
 
+CMakeFiles/aurora-kernel.dir/tests/font_tests.c.o: CMakeFiles/aurora-kernel.dir/flags.make
+CMakeFiles/aurora-kernel.dir/tests/font_tests.c.o: /home/runner/work/aurora-os/aurora-os/tests/font_tests.c
+CMakeFiles/aurora-kernel.dir/tests/font_tests.c.o: CMakeFiles/aurora-kernel.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/runner/work/aurora-os/aurora-os/_codeql_build_dir/CMakeFiles --progress-num=$(CMAKE_PROGRESS_37) "Building C object CMakeFiles/aurora-kernel.dir/tests/font_tests.c.o"
+	gcc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -MD -MT CMakeFiles/aurora-kernel.dir/tests/font_tests.c.o -MF CMakeFiles/aurora-kernel.dir/tests/font_tests.c.o.d -o CMakeFiles/aurora-kernel.dir/tests/font_tests.c.o -c /home/runner/work/aurora-os/aurora-os/tests/font_tests.c
+
+CMakeFiles/aurora-kernel.dir/tests/font_tests.c.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing C source to CMakeFiles/aurora-kernel.dir/tests/font_tests.c.i"
+	gcc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -E /home/runner/work/aurora-os/aurora-os/tests/font_tests.c > CMakeFiles/aurora-kernel.dir/tests/font_tests.c.i
+
+CMakeFiles/aurora-kernel.dir/tests/font_tests.c.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling C source to assembly CMakeFiles/aurora-kernel.dir/tests/font_tests.c.s"
+	gcc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -S /home/runner/work/aurora-os/aurora-os/tests/font_tests.c -o CMakeFiles/aurora-kernel.dir/tests/font_tests.c.s
+
 CMakeFiles/aurora-kernel.dir/tests/phase5_tests.c.o: CMakeFiles/aurora-kernel.dir/flags.make
 CMakeFiles/aurora-kernel.dir/tests/phase5_tests.c.o: /home/runner/work/aurora-os/aurora-os/tests/phase5_tests.c
 CMakeFiles/aurora-kernel.dir/tests/phase5_tests.c.o: CMakeFiles/aurora-kernel.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/runner/work/aurora-os/aurora-os/_codeql_build_dir/CMakeFiles --progress-num=$(CMAKE_PROGRESS_34) "Building C object CMakeFiles/aurora-kernel.dir/tests/phase5_tests.c.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/runner/work/aurora-os/aurora-os/_codeql_build_dir/CMakeFiles --progress-num=$(CMAKE_PROGRESS_38) "Building C object CMakeFiles/aurora-kernel.dir/tests/phase5_tests.c.o"
 	gcc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -MD -MT CMakeFiles/aurora-kernel.dir/tests/phase5_tests.c.o -MF CMakeFiles/aurora-kernel.dir/tests/phase5_tests.c.o.d -o CMakeFiles/aurora-kernel.dir/tests/phase5_tests.c.o -c /home/runner/work/aurora-os/aurora-os/tests/phase5_tests.c
 
 CMakeFiles/aurora-kernel.dir/tests/phase5_tests.c.i: cmake_force
@@ -553,7 +609,7 @@ CMakeFiles/aurora-kernel.dir/tests/phase5_tests.c.s: cmake_force
 CMakeFiles/aurora-kernel.dir/tests/plugin_tests.c.o: CMakeFiles/aurora-kernel.dir/flags.make
 CMakeFiles/aurora-kernel.dir/tests/plugin_tests.c.o: /home/runner/work/aurora-os/aurora-os/tests/plugin_tests.c
 CMakeFiles/aurora-kernel.dir/tests/plugin_tests.c.o: CMakeFiles/aurora-kernel.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/runner/work/aurora-os/aurora-os/_codeql_build_dir/CMakeFiles --progress-num=$(CMAKE_PROGRESS_35) "Building C object CMakeFiles/aurora-kernel.dir/tests/plugin_tests.c.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/runner/work/aurora-os/aurora-os/_codeql_build_dir/CMakeFiles --progress-num=$(CMAKE_PROGRESS_39) "Building C object CMakeFiles/aurora-kernel.dir/tests/plugin_tests.c.o"
 	gcc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -MD -MT CMakeFiles/aurora-kernel.dir/tests/plugin_tests.c.o -MF CMakeFiles/aurora-kernel.dir/tests/plugin_tests.c.o.d -o CMakeFiles/aurora-kernel.dir/tests/plugin_tests.c.o -c /home/runner/work/aurora-os/aurora-os/tests/plugin_tests.c
 
 CMakeFiles/aurora-kernel.dir/tests/plugin_tests.c.i: cmake_force
@@ -567,7 +623,7 @@ CMakeFiles/aurora-kernel.dir/tests/plugin_tests.c.s: cmake_force
 CMakeFiles/aurora-kernel.dir/tests/test_suite.c.o: CMakeFiles/aurora-kernel.dir/flags.make
 CMakeFiles/aurora-kernel.dir/tests/test_suite.c.o: /home/runner/work/aurora-os/aurora-os/tests/test_suite.c
 CMakeFiles/aurora-kernel.dir/tests/test_suite.c.o: CMakeFiles/aurora-kernel.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/runner/work/aurora-os/aurora-os/_codeql_build_dir/CMakeFiles --progress-num=$(CMAKE_PROGRESS_36) "Building C object CMakeFiles/aurora-kernel.dir/tests/test_suite.c.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/runner/work/aurora-os/aurora-os/_codeql_build_dir/CMakeFiles --progress-num=$(CMAKE_PROGRESS_40) "Building C object CMakeFiles/aurora-kernel.dir/tests/test_suite.c.o"
 	gcc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -MD -MT CMakeFiles/aurora-kernel.dir/tests/test_suite.c.o -MF CMakeFiles/aurora-kernel.dir/tests/test_suite.c.o.d -o CMakeFiles/aurora-kernel.dir/tests/test_suite.c.o -c /home/runner/work/aurora-os/aurora-os/tests/test_suite.c
 
 CMakeFiles/aurora-kernel.dir/tests/test_suite.c.i: cmake_force
@@ -589,11 +645,14 @@ aurora__kernel_OBJECTS = \
 "CMakeFiles/aurora-kernel.dir/kernel/core/plugin_quantum_compute.c.o" \
 "CMakeFiles/aurora-kernel.dir/kernel/core/plugin_system_optimization.c.o" \
 "CMakeFiles/aurora-kernel.dir/kernel/core/plugin_usage_example.c.o" \
+"CMakeFiles/aurora-kernel.dir/kernel/drivers/hdmi.c.o" \
 "CMakeFiles/aurora-kernel.dir/kernel/drivers/keyboard.c.o" \
 "CMakeFiles/aurora-kernel.dir/kernel/drivers/mouse.c.o" \
 "CMakeFiles/aurora-kernel.dir/kernel/drivers/serial.c.o" \
+"CMakeFiles/aurora-kernel.dir/kernel/drivers/storage.c.o" \
 "CMakeFiles/aurora-kernel.dir/kernel/drivers/timer.c.o" \
 "CMakeFiles/aurora-kernel.dir/kernel/drivers/vga.c.o" \
+"CMakeFiles/aurora-kernel.dir/kernel/drivers/wifi.c.o" \
 "CMakeFiles/aurora-kernel.dir/kernel/gui/application.c.o" \
 "CMakeFiles/aurora-kernel.dir/kernel/gui/framebuffer.c.o" \
 "CMakeFiles/aurora-kernel.dir/kernel/gui/gui.c.o" \
@@ -613,6 +672,7 @@ aurora__kernel_OBJECTS = \
 "CMakeFiles/aurora-kernel.dir/filesystem/ramdisk/ramdisk.c.o" \
 "CMakeFiles/aurora-kernel.dir/filesystem/vfs/vfs.c.o" \
 "CMakeFiles/aurora-kernel.dir/tests/advanced_tests.c.o" \
+"CMakeFiles/aurora-kernel.dir/tests/font_tests.c.o" \
 "CMakeFiles/aurora-kernel.dir/tests/phase5_tests.c.o" \
 "CMakeFiles/aurora-kernel.dir/tests/plugin_tests.c.o" \
 "CMakeFiles/aurora-kernel.dir/tests/test_suite.c.o"
@@ -629,11 +689,14 @@ aurora-kernel: CMakeFiles/aurora-kernel.dir/kernel/core/plugin_ml_optimization.c
 aurora-kernel: CMakeFiles/aurora-kernel.dir/kernel/core/plugin_quantum_compute.c.o
 aurora-kernel: CMakeFiles/aurora-kernel.dir/kernel/core/plugin_system_optimization.c.o
 aurora-kernel: CMakeFiles/aurora-kernel.dir/kernel/core/plugin_usage_example.c.o
+aurora-kernel: CMakeFiles/aurora-kernel.dir/kernel/drivers/hdmi.c.o
 aurora-kernel: CMakeFiles/aurora-kernel.dir/kernel/drivers/keyboard.c.o
 aurora-kernel: CMakeFiles/aurora-kernel.dir/kernel/drivers/mouse.c.o
 aurora-kernel: CMakeFiles/aurora-kernel.dir/kernel/drivers/serial.c.o
+aurora-kernel: CMakeFiles/aurora-kernel.dir/kernel/drivers/storage.c.o
 aurora-kernel: CMakeFiles/aurora-kernel.dir/kernel/drivers/timer.c.o
 aurora-kernel: CMakeFiles/aurora-kernel.dir/kernel/drivers/vga.c.o
+aurora-kernel: CMakeFiles/aurora-kernel.dir/kernel/drivers/wifi.c.o
 aurora-kernel: CMakeFiles/aurora-kernel.dir/kernel/gui/application.c.o
 aurora-kernel: CMakeFiles/aurora-kernel.dir/kernel/gui/framebuffer.c.o
 aurora-kernel: CMakeFiles/aurora-kernel.dir/kernel/gui/gui.c.o
@@ -653,13 +716,14 @@ aurora-kernel: CMakeFiles/aurora-kernel.dir/filesystem/journal/journal.c.o
 aurora-kernel: CMakeFiles/aurora-kernel.dir/filesystem/ramdisk/ramdisk.c.o
 aurora-kernel: CMakeFiles/aurora-kernel.dir/filesystem/vfs/vfs.c.o
 aurora-kernel: CMakeFiles/aurora-kernel.dir/tests/advanced_tests.c.o
+aurora-kernel: CMakeFiles/aurora-kernel.dir/tests/font_tests.c.o
 aurora-kernel: CMakeFiles/aurora-kernel.dir/tests/phase5_tests.c.o
 aurora-kernel: CMakeFiles/aurora-kernel.dir/tests/plugin_tests.c.o
 aurora-kernel: CMakeFiles/aurora-kernel.dir/tests/test_suite.c.o
 aurora-kernel: CMakeFiles/aurora-kernel.dir/build.make
 aurora-kernel: CMakeFiles/aurora-kernel.dir/compiler_depend.ts
 aurora-kernel: CMakeFiles/aurora-kernel.dir/link.txt
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --bold --progress-dir=/home/runner/work/aurora-os/aurora-os/_codeql_build_dir/CMakeFiles --progress-num=$(CMAKE_PROGRESS_37) "Linking C executable aurora-kernel"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --bold --progress-dir=/home/runner/work/aurora-os/aurora-os/_codeql_build_dir/CMakeFiles --progress-num=$(CMAKE_PROGRESS_41) "Linking C executable aurora-kernel"
 	$(CMAKE_COMMAND) -E cmake_link_script CMakeFiles/aurora-kernel.dir/link.txt --verbose=$(VERBOSE)
 
 # Rule to build all files generated by this target.
