@@ -68,7 +68,7 @@ void gui_demo_init(void) {
         gui_create_label(info_win, "* Memory: Initialized", 40, 50);
         gui_create_label(info_win, "* Scheduler: Running", 40, 70);
         gui_create_label(info_win, "* VFS: Mounted", 40, 90);
-        gui_create_label(info_win, "* Display: 1024x768x32", 40, 110);
+        gui_create_label(info_win, "* Display: 1920x1080x32 (Full HD)", 40, 110);
         
         widget_t* close_btn = gui_create_button(info_win, "Close", 20, 150, 100, 30);
         gui_set_widget_click_handler(close_btn, button1_click);

@@ -596,20 +596,20 @@ void gui_draw_window(window_t* window) {
     if (window->has_border) {
         gui_draw_rounded_rect(window->bounds.x, window->bounds.y,
                              window->bounds.width, window->bounds.height,
-                             8, COLOR_DARK_GRAY);
+                             12, COLOR_DARK_GRAY);  // Increased corner radius from 8 to 12
     }
     
     // Draw titlebar with gradient
     if (window->has_titlebar) {
         color_t title_color1, title_color2;
         if (window->focused) {
-            // Active window - blue gradient
-            title_color1 = (color_t){30, 140, 235, 255};
-            title_color2 = (color_t){0, 100, 195, 255};
+            // Active window - vivid blue gradient
+            title_color1 = (color_t){45, 170, 255, 255};  // Brighter, more vivid blue
+            title_color2 = (color_t){10, 120, 220, 255};  // Deeper vivid blue
         } else {
-            // Inactive window - gray gradient
-            title_color1 = (color_t){148, 148, 148, 255};
-            title_color2 = (color_t){108, 108, 108, 255};
+            // Inactive window - lighter gray gradient
+            title_color1 = (color_t){165, 165, 165, 255};
+            title_color2 = (color_t){125, 125, 125, 255};
         }
         
         gui_draw_gradient(window->bounds.x + 1, window->bounds.y + 1,
@@ -633,19 +633,20 @@ void gui_draw_window(window_t* window) {
         
         // Close button (red X) with 3D effect
         uint32_t close_x = window->bounds.x + window->bounds.width - 20;
-        gui_draw_3d_button(close_x, button_y, button_size, button_size, COLOR_RED, 0);
-        framebuffer_draw_string(close_x + 4, button_y + 4, "X", COLOR_WHITE, COLOR_RED);
+        color_t vivid_red = (color_t){255, 60, 60, 255};  // Brighter red
+        gui_draw_3d_button(close_x, button_y, button_size, button_size, vivid_red, 0);
+        framebuffer_draw_string(close_x + 4, button_y + 4, "X", COLOR_WHITE, vivid_red);
         
         // Maximize button (square) with 3D effect
         uint32_t max_x = close_x - button_size - button_spacing;
-        color_t max_color = window->maximized ? (color_t){100, 100, 100, 255} : (color_t){50, 150, 50, 255};
+        color_t max_color = window->maximized ? (color_t){120, 120, 120, 255} : (color_t){60, 180, 75, 255};  // Vivid green
         gui_draw_3d_button(max_x, button_y, button_size, button_size, max_color, 0);
         framebuffer_draw_rect_outline(max_x + 3, button_y + 3, 10, 10, COLOR_WHITE);
         
         // Minimize button (dash) with 3D effect
         uint32_t min_x = max_x - button_size - button_spacing;
-        gui_draw_3d_button(min_x, button_y, button_size, button_size, 
-                          (color_t){200, 150, 50, 255}, 0);
+        color_t vivid_yellow = (color_t){255, 200, 50, 255};  // Brighter yellow
+        gui_draw_3d_button(min_x, button_y, button_size, button_size, vivid_yellow, 0);
         framebuffer_draw_hline(min_x + 3, min_x + 13, button_y + 12, COLOR_WHITE);
     }
     
@@ -809,11 +810,11 @@ void gui_draw_desktop(void) {
     framebuffer_info_t* fb = framebuffer_get_info();
     if (!fb) return;
     
-    // Draw background with gradient (sky blue to lighter blue)
+    // Draw background with vivid gradient (bright sky blue to lighter blue)
     for (uint32_t y = 0; y < fb->height - 40; y++) {
-        uint8_t r = 30 + (y * 30 / fb->height);
-        uint8_t g = 130 + (y * 20 / fb->height);
-        uint8_t b = 200 + (y * 30 / fb->height);
+        uint8_t r = 40 + (y * 40 / fb->height);
+        uint8_t g = 150 + (y * 30 / fb->height);
+        uint8_t b = 230 + (y * 25 / fb->height);
         color_t line_color = {r, g, b, 255};
         framebuffer_draw_hline(0, fb->width - 1, y, line_color);
     }
@@ -838,17 +839,18 @@ void gui_draw_taskbar(void) {
     uint32_t taskbar_height = 40;
     uint32_t taskbar_y = fb->height - taskbar_height;
     
-    // Draw taskbar background
-    framebuffer_draw_rect(0, taskbar_y, fb->width, taskbar_height,
-                        (color_t){45, 45, 48, 255});  // Dark gray
+    // Draw taskbar background with slight gradient
+    gui_draw_gradient(0, taskbar_y, fb->width, taskbar_height,
+                     (color_t){50, 50, 54, 255},   // Slightly lighter dark gray
+                     (color_t){40, 40, 44, 255});  // Darker gray
     
     // Draw top border
-    framebuffer_draw_hline(0, fb->width - 1, taskbar_y, COLOR_GRAY);
+    framebuffer_draw_hline(0, fb->width - 1, taskbar_y, (color_t){100, 100, 100, 255});
     
-    // Draw "Start" button
-    framebuffer_draw_rect(5, taskbar_y + 5, 80, 30, (color_t){0, 120, 215, 255});
+    // Draw "Start" button with vivid color and rounded corners
+    gui_draw_rounded_rect(5, taskbar_y + 5, 80, 30, 4, (color_t){20, 140, 230, 255});  // Vivid blue
     framebuffer_draw_string(15, taskbar_y + 13, "Aurora OS", COLOR_WHITE,
-                          (color_t){0, 120, 215, 255});
+                          (color_t){20, 140, 230, 255});
     
     // Draw window list (taskbar buttons for open windows)
     uint32_t button_x = 95;
@@ -860,16 +862,17 @@ void gui_draw_taskbar(void) {
         // Show all windows in taskbar (including minimized)
         color_t btn_color;
         if (window->minimized) {
-            btn_color = (color_t){40, 40, 45, 255};  // Darker for minimized
+            btn_color = (color_t){45, 45, 50, 255};  // Slightly lighter for minimized
         } else if (window->focused) {
-            btn_color = (color_t){70, 70, 75, 255};  // Lighter for focused
+            btn_color = (color_t){80, 80, 90, 255};  // Vivid highlight for focused
         } else {
-            btn_color = (color_t){55, 55, 60, 255};  // Medium for unfocused
+            btn_color = (color_t){60, 60, 68, 255};  // Medium for unfocused
         }
         
-        // Draw window button
-        framebuffer_draw_rect(button_x, taskbar_y + 5, button_width, button_height, btn_color);
-        framebuffer_draw_rect_outline(button_x, taskbar_y + 5, button_width, button_height, COLOR_GRAY);
+        // Draw window button with rounded corners
+        gui_draw_rounded_rect(button_x, taskbar_y + 5, button_width, button_height, 4, btn_color);
+        framebuffer_draw_rect_outline(button_x, taskbar_y + 5, button_width, button_height, 
+                                      (color_t){110, 110, 110, 255});  // Lighter outline
         
         // Draw window title (truncated if needed)
         if (window->title) {
@@ -1188,9 +1191,27 @@ static void gui_draw_desktop_icon(desktop_icon_t* icon) {
     uint32_t icon_width = 80;
     uint32_t icon_size = 48;
     
-    // Draw simple icon representation (folder/app icon)
-    color_t icon_color = {100, 150, 255, 255};
-    framebuffer_draw_rect(icon->x + 16, icon->y, icon_size, icon_size, icon_color);
+    // Draw icon with rounded corners and vivid colors
+    color_t icon_color;
+    switch(icon->app_type) {
+        case APP_FILE_MANAGER:
+            icon_color = (color_t){255, 180, 50, 255};  // Vivid orange for files
+            break;
+        case APP_TERMINAL:
+            icon_color = (color_t){80, 80, 80, 255};    // Dark gray for terminal
+            break;
+        case APP_SETTINGS:
+            icon_color = (color_t){120, 120, 255, 255}; // Vivid purple for settings
+            break;
+        case APP_SYSTEM_INFO:
+            icon_color = (color_t){50, 200, 100, 255};  // Vivid green for info
+            break;
+        default:
+            icon_color = (color_t){120, 170, 255, 255}; // Default vivid blue
+            break;
+    }
+    
+    gui_draw_rounded_rect(icon->x + 16, icon->y, icon_size, icon_size, 8, icon_color);
     framebuffer_draw_rect_outline(icon->x + 16, icon->y, icon_size, icon_size, COLOR_WHITE);
     
     // Draw icon label with background
@@ -1199,9 +1220,9 @@ static void gui_draw_desktop_icon(desktop_icon_t* icon) {
     uint32_t label_x = icon->x + (icon_width - label_width) / 2;
     uint32_t label_y = icon->y + icon_size + 8;
     
-    // Draw label background (semi-transparent)
-    framebuffer_draw_rect(label_x - 2, label_y - 2, label_width + 4, 12, 
-                         (color_t){0, 0, 0, 128});
+    // Draw label background (semi-transparent with rounded corners)
+    gui_draw_rounded_rect(label_x - 2, label_y - 2, label_width + 4, 12, 
+                         3, (color_t){0, 0, 0, 128});
     
     // Draw label text
     framebuffer_draw_string(label_x, label_y, icon->label, COLOR_WHITE,
