@@ -49,8 +49,8 @@ typedef struct {
 
 /**
  * Initialize the framebuffer driver
- * @param width Desired width (default 1024 if 0)
- * @param height Desired height (default 768 if 0)
+ * @param width Desired width (default 1920 if 0)
+ * @param height Desired height (default 1080 if 0)
  * @param bpp Bits per pixel (default 32 if 0)
  * @return 0 on success, -1 on failure
  */

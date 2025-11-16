@@ -9,8 +9,9 @@
 #include <stddef.h>
 
 // Default framebuffer settings (can be overridden by multiboot)
-#define DEFAULT_FB_WIDTH  1024
-#define DEFAULT_FB_HEIGHT 768
+// Full HD resolution support
+#define DEFAULT_FB_WIDTH  1920
+#define DEFAULT_FB_HEIGHT 1080
 #define DEFAULT_FB_BPP    32
 
 // 8x8 bitmap font (simplified ASCII font)
