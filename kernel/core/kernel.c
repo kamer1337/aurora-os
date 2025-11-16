@@ -5,6 +5,7 @@
  */
 
 #include "kernel.h"
+#include "plugin.h"
 #include "../memory/memory.h"
 #include "../memory/paging.h"
 #include "../process/process.h"
@@ -24,6 +25,10 @@
 #include "../../filesystem/journal/journal.h"
 #include "../../tests/test_suite.h"
 #include "../../tests/advanced_tests.h"
+
+/* External plugin registration functions */
+extern void register_boot_diagnostic_plugin(void);
+extern void register_hw_setup_plugin(void);
 
 /**
  * Initialize device drivers
@@ -110,6 +115,20 @@ void kernel_init(void) {
     /* Initialize USB subsystem */
     usb_init();
     vga_write("USB subsystem initialized\n");
+    
+    /* Initialize plugin system */
+    plugin_system_init();
+    
+    /* Register built-in example plugins */
+    vga_write("\nRegistering boot plugins...\n");
+    register_hw_setup_plugin();
+    register_boot_diagnostic_plugin();
+    
+    /* List registered plugins */
+    plugin_list_all();
+    
+    /* Initialize all plugins */
+    plugin_init_all();
     
     vga_write("\nAurora OS initialization complete!\n");
     
