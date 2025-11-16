@@ -372,7 +372,7 @@ All functions documented with:
 - ✅ Valid ELF binary generated
 
 ### Visual Testing
-Would require QEMU or hardware:
+Would require Aurora VM or hardware:
 - [ ] Shadow rendering verification
 - [ ] Gradient smoothness
 - [ ] Particle physics

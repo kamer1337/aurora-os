@@ -240,19 +240,19 @@ gui_process_event(&event);
 - Added `build/kernel/gui` to build directories
 - New targets:
   - `make iso`: Create bootable ISO image
-  - `make run`: Build and run in QEMU (ISO boot)
-  - `make test`: Build and run in QEMU (direct kernel boot)
+  - `make run`: Build and run in Aurora VM
+  - `make test`: Build and run Aurora VM test suite
 
 ### Scripts:
 - **scripts/create_iso.sh**: Creates bootable ISO using GRUB
-- **scripts/run_qemu.sh**: Runs kernel in QEMU with various options
+- **scripts/run_aurora_vm.sh**: Runs Aurora VM test suite
 
 ## Testing
 
 ### Manual Testing:
 1. Build kernel: `make all`
 2. Create ISO: `make iso`
-3. Run in QEMU: `make run` or `make test`
+3. Run Aurora VM tests: `make run` or `make test`
 4. Test GUI rendering visually
 5. Test window creation and drawing
 
