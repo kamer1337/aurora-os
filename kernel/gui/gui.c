@@ -7,6 +7,7 @@
 #include "gui.h"
 #include "framebuffer.h"
 #include "gui_effects.h"
+#include "application.h"
 #include "../memory/memory.h"
 #include "../drivers/mouse.h"
 #include "../drivers/keyboard.h"
@@ -53,9 +54,37 @@ static window_t* context_menu_window = NULL;
 static int32_t context_menu_x = 0;
 static int32_t context_menu_y = 0;
 
+// Start menu animation state (for future implementation)
+// static float start_menu_animation = 0.0f;  // 0.0 = closed, 1.0 = open
+static uint8_t start_menu_animating = 0;
+// static uint32_t start_menu_anim_start_time = 0;
+// #define START_MENU_ANIMATION_DURATION 200  // milliseconds
+
+// Start menu keyboard navigation state
+static int32_t start_menu_selected_item = 0;
+static const int32_t start_menu_item_count = 6;
+
+// Desktop icons
+typedef struct desktop_icon {
+    const char* label;
+    int32_t x;
+    int32_t y;
+    app_type_t app_type;
+    uint8_t has_app;  // Whether this icon launches an app
+} desktop_icon_t;
+
+static desktop_icon_t desktop_icons[] = {
+    {"File Manager", 30, 80, APP_FILE_MANAGER, 1},
+    {"Terminal", 30, 180, APP_TERMINAL, 1},
+    {"Settings", 30, 280, APP_SETTINGS, 1},
+    {"System Info", 30, 380, APP_SYSTEM_INFO, 1}
+};
+static const int32_t desktop_icon_count = 4;
+
 // Forward declarations for desktop environment functions
 static void gui_draw_start_menu(void);
 static void gui_draw_context_menu(void);
+static void gui_draw_desktop_icon(desktop_icon_t* icon);
 
 int gui_init(void) {
     if (gui_initialized) {
@@ -70,6 +99,9 @@ int gui_init(void) {
     window_list = NULL;
     focused_window = NULL;
     gui_initialized = 1;
+    
+    // Initialize application framework
+    app_init();
     
     // Clear screen
     framebuffer_clear(COLOR_BLUE);
@@ -141,12 +173,44 @@ void gui_process_event(event_t* event) {
                     
                     if (gui_point_in_rect(event->x, event->y, &menu_rect)) {
                         // Clicked inside start menu - handle menu items
-                        // For now, just close the menu on any click
+                        uint32_t item_height = 40;
+                        uint32_t header_height = 70;
+                        uint32_t item_spacing = 5;
+                        int32_t relative_y = event->y - (int32_t)menu_y - (int32_t)header_height;
+                        
+                        // Check if clicked on a menu item (not header)
+                        if (relative_y >= 0 && relative_y < (int32_t)((item_height + item_spacing) * 6)) {
+                            uint32_t item_index = (uint32_t)relative_y / (item_height + item_spacing);
+                            
+                            // Launch the corresponding application
+                            switch (item_index) {
+                                case 0: // Applications (placeholder)
+                                    break;
+                                case 1: // System Settings
+                                    app_launch(APP_SETTINGS);
+                                    break;
+                                case 2: // File Manager
+                                    app_launch(APP_FILE_MANAGER);
+                                    break;
+                                case 3: // Terminal
+                                    app_launch(APP_TERMINAL);
+                                    break;
+                                case 4: // System Information
+                                    app_launch(APP_SYSTEM_INFO);
+                                    break;
+                                case 5: // Power Options (placeholder)
+                                    break;
+                            }
+                        }
+                        
+                        // Close the menu after launching
                         start_menu_visible = 0;
+                        start_menu_animating = 1;
                         return;
                     } else {
                         // Clicked outside start menu - close it
                         start_menu_visible = 0;
+                        start_menu_animating = 1;
                     }
                 }
             }
@@ -226,6 +290,31 @@ void gui_process_event(event_t* event) {
                     }
                     // Clicked on taskbar but not on a window button - don't process further
                     return;
+                }
+            }
+            
+            // Check if clicked on a desktop icon
+            {
+                framebuffer_info_t* fb = framebuffer_get_info();
+                if (fb && event->y < (int32_t)(fb->height - 40)) {
+                    for (int i = 0; i < desktop_icon_count; i++) {
+                        uint32_t icon_width = 80;
+                        uint32_t icon_height = 90;
+                        rect_t icon_rect = {
+                            desktop_icons[i].x,
+                            desktop_icons[i].y,
+                            icon_width,
+                            icon_height
+                        };
+                        
+                        if (gui_point_in_rect(event->x, event->y, &icon_rect)) {
+                            // Double-click detection would be better, but for now single click
+                            if (desktop_icons[i].has_app) {
+                                app_launch(desktop_icons[i].app_type);
+                            }
+                            return;
+                        }
+                    }
                 }
             }
             
@@ -345,6 +434,55 @@ void gui_process_event(event_t* event) {
             
         case EVENT_PAINT:
             gui_update();
+            break;
+            
+        case EVENT_KEY_DOWN:
+            // Handle keyboard navigation for start menu
+            if (start_menu_visible) {
+                switch (event->key) {
+                    case 0x48: // Up arrow
+                        if (start_menu_selected_item > 0) {
+                            start_menu_selected_item--;
+                        }
+                        break;
+                    case 0x50: // Down arrow
+                        if (start_menu_selected_item < start_menu_item_count - 1) {
+                            start_menu_selected_item++;
+                        }
+                        break;
+                    case 0x0D: // Enter key (also '\r')
+                    case '\n':
+                        // Launch the selected application
+                        switch (start_menu_selected_item) {
+                            case 0: // Applications (placeholder)
+                                break;
+                            case 1: // System Settings
+                                app_launch(APP_SETTINGS);
+                                break;
+                            case 2: // File Manager
+                                app_launch(APP_FILE_MANAGER);
+                                break;
+                            case 3: // Terminal
+                                app_launch(APP_TERMINAL);
+                                break;
+                            case 4: // System Information
+                                app_launch(APP_SYSTEM_INFO);
+                                break;
+                            case 5: // Power Options (placeholder)
+                                break;
+                        }
+                        start_menu_visible = 0;
+                        start_menu_animating = 1;
+                        start_menu_selected_item = 0;
+                        break;
+                    case 0x1B: // Escape key
+                        start_menu_visible = 0;
+                        start_menu_animating = 1;
+                        start_menu_selected_item = 0;
+                        break;
+                }
+                return;
+            }
             break;
             
         default:
@@ -680,13 +818,17 @@ void gui_draw_desktop(void) {
         framebuffer_draw_hline(0, fb->width - 1, y, line_color);
     }
     
-    // Draw desktop icons (placeholder - could add icon grid here)
-    // For now, just show "Aurora OS" text on desktop
+    // Draw desktop title
     const char* os_name = "Aurora OS Desktop";
     uint32_t text_x = fb->width / 2 - (strlen(os_name) * 8) / 2;
     uint32_t text_y = 20;
     framebuffer_draw_string(text_x, text_y, os_name, COLOR_WHITE, 
                           (color_t){0, 0, 0, 0});  // Transparent background
+    
+    // Draw desktop icons
+    for (int i = 0; i < desktop_icon_count; i++) {
+        gui_draw_desktop_icon(&desktop_icons[i]);
+    }
 }
 
 void gui_draw_taskbar(void) {
@@ -985,8 +1127,13 @@ static void gui_draw_start_menu(void) {
     uint32_t item_y = menu_y + 70;
     
     for (int i = 0; i < 6; i++) {
-        // Draw item background (highlight on hover could be added)
-        color_t item_bg = {55, 55, 60, 255};
+        // Draw item background (highlight selected item)
+        color_t item_bg;
+        if (i == start_menu_selected_item) {
+            item_bg = (color_t){0, 120, 215, 255};  // Highlighted (blue)
+        } else {
+            item_bg = (color_t){55, 55, 60, 255};  // Normal
+        }
         framebuffer_draw_rect(menu_x + 5, item_y, menu_width - 10, item_height,
                             item_bg);
         
@@ -1033,6 +1180,32 @@ static void gui_draw_context_menu(void) {
         
         item_y += item_height;
     }
+}
+
+static void gui_draw_desktop_icon(desktop_icon_t* icon) {
+    if (!icon) return;
+    
+    uint32_t icon_width = 80;
+    uint32_t icon_size = 48;
+    
+    // Draw simple icon representation (folder/app icon)
+    color_t icon_color = {100, 150, 255, 255};
+    framebuffer_draw_rect(icon->x + 16, icon->y, icon_size, icon_size, icon_color);
+    framebuffer_draw_rect_outline(icon->x + 16, icon->y, icon_size, icon_size, COLOR_WHITE);
+    
+    // Draw icon label with background
+    uint32_t label_len = strlen(icon->label);
+    uint32_t label_width = label_len * 8;
+    uint32_t label_x = icon->x + (icon_width - label_width) / 2;
+    uint32_t label_y = icon->y + icon_size + 8;
+    
+    // Draw label background (semi-transparent)
+    framebuffer_draw_rect(label_x - 2, label_y - 2, label_width + 4, 12, 
+                         (color_t){0, 0, 0, 128});
+    
+    // Draw label text
+    framebuffer_draw_string(label_x, label_y, icon->label, COLOR_WHITE,
+                          (color_t){0, 0, 0, 0});
 }
 
 void gui_toggle_start_menu(void) {
