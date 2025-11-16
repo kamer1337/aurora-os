@@ -1,132 +1,144 @@
 # Aurora OS - Documentation Index
 
 **Last Updated**: November 16, 2025  
-**Project Status**: Phase 4 Substantially Complete (95%)
+**Project Status**: Release Candidate
 
 ---
 
-## Quick Navigation
+## Essential Documents (Root Directory)
 
-### Getting Started
-- **[README.md](README.md)** - Project overview, requirements, and roadmap
-- **[Getting Started Guide](docs/GETTING_STARTED.md)** - Development environment setup
-- **[Project Structure](docs/PROJECT_STRUCTURE.md)** - Code organization overview
+These are the key documents for understanding Aurora OS:
 
-### Implementation Documentation
-
-#### Phase Summaries
-- **[PHASE_COMPLETION_REPORT.md](PHASE_COMPLETION_REPORT.md)** - Complete Phase 2, 3, 4 summary with technical details
-- **[PHASE4_SUMMARY.md](PHASE4_SUMMARY.md)** - Comprehensive Phase 4 User Interface overview
-- **[IMPLEMENTATION_SUMMARY.md](IMPLEMENTATION_SUMMARY.md)** - Overall implementation statistics and status
-
-#### Technical Documentation
-- **[Phase 2 & 3 Implementation](docs/PHASE2_PHASE3_IMPLEMENTATION.md)** - Kernel and file system APIs
-- **[Phase 4 Implementation](docs/PHASE4_IMPLEMENTATION.md)** - GUI framework and basic features
-- **[3D/4D/5D GUI Implementation](docs/3D_4D_5D_GUI_IMPLEMENTATION.md)** - Advanced visual effects API
-- **[Quantum Encryption](docs/QUANTUM_ENCRYPTION.md)** - Cryptography module documentation
-- **[Advanced Features](docs/ADVANCED_FEATURES.md)** - Additional capabilities
-
-#### Completion Reports
-- **[3D/4D/5D Completion Report](docs/3D_4D_5D_COMPLETION_REPORT.md)** - Visual effects implementation details
-- **[Stub Completion Report](STUB_COMPLETION_REPORT.md)** - Stub replacement documentation
-- **[Implementation 3D/4D/5D Summary](IMPLEMENTATION_3D_4D_5D.md)** - Quick reference for effects
-
-### Task Management
+- **[README.md](README.md)** - Project overview, requirements, and roadmap ⭐ START HERE
 - **[TODO.md](TODO.md)** - Current tasks, priorities, and completion status
+- **[IMPLEMENTATION_SUMMARY.md](IMPLEMENTATION_SUMMARY.md)** - Overall implementation statistics and status
+- **[RELEASE_CANDIDATE_SUMMARY.md](RELEASE_CANDIDATE_SUMMARY.md)** - Current release information
+
+---
+
+## Quick Start Guide
+
+### For New Users
+1. Read: [README.md](README.md) - Understand the project
+2. Review: [RELEASE_CANDIDATE_SUMMARY.md](RELEASE_CANDIDATE_SUMMARY.md) - See what's available
+3. Setup: [docs/GETTING_STARTED.md](docs/GETTING_STARTED.md) - Build and run
+
+### For Developers
+1. Read: [README.md](README.md) - Project overview
+2. Setup: [docs/GETTING_STARTED.md](docs/GETTING_STARTED.md) - Development environment
+3. Structure: [docs/PROJECT_STRUCTURE.md](docs/PROJECT_STRUCTURE.md) - Code organization
+4. Current work: [TODO.md](TODO.md) - What's in progress
+
+### For Contributors
+1. Status: [TODO.md](TODO.md) - What needs work
+2. APIs: See Technical Documentation below
+3. Standards: This document's "Documentation Standards" section
+
+---
+
+## Technical Documentation (docs/ directory)
+
+### Phase Implementation Guides
+- **[docs/PHASE_COMPLETION_REPORT.md](docs/PHASE_COMPLETION_REPORT.md)** - Phases 2, 3, 4 summary
+- **[docs/PHASE4_SUMMARY.md](docs/PHASE4_SUMMARY.md)** - Phase 4 User Interface comprehensive guide
+- **[docs/PHASE5_COMPLETION_REPORT.md](docs/PHASE5_COMPLETION_REPORT.md)** - Phase 5 Testing & Debugging
+- **[docs/STUB_COMPLETION_REPORT.md](docs/STUB_COMPLETION_REPORT.md)** - Stub replacement details
+
+### Core System Documentation
+- **[docs/PHASE2_PHASE3_IMPLEMENTATION.md](docs/PHASE2_PHASE3_IMPLEMENTATION.md)** - Kernel and file system APIs
+- **[docs/GETTING_STARTED.md](docs/GETTING_STARTED.md)** - Development environment setup
+- **[docs/PROJECT_STRUCTURE.md](docs/PROJECT_STRUCTURE.md)** - Code organization
+- **[docs/ADVANCED_FEATURES.md](docs/ADVANCED_FEATURES.md)** - Additional system capabilities
+
+### GUI & Visual Effects
+- **[docs/PHASE4_IMPLEMENTATION.md](docs/PHASE4_IMPLEMENTATION.md)** - GUI framework and basic features
+- **[docs/3D_4D_5D_GUI_IMPLEMENTATION.md](docs/3D_4D_5D_GUI_IMPLEMENTATION.md)** - Advanced visual effects API
+- **[docs/3D_4D_5D_COMPLETION_REPORT.md](docs/3D_4D_5D_COMPLETION_REPORT.md)** - Effects implementation details
+- **[docs/IMPLEMENTATION_3D_4D_5D.md](docs/IMPLEMENTATION_3D_4D_5D.md)** - Quick reference for effects
+- **[docs/DESKTOP_ENVIRONMENT_COMPLETION.md](docs/DESKTOP_ENVIRONMENT_COMPLETION.md)** - Desktop integration
+- **[docs/FEATURES_IMPLEMENTATION_SUMMARY.md](docs/FEATURES_IMPLEMENTATION_SUMMARY.md)** - Short/medium-term features
+- **[docs/PHASE4_LIMITATIONS_RESOLVED.md](docs/PHASE4_LIMITATIONS_RESOLVED.md)** - Phase 4 issues fixed
+- **[docs/PHASE4_VISUAL_OVERVIEW.md](docs/PHASE4_VISUAL_OVERVIEW.md)** - Visual layout diagrams
+
+### Plugin System
+- **[docs/PLUGIN_SYSTEM.md](docs/PLUGIN_SYSTEM.md)** - Plugin system architecture
+- **[docs/PLUGIN_QUICKSTART.md](docs/PLUGIN_QUICKSTART.md)** - Quick start guide
+- **[docs/OPTIONAL_PLUGINS_QUICKREF.md](docs/OPTIONAL_PLUGINS_QUICKREF.md)** - Quick reference
+- **[docs/OPTIONAL_PLUGIN_SYSTEM.md](docs/OPTIONAL_PLUGIN_SYSTEM.md)** - Optional plugin details
+- **[docs/PLUGIN_IMPLEMENTATION_SUMMARY.md](docs/PLUGIN_IMPLEMENTATION_SUMMARY.md)** - Implementation summary
+- **[docs/OPTIONAL_PLUGIN_IMPLEMENTATION.md](docs/OPTIONAL_PLUGIN_IMPLEMENTATION.md)** - Optional plugins implementation
+- **[docs/PLUGIN_TEST_VALIDATION.md](docs/PLUGIN_TEST_VALIDATION.md)** - Plugin testing
+
+### Security & Advanced Features
+- **[docs/QUANTUM_ENCRYPTION.md](docs/QUANTUM_ENCRYPTION.md)** - Quantum cryptography module
+- **[docs/QUANTUM_ENCRYPTION_SUMMARY.md](docs/QUANTUM_ENCRYPTION_SUMMARY.md)** - Implementation summary
+- **[docs/FILE_CACHE_SYSTEM.md](docs/FILE_CACHE_SYSTEM.md)** - File caching
+- **[docs/NFR_MODULE.md](docs/NFR_MODULE.md)** - Non-functional requirements module
+- **[docs/AURORA_VM.md](docs/AURORA_VM.md)** - Virtual machine documentation
+- **[docs/FONT_5X7_ENCODING.md](docs/FONT_5X7_ENCODING.md)** - Font encoding details
 
 ---
 
 ## Documentation by Topic
 
 ### Kernel & Core
-- Bootloader: PHASE_COMPLETION_REPORT.md, STUB_COMPLETION_REPORT.md
-- Memory Management: docs/PHASE2_PHASE3_IMPLEMENTATION.md
-- Process Management: docs/PHASE2_PHASE3_IMPLEMENTATION.md
-- Interrupt Handling: docs/PHASE2_PHASE3_IMPLEMENTATION.md
+- **Bootloader**: [docs/PHASE_COMPLETION_REPORT.md](docs/PHASE_COMPLETION_REPORT.md), [docs/STUB_COMPLETION_REPORT.md](docs/STUB_COMPLETION_REPORT.md)
+- **Memory Management**: [docs/PHASE2_PHASE3_IMPLEMENTATION.md](docs/PHASE2_PHASE3_IMPLEMENTATION.md)
+- **Process Management**: [docs/PHASE2_PHASE3_IMPLEMENTATION.md](docs/PHASE2_PHASE3_IMPLEMENTATION.md)
+- **Interrupt Handling**: [docs/PHASE2_PHASE3_IMPLEMENTATION.md](docs/PHASE2_PHASE3_IMPLEMENTATION.md)
 
 ### File System
-- VFS Layer: docs/PHASE2_PHASE3_IMPLEMENTATION.md
-- Ramdisk: docs/PHASE2_PHASE3_IMPLEMENTATION.md
-- Journaling: docs/PHASE2_PHASE3_IMPLEMENTATION.md
-
-### Device Drivers
-- Timer: docs/PHASE2_PHASE3_IMPLEMENTATION.md
-- Serial Port: docs/PHASE2_PHASE3_IMPLEMENTATION.md
-- VGA: docs/PHASE2_PHASE3_IMPLEMENTATION.md
-- Keyboard: docs/PHASE2_PHASE3_IMPLEMENTATION.md
+- **VFS Layer**: [docs/PHASE2_PHASE3_IMPLEMENTATION.md](docs/PHASE2_PHASE3_IMPLEMENTATION.md)
+- **Ramdisk**: [docs/PHASE2_PHASE3_IMPLEMENTATION.md](docs/PHASE2_PHASE3_IMPLEMENTATION.md)
+- **Journaling**: [docs/PHASE2_PHASE3_IMPLEMENTATION.md](docs/PHASE2_PHASE3_IMPLEMENTATION.md)
+- **File Cache**: [docs/FILE_CACHE_SYSTEM.md](docs/FILE_CACHE_SYSTEM.md)
 
 ### Graphics & GUI
-- Framebuffer Driver: docs/PHASE4_IMPLEMENTATION.md, PHASE4_SUMMARY.md
-- Window Management: docs/PHASE4_IMPLEMENTATION.md, PHASE4_SUMMARY.md
-- Widget System: docs/PHASE4_IMPLEMENTATION.md, PHASE4_SUMMARY.md
-- Visual Effects (3D/4D/5D): docs/3D_4D_5D_GUI_IMPLEMENTATION.md
-- Effects Demo: docs/3D_4D_5D_COMPLETION_REPORT.md
+- **Framework**: [docs/PHASE4_IMPLEMENTATION.md](docs/PHASE4_IMPLEMENTATION.md), [docs/PHASE4_SUMMARY.md](docs/PHASE4_SUMMARY.md)
+- **Window Management**: [docs/PHASE4_IMPLEMENTATION.md](docs/PHASE4_IMPLEMENTATION.md)
+- **Visual Effects (3D/4D/5D)**: [docs/3D_4D_5D_GUI_IMPLEMENTATION.md](docs/3D_4D_5D_GUI_IMPLEMENTATION.md)
+- **Desktop Environment**: [docs/DESKTOP_ENVIRONMENT_COMPLETION.md](docs/DESKTOP_ENVIRONMENT_COMPLETION.md)
 
 ### Security
-- Quantum Cryptography: docs/QUANTUM_ENCRYPTION.md
-- Encryption/Decryption: docs/QUANTUM_ENCRYPTION.md
+- **Quantum Cryptography**: [docs/QUANTUM_ENCRYPTION.md](docs/QUANTUM_ENCRYPTION.md)
+- **Implementation Details**: [docs/QUANTUM_ENCRYPTION_SUMMARY.md](docs/QUANTUM_ENCRYPTION_SUMMARY.md)
 
-### Build & Testing
-- Build System: PHASE_COMPLETION_REPORT.md
-- ISO Generation: PHASE_COMPLETION_REPORT.md
-- QEMU Testing: PHASE_COMPLETION_REPORT.md
+### Plugins
+- **System Overview**: [docs/PLUGIN_SYSTEM.md](docs/PLUGIN_SYSTEM.md)
+- **Quick Start**: [docs/PLUGIN_QUICKSTART.md](docs/PLUGIN_QUICKSTART.md)
+- **Optional Plugins**: [docs/OPTIONAL_PLUGIN_SYSTEM.md](docs/OPTIONAL_PLUGIN_SYSTEM.md)
+
+### Virtual Machine
+- **Aurora VM**: [docs/AURORA_VM.md](docs/AURORA_VM.md)
 
 ---
 
 ## Documentation by Phase
 
 ### Phase 1: Design & Planning ✅
-- README.md - Requirements and architecture
-- docs/PROJECT_STRUCTURE.md - Code organization
+- [README.md](README.md) - Requirements and architecture
+- [docs/PROJECT_STRUCTURE.md](docs/PROJECT_STRUCTURE.md) - Code organization
 
 ### Phase 2: Kernel Implementation ✅
-- docs/PHASE2_PHASE3_IMPLEMENTATION.md - Complete kernel APIs
-- IMPLEMENTATION_SUMMARY.md - Statistics and overview
-- STUB_COMPLETION_REPORT.md - Implementation details
+- [docs/PHASE2_PHASE3_IMPLEMENTATION.md](docs/PHASE2_PHASE3_IMPLEMENTATION.md) - Complete kernel APIs
+- [IMPLEMENTATION_SUMMARY.md](IMPLEMENTATION_SUMMARY.md) - Statistics and overview
+- [docs/STUB_COMPLETION_REPORT.md](docs/STUB_COMPLETION_REPORT.md) - Implementation details
 
 ### Phase 3: File System & I/O ✅
-- docs/PHASE2_PHASE3_IMPLEMENTATION.md - VFS, ramdisk, journaling
-- IMPLEMENTATION_SUMMARY.md - File system features
-- PHASE_COMPLETION_REPORT.md - Integration details
+- [docs/PHASE2_PHASE3_IMPLEMENTATION.md](docs/PHASE2_PHASE3_IMPLEMENTATION.md) - VFS, ramdisk, journaling
+- [IMPLEMENTATION_SUMMARY.md](IMPLEMENTATION_SUMMARY.md) - File system features
+- [docs/PHASE_COMPLETION_REPORT.md](docs/PHASE_COMPLETION_REPORT.md) - Integration details
 
-### Phase 4: User Interface 🔄 (95% Complete)
-- **PHASE4_SUMMARY.md** - Complete Phase 4 overview ⭐
-- docs/PHASE4_IMPLEMENTATION.md - Basic GUI framework
-- docs/3D_4D_5D_GUI_IMPLEMENTATION.md - Advanced effects
-- docs/3D_4D_5D_COMPLETION_REPORT.md - Effects implementation
-- IMPLEMENTATION_3D_4D_5D.md - Quick reference
-- PHASE_COMPLETION_REPORT.md - Integration summary
+### Phase 4: User Interface ✅
+- [docs/PHASE4_SUMMARY.md](docs/PHASE4_SUMMARY.md) - Complete Phase 4 overview ⭐
+- [docs/PHASE4_IMPLEMENTATION.md](docs/PHASE4_IMPLEMENTATION.md) - Basic GUI framework
+- [docs/3D_4D_5D_GUI_IMPLEMENTATION.md](docs/3D_4D_5D_GUI_IMPLEMENTATION.md) - Advanced effects
+- [docs/DESKTOP_ENVIRONMENT_COMPLETION.md](docs/DESKTOP_ENVIRONMENT_COMPLETION.md) - Desktop integration
+- [docs/PHASE4_LIMITATIONS_RESOLVED.md](docs/PHASE4_LIMITATIONS_RESOLVED.md) - Issues resolved
 
-### Phase 5: Testing & Debugging ⏭️
-- TODO.md - Upcoming tasks
-
----
-
-## Key Documents for Specific Tasks
-
-### For New Developers
-1. Start with: README.md
-2. Setup environment: docs/GETTING_STARTED.md
-3. Understand structure: docs/PROJECT_STRUCTURE.md
-4. Review phases: IMPLEMENTATION_SUMMARY.md
-
-### For Code Contributors
-1. Current status: TODO.md
-2. Phase 4 details: PHASE4_SUMMARY.md
-3. API reference: docs/PHASE4_IMPLEMENTATION.md, docs/3D_4D_5D_GUI_IMPLEMENTATION.md
-4. Coding patterns: docs/PHASE2_PHASE3_IMPLEMENTATION.md
-
-### For Reviewers
-1. Overall progress: PHASE_COMPLETION_REPORT.md
-2. Phase 4 achievements: PHASE4_SUMMARY.md
-3. Code statistics: IMPLEMENTATION_SUMMARY.md
-4. Completion reports: docs/3D_4D_5D_COMPLETION_REPORT.md
-
-### For Project Managers
-1. Project overview: README.md
-2. Current status: PHASE4_SUMMARY.md
-3. Timeline: PHASE_COMPLETION_REPORT.md
-4. Remaining work: TODO.md
+### Phase 5: Testing & Debugging ✅
+- [docs/PHASE5_COMPLETION_REPORT.md](docs/PHASE5_COMPLETION_REPORT.md) - Testing summary
+- [TODO.md](TODO.md) - Ongoing tasks
 
 ---
 
@@ -135,33 +147,46 @@
 ```
 Aurora OS Documentation
 │
-├── README.md (Start Here)
-│   └── Project overview, requirements, roadmap
-│
-├── Quick References
-│   ├── TODO.md - Task tracking
-│   ├── IMPLEMENTATION_3D_4D_5D.md - Effects summary
-│   └── docs/PROJECT_STRUCTURE.md - Code layout
-│
-├── Phase Summaries
+├── Root Directory (Essential Documents)
+│   ├── README.md - Project overview ⭐ START HERE
+│   ├── TODO.md - Current tasks and priorities
 │   ├── IMPLEMENTATION_SUMMARY.md - Overall statistics
-│   ├── PHASE_COMPLETION_REPORT.md - Phases 2, 3, 4 details
-│   └── PHASE4_SUMMARY.md - Phase 4 comprehensive guide ⭐
+│   ├── RELEASE_CANDIDATE_SUMMARY.md - Release information
+│   └── DOCUMENTATION_INDEX.md - This file
 │
-├── Implementation Details
-│   ├── docs/PHASE2_PHASE3_IMPLEMENTATION.md - Kernel & FS
-│   ├── docs/PHASE4_IMPLEMENTATION.md - Basic GUI
-│   └── docs/3D_4D_5D_GUI_IMPLEMENTATION.md - Advanced effects
-│
-├── Completion Reports
-│   ├── STUB_COMPLETION_REPORT.md - Stub implementations
-│   └── docs/3D_4D_5D_COMPLETION_REPORT.md - Visual effects
-│
-└── Specialized Topics
-    ├── docs/QUANTUM_ENCRYPTION.md - Cryptography
-    ├── docs/ADVANCED_FEATURES.md - Additional capabilities
-    └── docs/GETTING_STARTED.md - Developer setup
+└── docs/ Directory (Technical Documentation)
+    │
+    ├── Getting Started
+    │   ├── GETTING_STARTED.md - Setup guide
+    │   └── PROJECT_STRUCTURE.md - Code organization
+    │
+    ├── Phase Documentation
+    │   ├── PHASE_COMPLETION_REPORT.md - Phases 2, 3, 4
+    │   ├── PHASE2_PHASE3_IMPLEMENTATION.md - Kernel & FS
+    │   ├── PHASE4_SUMMARY.md - GUI comprehensive
+    │   ├── PHASE4_IMPLEMENTATION.md - GUI framework
+    │   └── PHASE5_COMPLETION_REPORT.md - Testing
+    │
+    ├── Visual Effects
+    │   ├── 3D_4D_5D_GUI_IMPLEMENTATION.md - API docs
+    │   ├── 3D_4D_5D_COMPLETION_REPORT.md - Implementation
+    │   ├── IMPLEMENTATION_3D_4D_5D.md - Quick reference
+    │   ├── DESKTOP_ENVIRONMENT_COMPLETION.md - Desktop
+    │   └── FEATURES_IMPLEMENTATION_SUMMARY.md - Features
+    │
+    ├── Plugin System
+    │   ├── PLUGIN_SYSTEM.md - Architecture
+    │   ├── PLUGIN_QUICKSTART.md - Quick start
+    │   ├── OPTIONAL_PLUGIN_SYSTEM.md - Optional plugins
+    │   └── [other plugin docs]
+    │
+    └── Security & Advanced
+        ├── QUANTUM_ENCRYPTION.md - Crypto API
+        ├── QUANTUM_ENCRYPTION_SUMMARY.md - Implementation
+        ├── AURORA_VM.md - Virtual machine
+        └── [other advanced docs]
 ```
+
 
 ---
 
@@ -170,55 +195,67 @@ Aurora OS Documentation
 All Aurora OS documentation follows these standards:
 
 ### Format
-- Markdown (.md) format
+- Markdown (.md) format for all documentation
 - Clear section headers with hierarchy
-- Code examples with syntax highlighting
+- Code examples with syntax highlighting where applicable
 - Tables for specifications
 - Lists for features and tasks
 
-### Content
-- Date and status at top
-- Executive summary
-- Technical details
-- Usage examples
-- Known limitations
-- Future enhancements
+### Content Structure
+- Date and status at the top
+- Executive summary for major documents
+- Technical details in logical sections
+- Usage examples where helpful
+- Known limitations documented
+- Future enhancements noted
+
+### File Organization
+- **Root directory**: Only essential documents (README, TODO, summaries, index)
+- **docs/ directory**: All detailed technical documentation
+- Consistent naming: UPPERCASE for root docs, Title_Case for detailed docs
 
 ### Maintenance
-- Updated with each major change
-- Dated with last update
+- Documents updated with each major change
+- Last update date included
 - Version tracked where applicable
-- Cross-referenced between documents
+- Cross-references kept current
 
 ---
 
 ## Recent Updates
 
-### November 16, 2025
-- **NEW**: PHASE4_SUMMARY.md - Comprehensive Phase 4 overview
-- **UPDATED**: PHASE_COMPLETION_REPORT.md - Added 3D/4D/5D effects
-- **UPDATED**: README.md - Reflected Phase 4 substantial completion
-- **UPDATED**: IMPLEMENTATION_3D_4D_5D.md - Enhanced context
+### November 16, 2025 - Documentation Reorganization
+- **REORGANIZED**: Moved detailed technical documents from root to docs/ directory
+- **CONSOLIDATED**: Renamed and organized implementation summaries
+- **UPDATED**: This index to reflect new structure
+- **IMPROVED**: Clear separation between essential and technical documentation
 
-### November 15, 2025
-- Initial Phase 4 foundation documentation
-- 3D/4D/5D effects implementation documents
-- Build and testing infrastructure docs
+### Previous Updates
+- Phase 5 completion documentation
+- Phase 4 comprehensive guides
+- Plugin system documentation
+- Quantum encryption implementation docs
 
 ---
 
-## Contact & Contribution
+## Finding Documentation
 
-For questions about documentation:
-- Review relevant section above
-- Check cross-references in documents
-- Consult TODO.md for current priorities
+### By Phase
+- Looking for Phase 2 or 3 info? → [docs/PHASE2_PHASE3_IMPLEMENTATION.md](docs/PHASE2_PHASE3_IMPLEMENTATION.md)
+- Looking for Phase 4 GUI info? → [docs/PHASE4_SUMMARY.md](docs/PHASE4_SUMMARY.md)
+- Looking for Phase 5 testing info? → [docs/PHASE5_COMPLETION_REPORT.md](docs/PHASE5_COMPLETION_REPORT.md)
 
-For documentation improvements:
-- Follow existing format and style
-- Update DOCUMENTATION_INDEX.md when adding new docs
-- Cross-reference related documents
-- Include examples where helpful
+### By Topic
+- Kernel APIs? → [docs/PHASE2_PHASE3_IMPLEMENTATION.md](docs/PHASE2_PHASE3_IMPLEMENTATION.md)
+- GUI/Visual Effects? → [docs/PHASE4_SUMMARY.md](docs/PHASE4_SUMMARY.md) or [docs/3D_4D_5D_GUI_IMPLEMENTATION.md](docs/3D_4D_5D_GUI_IMPLEMENTATION.md)
+- Plugins? → [docs/PLUGIN_SYSTEM.md](docs/PLUGIN_SYSTEM.md)
+- Security? → [docs/QUANTUM_ENCRYPTION.md](docs/QUANTUM_ENCRYPTION.md)
+
+### By Task
+- Setting up development environment? → [docs/GETTING_STARTED.md](docs/GETTING_STARTED.md)
+- Understanding project structure? → [docs/PROJECT_STRUCTURE.md](docs/PROJECT_STRUCTURE.md)
+- Contributing code? → [TODO.md](TODO.md) + relevant phase docs
+- Reviewing progress? → [IMPLEMENTATION_SUMMARY.md](IMPLEMENTATION_SUMMARY.md) + [RELEASE_CANDIDATE_SUMMARY.md](RELEASE_CANDIDATE_SUMMARY.md)
 
 ---
 

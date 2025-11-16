@@ -253,16 +253,22 @@ The desktop environment includes:
 
 ### **Documentation**
 
+For comprehensive documentation, see **[DOCUMENTATION_INDEX.md](DOCUMENTATION_INDEX.md)** for a complete guide.
+
+**Quick Links:**
 - **[Getting Started Guide](docs/GETTING_STARTED.md)** - Setup development environment and build instructions
-- **[Project Structure](docs/PROJECT_STRUCTURE.md)** - Overview of code organization
-- **[Phase 2 & 3 Implementation](docs/PHASE2_PHASE3_IMPLEMENTATION.md)** - Kernel and filesystem documentation
-- **[Phase 4 Implementation](docs/PHASE4_IMPLEMENTATION.md)** - GUI framework documentation
-- **[Phase 5 Implementation](docs/PHASE5_IMPLEMENTATION.md)** - Testing and debugging documentation
-- **[3D/4D/5D Visual Effects](docs/3D_4D_5D_GUI_IMPLEMENTATION.md)** - Advanced effects API and usage
-- **[Quantum Encryption](docs/QUANTUM_ENCRYPTION.md)** - Quantum cryptography module documentation
-- **[Plugin System](docs/PLUGIN_SYSTEM.md)** - Bootloader plugin system for extensibility
-- **[Aurora VM](docs/AURORA_VM.md)** - Virtual machine for testing Aurora OS applications
 - **[TODO List](TODO.md)** - Current tasks and priorities
+- **[Implementation Summary](IMPLEMENTATION_SUMMARY.md)** - Overall project statistics
+- **[Release Candidate Summary](RELEASE_CANDIDATE_SUMMARY.md)** - Current release status
+
+**Technical Documentation:**
+- **[Phase 2 & 3 Implementation](docs/PHASE2_PHASE3_IMPLEMENTATION.md)** - Kernel and filesystem
+- **[Phase 4 Summary](docs/PHASE4_SUMMARY.md)** - GUI comprehensive guide
+- **[Phase 5 Completion Report](docs/PHASE5_COMPLETION_REPORT.md)** - Testing and debugging
+- **[3D/4D/5D Visual Effects](docs/3D_4D_5D_GUI_IMPLEMENTATION.md)** - Advanced effects API
+- **[Quantum Encryption](docs/QUANTUM_ENCRYPTION.md)** - Cryptography module
+- **[Plugin System](docs/PLUGIN_SYSTEM.md)** - Extensibility system
+- **[Aurora VM](docs/AURORA_VM.md)** - Virtual machine
 
 ### **Quick Start**
 

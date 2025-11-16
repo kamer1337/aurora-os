@@ -203,7 +203,7 @@ Most operating system GUIs focus on 2D rendering. Aurora OS goes further:
 - **README.md**: Updated project status
 - **TODO.md**: Updated Phase 4 completion status
 - **IMPLEMENTATION_SUMMARY.md**: Added Phase 4 section
-- **PHASE_COMPLETION_REPORT.md**: Enhanced with 3D/4D/5D details
+- **[PHASE_COMPLETION_REPORT.md](PHASE_COMPLETION_REPORT.md)**: Enhanced with 3D/4D/5D details
 
 ---
 
