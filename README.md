@@ -225,6 +225,17 @@ The desktop environment includes:
   - ✅ Stress and stability testing
   - ✅ Error handling validation
 
+**Latest Features:**
+- ✅ Aurora VM - Standalone 32-bit RISC virtual machine
+  - ✅ 33 opcodes with R/I/J-type instruction formats
+  - ✅ 64KB memory with page protection
+  - ✅ Virtual devices (display, keyboard, mouse, timer, storage)
+  - ✅ 12 system calls for I/O and memory management
+  - ✅ Integrated debugger with breakpoints and disassembly
+  - ✅ 29 comprehensive tests - all passing
+  - ✅ Zero external dependencies
+  - ✅ Cross-platform (Windows/Linux/macOS)
+
 **Next Up:**
 - ⏭️ Release candidate preparation
 - ⏭️ Documentation finalization
@@ -250,6 +261,7 @@ The desktop environment includes:
 - **[3D/4D/5D Visual Effects](docs/3D_4D_5D_GUI_IMPLEMENTATION.md)** - Advanced effects API and usage
 - **[Quantum Encryption](docs/QUANTUM_ENCRYPTION.md)** - Quantum cryptography module documentation
 - **[Plugin System](docs/PLUGIN_SYSTEM.md)** - Bootloader plugin system for extensibility
+- **[Aurora VM](docs/AURORA_VM.md)** - Virtual machine for testing Aurora OS applications
 - **[TODO List](TODO.md)** - Current tasks and priorities
 
 ### **Quick Start**
@@ -270,6 +282,9 @@ make run
 
 # Or run kernel directly in QEMU
 make test
+
+# Build and test Aurora VM (standalone virtual machine)
+make -f Makefile.vm test
 ```
 
 ### **Project Status**

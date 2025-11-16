@@ -6,6 +6,10 @@ build/
 *.iso
 *.img
 
+# VM build artifacts
+bin/
+lib/
+
 # Compiled files
 *.out
 *.exe
