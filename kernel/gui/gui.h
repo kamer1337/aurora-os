@@ -276,4 +276,22 @@ void gui_hide_context_menu(void);
  */
 int gui_is_start_menu_visible(void);
 
+/**
+ * Get the window list (linked list of all windows)
+ * @return Pointer to first window in list, or NULL if none
+ */
+window_t* gui_get_window_list(void);
+
+/**
+ * Set focused window
+ * @param window Window to focus
+ */
+void gui_set_focused_window(window_t* window);
+
+/**
+ * Bring window to front (top of Z-order)
+ * @param window Window to bring to front
+ */
+void gui_bring_to_front(window_t* window);
+
 #endif // GUI_H

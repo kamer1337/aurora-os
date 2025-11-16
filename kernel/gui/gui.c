@@ -1237,3 +1237,33 @@ void gui_hide_context_menu(void) {
 int gui_is_start_menu_visible(void) {
     return start_menu_visible;
 }
+
+window_t* gui_get_window_list(void) {
+    return window_list;
+}
+
+void gui_set_focused_window(window_t* window) {
+    if (!window) return;
+    gui_focus_window(window);
+}
+
+void gui_bring_to_front(window_t* window) {
+    if (!window || !window_list) return;
+    
+    // Remove window from its current position
+    if (window == window_list) {
+        window_list = window->next;
+    } else {
+        window_t* prev = window_list;
+        while (prev && prev->next != window) {
+            prev = prev->next;
+        }
+        if (prev) {
+            prev->next = window->next;
+        }
+    }
+    
+    // Add to front of list
+    window->next = window_list;
+    window_list = window;
+}
