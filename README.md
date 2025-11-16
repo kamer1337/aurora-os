@@ -277,10 +277,10 @@ make all
 # Create bootable ISO
 make iso
 
-# Run in QEMU with ISO
+# Run in Aurora VM
 make run
 
-# Or run kernel directly in QEMU
+# Or run Aurora VM test suite
 make test
 
 # Build and test Aurora VM (standalone virtual machine)

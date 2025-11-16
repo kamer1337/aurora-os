@@ -105,13 +105,13 @@ iso: all
 	@echo "Creating bootable ISO"
 	@./scripts/create_iso.sh
 
-run: iso
-	@echo "Running in QEMU"
-	@./scripts/run_qemu.sh
+run: all
+	@echo "Running in Aurora VM"
+	@./scripts/run_aurora_vm.sh
 
 test: all
-	@echo "Running in QEMU (kernel direct boot)"
-	@./scripts/run_qemu.sh -k
+	@echo "Running Aurora VM test suite"
+	@./scripts/run_aurora_vm.sh
 
 help:
 	@echo "Aurora OS Build System"
@@ -119,8 +119,8 @@ help:
 	@echo "make all    - Build the kernel"
 	@echo "make clean  - Clean build artifacts"
 	@echo "make iso    - Create bootable ISO image"
-	@echo "make run    - Build and run in QEMU (ISO boot)"
-	@echo "make test   - Build and run in QEMU (direct kernel boot)"
+	@echo "make run    - Build and run in Aurora VM"
+	@echo "make test   - Build and run Aurora VM test suite"
 	@echo "make help   - Show this help message"
 
 # Plugin-specific targets

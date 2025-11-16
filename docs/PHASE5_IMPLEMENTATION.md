@@ -285,10 +285,10 @@ make all
 # Create bootable ISO
 make iso
 
-# Run in QEMU
+# Run in Aurora VM
 make run
 
-# Or run directly with kernel
+# Or run Aurora VM test suite
 make test
 ```
 

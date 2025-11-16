@@ -7,20 +7,21 @@ To build and develop Aurora OS, you'll need:
 - GCC (cross-compiler for i386-elf recommended)
 - NASM (Netwide Assembler)
 - GNU Make
-- QEMU (for testing)
 - Git
+
+Note: Aurora OS uses Aurora VM for testing, which has zero external dependencies and is built as part of the project.
 
 ### Installing Prerequisites
 
 #### On Ubuntu/Debian:
 ```bash
 sudo apt-get update
-sudo apt-get install build-essential nasm qemu-system-x86 git
+sudo apt-get install build-essential nasm git
 ```
 
 #### On macOS:
 ```bash
-brew install i386-elf-gcc nasm qemu git
+brew install i386-elf-gcc nasm git
 ```
 
 #### On Windows:
@@ -41,19 +42,28 @@ make all
 
 3. The compiled kernel will be located at `build/aurora-kernel.bin`
 
-## Running in QEMU
+## Running in Aurora VM
 
-To run Aurora OS in the QEMU emulator:
+To run Aurora OS tests in the Aurora VM:
 
 ```bash
-qemu-system-i386 -kernel build/aurora-kernel.bin
+# Run Aurora VM test suite
+make test
+
+# Or run directly
+./scripts/run_aurora_vm.sh
+
+# Build and run Aurora VM separately
+make -f Makefile.vm test
 ```
+
+Aurora VM is a standalone 32-bit RISC virtual machine designed specifically for testing Aurora OS applications.
 
 ## Development Setup
 
 1. **Set up your editor**: Configure your IDE/editor for C development
 2. **Code style**: Follow the existing code style in the project
-3. **Testing**: Test changes in QEMU before committing
+3. **Testing**: Test changes in Aurora VM before committing
 4. **Documentation**: Update documentation when adding features
 
 ## Project Structure
