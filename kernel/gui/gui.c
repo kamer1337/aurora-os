@@ -64,7 +64,7 @@ static uint8_t start_menu_animating = 0;
 
 // Start menu keyboard navigation state
 static int32_t start_menu_selected_item = 0;
-static const int32_t start_menu_item_count = 6;
+static const int32_t start_menu_item_count = 10;  // Updated for new items
 
 // Desktop icons
 typedef struct desktop_icon {
@@ -79,9 +79,12 @@ static desktop_icon_t desktop_icons[] = {
     {"File Manager", 30, 80, APP_FILE_MANAGER, 1},
     {"Terminal", 30, 180, APP_TERMINAL, 1},
     {"Settings", 30, 280, APP_SETTINGS, 1},
-    {"System Info", 30, 380, APP_SYSTEM_INFO, 1}
+    {"System Info", 30, 380, APP_SYSTEM_INFO, 1},
+    {"Paint", 30, 480, APP_PAINT_EDITOR, 1},
+    {"Images", 30, 580, APP_IMAGE_VIEWER, 1},
+    {"Notebook", 150, 80, APP_NOTEBOOK, 1}
 };
-static const int32_t desktop_icon_count = 4;
+static const int32_t desktop_icon_count = 7;
 
 // Forward declarations for desktop environment functions
 static void gui_draw_start_menu(void);
@@ -185,26 +188,39 @@ void gui_process_event(event_t* event) {
                         int32_t relative_y = event->y - (int32_t)menu_y - (int32_t)header_height;
                         
                         // Check if clicked on a menu item (not header)
-                        if (relative_y >= 0 && relative_y < (int32_t)((item_height + item_spacing) * 6)) {
+                        if (relative_y >= 0 && relative_y < (int32_t)((item_height + item_spacing) * 10)) {
                             uint32_t item_index = (uint32_t)relative_y / (item_height + item_spacing);
                             
                             // Launch the corresponding application
                             switch (item_index) {
-                                case 0: // Applications (placeholder)
-                                    break;
-                                case 1: // System Settings
-                                    app_launch(APP_SETTINGS);
-                                    break;
-                                case 2: // File Manager
+                                case 0: // File Manager
                                     app_launch(APP_FILE_MANAGER);
                                     break;
-                                case 3: // Terminal
+                                case 1: // Terminal
                                     app_launch(APP_TERMINAL);
                                     break;
-                                case 4: // System Information
+                                case 2: // Paint Editor
+                                    app_launch(APP_PAINT_EDITOR);
+                                    break;
+                                case 3: // Image Viewer
+                                    app_launch(APP_IMAGE_VIEWER);
+                                    break;
+                                case 4: // Notebook
+                                    app_launch(APP_NOTEBOOK);
+                                    break;
+                                case 5: // System Settings
+                                    app_launch(APP_SETTINGS);
+                                    break;
+                                case 6: // System Information
                                     app_launch(APP_SYSTEM_INFO);
                                     break;
-                                case 5: // Power Options (placeholder)
+                                case 7: // Calculator
+                                    app_launch(APP_CALCULATOR);
+                                    break;
+                                case 8: // Disk Manager
+                                    app_launch(APP_DISK_MANAGER);
+                                    break;
+                                case 9: // Power Options (placeholder)
                                     break;
                             }
                         }
@@ -460,21 +476,34 @@ void gui_process_event(event_t* event) {
                     case '\n':
                         // Launch the selected application
                         switch (start_menu_selected_item) {
-                            case 0: // Applications (placeholder)
-                                break;
-                            case 1: // System Settings
-                                app_launch(APP_SETTINGS);
-                                break;
-                            case 2: // File Manager
+                            case 0: // File Manager
                                 app_launch(APP_FILE_MANAGER);
                                 break;
-                            case 3: // Terminal
+                            case 1: // Terminal
                                 app_launch(APP_TERMINAL);
                                 break;
-                            case 4: // System Information
+                            case 2: // Paint Editor
+                                app_launch(APP_PAINT_EDITOR);
+                                break;
+                            case 3: // Image Viewer
+                                app_launch(APP_IMAGE_VIEWER);
+                                break;
+                            case 4: // Notebook
+                                app_launch(APP_NOTEBOOK);
+                                break;
+                            case 5: // System Settings
+                                app_launch(APP_SETTINGS);
+                                break;
+                            case 6: // System Information
                                 app_launch(APP_SYSTEM_INFO);
                                 break;
-                            case 5: // Power Options (placeholder)
+                            case 7: // Calculator
+                                app_launch(APP_CALCULATOR);
+                                break;
+                            case 8: // Disk Manager
+                                app_launch(APP_DISK_MANAGER);
+                                break;
+                            case 9: // Power Options (placeholder)
                                 break;
                         }
                         start_menu_visible = 0;
@@ -1102,7 +1131,7 @@ static void gui_draw_start_menu(void) {
     if (!fb) return;
     
     uint32_t menu_width = 250;
-    uint32_t menu_height = 400;
+    uint32_t menu_height = 500;  // Increased height for more items
     uint32_t menu_x = 5;
     uint32_t menu_y = fb->height - 40 - menu_height;
     
@@ -1124,20 +1153,24 @@ static void gui_draw_start_menu(void) {
                           (color_t){200, 200, 200, 255},
                           (color_t){0, 120, 215, 255});
     
-    // Draw menu items
+    // Draw menu items (updated to include new applications)
     const char* items[] = {
-        "Applications",
-        "System Settings",
         "File Manager",
         "Terminal",
+        "Paint Editor",
+        "Image Viewer",
+        "Notebook",
+        "System Settings",
         "System Information",
+        "Calculator",
+        "Disk Manager",
         "Power Options"
     };
     
     uint32_t item_height = 40;
     uint32_t item_y = menu_y + 70;
     
-    for (int i = 0; i < 6; i++) {
+    for (int i = 0; i < 10; i++) {
         // Draw item background (highlight selected item)
         color_t item_bg;
         if (i == start_menu_selected_item) {
