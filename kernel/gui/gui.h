@@ -248,4 +248,32 @@ void gui_maximize_window(window_t* window);
  */
 void gui_restore_window(window_t* window);
 
+/**
+ * Draw desktop wallpaper/background
+ */
+void gui_draw_desktop(void);
+
+/**
+ * Toggle start menu visibility
+ */
+void gui_toggle_start_menu(void);
+
+/**
+ * Show context menu for a window
+ * @param window Window to show context menu for
+ * @param x X position for menu
+ * @param y Y position for menu
+ */
+void gui_show_context_menu(window_t* window, int32_t x, int32_t y);
+
+/**
+ * Hide the context menu if visible
+ */
+void gui_hide_context_menu(void);
+
+/**
+ * Check if start menu is visible
+ */
+int gui_is_start_menu_visible(void);
+
 #endif // GUI_H

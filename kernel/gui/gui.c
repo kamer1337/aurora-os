@@ -46,6 +46,17 @@ static window_t* dragging_window = NULL;
 static int32_t drag_offset_x = 0;
 static int32_t drag_offset_y = 0;
 
+// Desktop environment state
+static uint8_t start_menu_visible = 0;
+static uint8_t context_menu_visible = 0;
+static window_t* context_menu_window = NULL;
+static int32_t context_menu_x = 0;
+static int32_t context_menu_y = 0;
+
+// Forward declarations for desktop environment functions
+static void gui_draw_start_menu(void);
+static void gui_draw_context_menu(void);
+
 int gui_init(void) {
     if (gui_initialized) {
         return 0;
@@ -84,7 +95,7 @@ void gui_update(void) {
     if (!gui_initialized) return;
     
     // Redraw desktop background
-    framebuffer_clear((color_t){30, 130, 200, 255});  // Windows-like blue
+    gui_draw_desktop();
     
     // Draw all windows
     window_t* window = window_list;
@@ -98,6 +109,16 @@ void gui_update(void) {
     // Draw taskbar
     gui_draw_taskbar();
     
+    // Draw start menu if visible
+    if (start_menu_visible) {
+        gui_draw_start_menu();
+    }
+    
+    // Draw context menu if visible
+    if (context_menu_visible) {
+        gui_draw_context_menu();
+    }
+    
     // Draw cursor last (on top of everything)
     gui_draw_cursor();
 }
@@ -108,14 +129,86 @@ void gui_process_event(event_t* event) {
     // Process event based on type
     switch (event->type) {
         case EVENT_MOUSE_DOWN:
+            // Check if clicked on start menu
+            if (start_menu_visible) {
+                framebuffer_info_t* fb = framebuffer_get_info();
+                if (fb) {
+                    uint32_t menu_width = 250;
+                    uint32_t menu_height = 400;
+                    uint32_t menu_x = 5;
+                    uint32_t menu_y = fb->height - 40 - menu_height;
+                    rect_t menu_rect = {menu_x, menu_y, menu_width, menu_height};
+                    
+                    if (gui_point_in_rect(event->x, event->y, &menu_rect)) {
+                        // Clicked inside start menu - handle menu items
+                        // For now, just close the menu on any click
+                        start_menu_visible = 0;
+                        return;
+                    } else {
+                        // Clicked outside start menu - close it
+                        start_menu_visible = 0;
+                    }
+                }
+            }
+            
+            // Check if clicked on context menu
+            if (context_menu_visible) {
+                rect_t context_rect = {context_menu_x, context_menu_y, 150, 120};
+                if (gui_point_in_rect(event->x, event->y, &context_rect)) {
+                    // Clicked inside context menu - determine which item
+                    uint32_t item_height = 30;
+                    uint32_t relative_y = event->y - context_menu_y;
+                    uint32_t item_index = relative_y / item_height;
+                    
+                    if (context_menu_window && item_index < 4) {
+                        switch (item_index) {
+                            case 0: // Restore
+                                gui_restore_window(context_menu_window);
+                                break;
+                            case 1: // Minimize
+                                gui_minimize_window(context_menu_window);
+                                break;
+                            case 2: // Maximize
+                                if (context_menu_window->maximized) {
+                                    gui_restore_window(context_menu_window);
+                                } else {
+                                    gui_maximize_window(context_menu_window);
+                                }
+                                break;
+                            case 3: // Close
+                                gui_destroy_window(context_menu_window);
+                                break;
+                        }
+                    }
+                    gui_hide_context_menu();
+                    return;
+                } else {
+                    // Clicked outside context menu - close it
+                    gui_hide_context_menu();
+                }
+            }
+            
             // Check if clicked on taskbar
             {
                 framebuffer_info_t* fb = framebuffer_get_info();
                 if (fb && event->y >= (int32_t)(fb->height - 40)) {
+                    uint32_t taskbar_y = fb->height - 40;
+                    
+                    // Check if clicked on Start button
+                    rect_t start_button_rect = {5, taskbar_y + 5, 80, 30};
+                    if (gui_point_in_rect(event->x, event->y, &start_button_rect)) {
+                        gui_toggle_start_menu();
+                        return;
+                    }
+                    
+                    // Hide start menu if clicking elsewhere on taskbar
+                    if (start_menu_visible) {
+                        start_menu_visible = 0;
+                    }
+                    
                     // Clicked on taskbar - check window list buttons
                     uint32_t button_x = 95;
                     uint32_t button_width = 150;
-                    uint32_t taskbar_y = fb->height - 40;
                     
                     window_t* window = window_list;
                     while (window && button_x + button_width < fb->width - 100) {
@@ -185,13 +278,20 @@ void gui_process_event(event_t* event) {
                                 break;
                             }
                             
-                            // If clicked on titlebar (but not buttons), start dragging
-                            clicked_window = window;
-                            dragging_window = window;
-                            drag_offset_x = event->x - window->bounds.x;
-                            drag_offset_y = event->y - window->bounds.y;
-                            gui_focus_window(window);
-                            break;
+                            // If clicked on titlebar (but not buttons), start dragging or show context menu
+                            if (event->button == 2) {
+                                // Right-click on titlebar - show context menu
+                                gui_show_context_menu(window, event->x, event->y);
+                                break;
+                            } else {
+                                // Left-click - start dragging
+                                clicked_window = window;
+                                dragging_window = window;
+                                drag_offset_x = event->x - window->bounds.x;
+                                drag_offset_y = event->y - window->bounds.y;
+                                gui_focus_window(window);
+                                break;
+                            }
                         }
                         
                         // Check if clicked anywhere on window
@@ -567,6 +667,28 @@ int gui_point_in_rect(int32_t x, int32_t y, rect_t* rect) {
             y >= rect->y && y < rect->y + (int32_t)rect->height);
 }
 
+void gui_draw_desktop(void) {
+    framebuffer_info_t* fb = framebuffer_get_info();
+    if (!fb) return;
+    
+    // Draw background with gradient (sky blue to lighter blue)
+    for (uint32_t y = 0; y < fb->height - 40; y++) {
+        uint8_t r = 30 + (y * 30 / fb->height);
+        uint8_t g = 130 + (y * 20 / fb->height);
+        uint8_t b = 200 + (y * 30 / fb->height);
+        color_t line_color = {r, g, b, 255};
+        framebuffer_draw_hline(0, fb->width - 1, y, line_color);
+    }
+    
+    // Draw desktop icons (placeholder - could add icon grid here)
+    // For now, just show "Aurora OS" text on desktop
+    const char* os_name = "Aurora OS Desktop";
+    uint32_t text_x = fb->width / 2 - (strlen(os_name) * 8) / 2;
+    uint32_t text_y = 20;
+    framebuffer_draw_string(text_x, text_y, os_name, COLOR_WHITE, 
+                          (color_t){0, 0, 0, 0});  // Transparent background
+}
+
 void gui_draw_taskbar(void) {
     framebuffer_info_t* fb = framebuffer_get_info();
     if (!fb) return;
@@ -818,4 +940,127 @@ void gui_restore_window(window_t* window) {
         window->bounds = window->normal_bounds;
         window->maximized = 0;
     }
+}
+
+// Desktop environment functions
+
+static void gui_draw_start_menu(void) {
+    framebuffer_info_t* fb = framebuffer_get_info();
+    if (!fb) return;
+    
+    uint32_t menu_width = 250;
+    uint32_t menu_height = 400;
+    uint32_t menu_x = 5;
+    uint32_t menu_y = fb->height - 40 - menu_height;
+    
+    // Draw menu background with shadow
+    gui_draw_shadow(menu_x, menu_y, menu_width, menu_height, 4, 8);
+    framebuffer_draw_rect(menu_x, menu_y, menu_width, menu_height,
+                        (color_t){45, 45, 48, 255});
+    
+    // Draw menu border
+    framebuffer_draw_rect_outline(menu_x, menu_y, menu_width, menu_height,
+                                 (color_t){80, 80, 85, 255});
+    
+    // Draw menu header
+    framebuffer_draw_rect(menu_x, menu_y, menu_width, 60,
+                        (color_t){0, 120, 215, 255});
+    framebuffer_draw_string(menu_x + 10, menu_y + 10, "Aurora OS", COLOR_WHITE,
+                          (color_t){0, 120, 215, 255});
+    framebuffer_draw_string(menu_x + 10, menu_y + 30, "Start Menu", 
+                          (color_t){200, 200, 200, 255},
+                          (color_t){0, 120, 215, 255});
+    
+    // Draw menu items
+    const char* items[] = {
+        "Applications",
+        "System Settings",
+        "File Manager",
+        "Terminal",
+        "System Information",
+        "Power Options"
+    };
+    
+    uint32_t item_height = 40;
+    uint32_t item_y = menu_y + 70;
+    
+    for (int i = 0; i < 6; i++) {
+        // Draw item background (highlight on hover could be added)
+        color_t item_bg = {55, 55, 60, 255};
+        framebuffer_draw_rect(menu_x + 5, item_y, menu_width - 10, item_height,
+                            item_bg);
+        
+        // Draw item text
+        framebuffer_draw_string(menu_x + 15, item_y + 12, items[i],
+                              COLOR_WHITE, item_bg);
+        
+        item_y += item_height + 5;
+    }
+}
+
+static void gui_draw_context_menu(void) {
+    if (!context_menu_visible || !context_menu_window) return;
+    
+    uint32_t menu_width = 150;
+    uint32_t menu_height = 120;
+    
+    // Draw menu background with shadow
+    gui_draw_shadow(context_menu_x, context_menu_y, menu_width, menu_height, 3, 5);
+    framebuffer_draw_rect(context_menu_x, context_menu_y, menu_width, menu_height,
+                        (color_t){50, 50, 55, 255});
+    
+    // Draw menu border
+    framebuffer_draw_rect_outline(context_menu_x, context_menu_y, 
+                                 menu_width, menu_height,
+                                 (color_t){80, 80, 85, 255});
+    
+    // Draw menu items
+    const char* items[] = {"Restore", "Minimize", "Maximize", "Close"};
+    uint32_t item_height = 30;
+    uint32_t item_y = context_menu_y;
+    
+    for (int i = 0; i < 4; i++) {
+        // Draw item text
+        framebuffer_draw_string(context_menu_x + 10, item_y + 8, items[i],
+                              COLOR_WHITE, (color_t){50, 50, 55, 255});
+        
+        // Draw separator line
+        if (i < 3) {
+            framebuffer_draw_hline(context_menu_x, context_menu_x + menu_width - 1,
+                                 item_y + item_height, 
+                                 (color_t){70, 70, 75, 255});
+        }
+        
+        item_y += item_height;
+    }
+}
+
+void gui_toggle_start_menu(void) {
+    start_menu_visible = !start_menu_visible;
+    
+    // Hide context menu when opening start menu
+    if (start_menu_visible) {
+        context_menu_visible = 0;
+    }
+}
+
+void gui_show_context_menu(window_t* window, int32_t x, int32_t y) {
+    if (!window) return;
+    
+    context_menu_window = window;
+    context_menu_x = x;
+    context_menu_y = y;
+    context_menu_visible = 1;
+    
+    // Hide start menu when showing context menu
+    start_menu_visible = 0;
+}
+
+void gui_hide_context_menu(void) {
+    context_menu_visible = 0;
+    context_menu_window = NULL;
+}
+
+int gui_is_start_menu_visible(void) {
+    return start_menu_visible;
 }
