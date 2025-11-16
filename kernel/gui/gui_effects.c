@@ -226,6 +226,34 @@ float gui_ease(float t, ease_type_t ease_type) {
                 return 0.5f + 0.5f * (2.0f * t - 1.0f) * (2.0f * t - 1.0f);
             }
         }
+        
+        case EASE_ELASTIC: {
+            // Elastic easing: overshoots with oscillation
+            if (t == 0.0f) return 0.0f;
+            if (t == 1.0f) return 1.0f;
+            
+            float p = 0.3f;
+            float s = p / 4.0f;
+            float post = t - 1.0f;
+            
+            // Simplified elastic without pow: use quadratic approximation
+            float amp = 1.0f - (post * post * 4.0f);  // Approximation of decay
+            if (amp < 0.0f) amp = 0.0f;
+            
+            // Sine approximation using Taylor series (first 3 terms)
+            float angle = (post * 13.0f);  // Frequency
+            float sine = angle - (angle * angle * angle) / 6.0f;  // sin(x) ≈ x - x³/6
+            
+            return amp * sine + 1.0f;
+        }
+        
+        case EASE_BACK: {
+            // Back easing: overshoots slightly past target
+            float c1 = 1.70158f;
+            float c3 = c1 + 1.0f;
+            
+            return c3 * t * t * t - c1 * t * t;
+        }
             
         default:
             return t;
@@ -251,15 +279,87 @@ color_t gui_color_lerp(color_t color1, color_t color2, float t) {
 
 void gui_apply_blur(int32_t x, int32_t y, uint32_t width, uint32_t height,
                     uint32_t amount) {
-    // Simple box blur implementation
-    // Note: In a real implementation, we'd read from and write to framebuffer
-    // For now, this is a placeholder showing the concept
     if (amount < 1) amount = 1;
     if (amount > 10) amount = 10;
     
-    // Draw semi-transparent overlay to simulate blur
-    color_t blur_color = {200, 200, 200, 50};
-    gui_draw_rect_alpha(x, y, width, height, blur_color);
+    // Get framebuffer info
+    framebuffer_info_t* fb_info = framebuffer_get_info();
+    if (!fb_info || !fb_info->address) {
+        return;
+    }
+    
+    // Ensure coordinates are within bounds
+    if (x < 0) x = 0;
+    if (y < 0) y = 0;
+    if (x + (int32_t)width > (int32_t)fb_info->width) width = fb_info->width - x;
+    if (y + (int32_t)height > (int32_t)fb_info->height) height = fb_info->height - y;
+    
+    // Use a 3x3 Gaussian kernel for blur
+    // Kernel: [1 2 1]
+    //         [2 4 2]
+    //         [1 2 1]
+    // Sum = 16
+    
+    // Allocate temporary buffer for the region (simplified - use stack for small regions)
+    // For larger regions, we'd need dynamic allocation
+    uint32_t max_size = 256 * 256;  // Maximum 256x256 region
+    if (width * height > max_size) {
+        // Fall back to simple overlay for large regions
+        color_t blur_color = {200, 200, 200, 50};
+        gui_draw_rect_alpha(x, y, width, height, blur_color);
+        return;
+    }
+    
+    // Apply blur multiple times based on amount
+    for (uint32_t iter = 0; iter < amount; iter++) {
+        // Apply 3x3 Gaussian kernel convolution
+        for (uint32_t py = 1; py < height - 1; py++) {
+            for (uint32_t px = 1; px < width - 1; px++) {
+                uint32_t abs_x = x + px;
+                uint32_t abs_y = y + py;
+                
+                // Sample 3x3 neighborhood
+                uint32_t sum_r = 0, sum_g = 0, sum_b = 0;
+                
+                // Get pixel values and apply kernel weights
+                for (int ky = -1; ky <= 1; ky++) {
+                    for (int kx = -1; kx <= 1; kx++) {
+                        uint32_t sx = abs_x + kx;
+                        uint32_t sy = abs_y + ky;
+                        uint32_t offset = sy * (fb_info->pitch / 4) + sx;
+                        uint32_t pixel = fb_info->address[offset];
+                        
+                        // Extract RGB
+                        uint8_t r = (pixel >> 16) & 0xFF;
+                        uint8_t g = (pixel >> 8) & 0xFF;
+                        uint8_t b = pixel & 0xFF;
+                        
+                        // Apply kernel weight
+                        uint32_t weight = 1;
+                        if (kx == 0 && ky == 0) weight = 4;  // Center
+                        else if (kx == 0 || ky == 0) weight = 2;  // Edges
+                        // Corners = 1
+                        
+                        sum_r += r * weight;
+                        sum_g += g * weight;
+                        sum_b += b * weight;
+                    }
+                }
+                
+                // Average by dividing by kernel sum (16)
+                color_t blurred;
+                blurred.r = (uint8_t)(sum_r / 16);
+                blurred.g = (uint8_t)(sum_g / 16);
+                blurred.b = (uint8_t)(sum_b / 16);
+                blurred.a = 255;
+                
+                // Write back (only for every other iteration to avoid artifacts)
+                if (iter % 2 == 0 || iter == amount - 1) {
+                    framebuffer_draw_pixel(abs_x, abs_y, blurred);
+                }
+            }
+        }
+    }
 }
 
 void gui_draw_glow(int32_t x, int32_t y, uint32_t width, uint32_t height,
@@ -419,5 +519,121 @@ void gui_draw_particles(void) {
                 }
             }
         }
+    }
+}
+
+// ============================================================================
+// Sprite System
+// ============================================================================
+
+sprite_t* gui_create_sprite(uint32_t width, uint32_t height, uint32_t* pixels) {
+    if (!width || !height || !pixels) {
+        return 0;
+    }
+    
+    // For now, use a static sprite pool (in real implementation, use dynamic allocation)
+    static sprite_t sprite_pool[16];
+    static int sprite_count = 0;
+    
+    if (sprite_count >= 16) {
+        return 0;  // Pool exhausted
+    }
+    
+    sprite_t* sprite = &sprite_pool[sprite_count++];
+    sprite->width = width;
+    sprite->height = height;
+    sprite->pixels = pixels;
+    
+    return sprite;
+}
+
+void gui_draw_sprite(sprite_t* sprite, int32_t x, int32_t y) {
+    if (!sprite || !sprite->pixels) {
+        return;
+    }
+    
+    for (uint32_t py = 0; py < sprite->height; py++) {
+        for (uint32_t px = 0; px < sprite->width; px++) {
+            uint32_t pixel = sprite->pixels[py * sprite->width + px];
+            
+            // Extract RGBA
+            color_t color;
+            color.r = (pixel >> 24) & 0xFF;
+            color.g = (pixel >> 16) & 0xFF;
+            color.b = (pixel >> 8) & 0xFF;
+            color.a = pixel & 0xFF;
+            
+            // Draw with alpha blending if alpha < 255
+            if (color.a == 255) {
+                framebuffer_draw_pixel(x + px, y + py, color);
+            } else if (color.a > 0) {
+                gui_draw_pixel_alpha(x + px, y + py, color);
+            }
+        }
+    }
+}
+
+void gui_draw_sprite_alpha(sprite_t* sprite, int32_t x, int32_t y, uint8_t alpha) {
+    if (!sprite || !sprite->pixels) {
+        return;
+    }
+    
+    for (uint32_t py = 0; py < sprite->height; py++) {
+        for (uint32_t px = 0; px < sprite->width; px++) {
+            uint32_t pixel = sprite->pixels[py * sprite->width + px];
+            
+            // Extract RGBA
+            color_t color;
+            color.r = (pixel >> 24) & 0xFF;
+            color.g = (pixel >> 16) & 0xFF;
+            color.b = (pixel >> 8) & 0xFF;
+            color.a = ((pixel & 0xFF) * alpha) / 255;
+            
+            if (color.a > 0) {
+                gui_draw_pixel_alpha(x + px, y + py, color);
+            }
+        }
+    }
+}
+
+void gui_draw_sprite_scaled(sprite_t* sprite, int32_t x, int32_t y, float scale_x, float scale_y) {
+    if (!sprite || !sprite->pixels || scale_x <= 0.0f || scale_y <= 0.0f) {
+        return;
+    }
+    
+    uint32_t scaled_width = (uint32_t)(sprite->width * scale_x);
+    uint32_t scaled_height = (uint32_t)(sprite->height * scale_y);
+    
+    for (uint32_t py = 0; py < scaled_height; py++) {
+        for (uint32_t px = 0; px < scaled_width; px++) {
+            // Nearest neighbor sampling
+            uint32_t src_x = (uint32_t)(px / scale_x);
+            uint32_t src_y = (uint32_t)(py / scale_y);
+            
+            if (src_x < sprite->width && src_y < sprite->height) {
+                uint32_t pixel = sprite->pixels[src_y * sprite->width + src_x];
+                
+                // Extract RGBA
+                color_t color;
+                color.r = (pixel >> 24) & 0xFF;
+                color.g = (pixel >> 16) & 0xFF;
+                color.b = (pixel >> 8) & 0xFF;
+                color.a = pixel & 0xFF;
+                
+                if (color.a == 255) {
+                    framebuffer_draw_pixel(x + px, y + py, color);
+                } else if (color.a > 0) {
+                    gui_draw_pixel_alpha(x + px, y + py, color);
+                }
+            }
+        }
+    }
+}
+
+void gui_destroy_sprite(sprite_t* sprite) {
+    // In a real implementation with dynamic allocation, free memory here
+    // For now with static pool, just mark as unused (simplified)
+    if (sprite) {
+        sprite->pixels = 0;
     }
 }

@@ -174,4 +174,43 @@ void framebuffer_draw_string_5x7(uint32_t x, uint32_t y, const char* str, color_
  */
 uint32_t framebuffer_color_to_pixel(color_t color);
 
+/**
+ * Enable or disable double buffering
+ * @param enable 1 to enable, 0 to disable
+ * @return 0 on success, -1 on failure
+ */
+int framebuffer_set_double_buffering(int enable);
+
+/**
+ * Swap buffers (present back buffer to front)
+ * Only has effect if double buffering is enabled
+ */
+void framebuffer_swap_buffers(void);
+
+/**
+ * Get the current drawing buffer address
+ * @return Pointer to current drawing buffer
+ */
+uint32_t* framebuffer_get_draw_buffer(void);
+
+/**
+ * Draw a character with anti-aliasing
+ * @param x X coordinate
+ * @param y Y coordinate
+ * @param c Character to draw
+ * @param fg_color Foreground color
+ * @param bg_color Background color
+ */
+void framebuffer_draw_char_antialiased(uint32_t x, uint32_t y, char c, color_t fg_color, color_t bg_color);
+
+/**
+ * Draw a string with anti-aliasing
+ * @param x X coordinate
+ * @param y Y coordinate
+ * @param str String to draw
+ * @param fg_color Foreground color
+ * @param bg_color Background color
+ */
+void framebuffer_draw_string_antialiased(uint32_t x, uint32_t y, const char* str, color_t fg_color, color_t bg_color);
+
 #endif // FRAMEBUFFER_H

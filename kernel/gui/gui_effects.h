@@ -94,7 +94,9 @@ typedef enum {
     EASE_IN_OUT_QUAD,
     EASE_IN_CUBIC,
     EASE_OUT_CUBIC,
-    EASE_BOUNCE
+    EASE_BOUNCE,
+    EASE_ELASTIC,
+    EASE_BACK
 } ease_type_t;
 
 /**
@@ -202,5 +204,56 @@ void gui_update_particles(uint32_t delta_time);
  * Draw all active particles
  */
 void gui_draw_particles(void);
+
+/**
+ * Sprite structure for images/icons
+ */
+typedef struct {
+    uint32_t width;
+    uint32_t height;
+    uint32_t* pixels;  // RGBA pixel data
+} sprite_t;
+
+/**
+ * Create a sprite from pixel data
+ * @param width Sprite width
+ * @param height Sprite height
+ * @param pixels Pointer to RGBA pixel data
+ * @return Pointer to created sprite, or NULL on failure
+ */
+sprite_t* gui_create_sprite(uint32_t width, uint32_t height, uint32_t* pixels);
+
+/**
+ * Draw a sprite at the specified position
+ * @param sprite Pointer to sprite
+ * @param x X position
+ * @param y Y position
+ */
+void gui_draw_sprite(sprite_t* sprite, int32_t x, int32_t y);
+
+/**
+ * Draw a sprite with alpha blending
+ * @param sprite Pointer to sprite
+ * @param x X position
+ * @param y Y position
+ * @param alpha Overall alpha multiplier (0-255)
+ */
+void gui_draw_sprite_alpha(sprite_t* sprite, int32_t x, int32_t y, uint8_t alpha);
+
+/**
+ * Draw a scaled sprite
+ * @param sprite Pointer to sprite
+ * @param x X position
+ * @param y Y position
+ * @param scale_x Horizontal scale factor (1.0 = normal)
+ * @param scale_y Vertical scale factor (1.0 = normal)
+ */
+void gui_draw_sprite_scaled(sprite_t* sprite, int32_t x, int32_t y, float scale_x, float scale_y);
+
+/**
+ * Destroy a sprite and free its resources
+ * @param sprite Pointer to sprite
+ */
+void gui_destroy_sprite(sprite_t* sprite);
 
 #endif // GUI_EFFECTS_H
