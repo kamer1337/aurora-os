@@ -1,11 +1,18 @@
 /* Aurora OS - Boot Assembly Code */
-/* Multiboot header for GRUB bootloader */
+/* Multiboot header for GRUB bootloader with video mode support */
 
 .set ALIGN,    1<<0                 /* Align loaded modules on page boundaries */
 .set MEMINFO,  1<<1                 /* Provide memory map */
-.set FLAGS,    ALIGN | MEMINFO      /* Multiboot flags */
+.set VIDEO,    1<<2                 /* Request video mode */
+.set FLAGS,    ALIGN | MEMINFO | VIDEO  /* Multiboot flags */
 .set MAGIC,    0x1BADB002           /* Magic number for multiboot */
 .set CHECKSUM, -(MAGIC + FLAGS)     /* Checksum for multiboot */
+
+/* Video mode preferences */
+.set MODE_TYPE, 0                   /* 0 = linear framebuffer mode */
+.set WIDTH,     1920                /* Preferred width */
+.set HEIGHT,    1080                /* Preferred height */
+.set DEPTH,     32                  /* Preferred depth (bits per pixel) */
 
 /* Multiboot header */
 .section .multiboot
@@ -13,6 +20,11 @@
 .long MAGIC
 .long FLAGS
 .long CHECKSUM
+/* Video mode fields (only valid if bit 2 of FLAGS is set) */
+.long MODE_TYPE
+.long WIDTH
+.long HEIGHT
+.long DEPTH
 
 /* Stack setup */
 .section .bss
@@ -33,7 +45,13 @@ _start:
     pushl $0
     popf
     
-    /* Call kernel main function */
+    /* Push multiboot info pointer (from EBX) onto stack */
+    pushl %ebx
+    
+    /* Push multiboot magic number (from EAX) onto stack */
+    pushl %eax
+    
+    /* Call kernel main function with multiboot parameters */
     call kernel_main
     
     /* If kernel_main returns, halt */

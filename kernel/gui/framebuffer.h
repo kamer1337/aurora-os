@@ -57,6 +57,13 @@ typedef struct {
 int framebuffer_init(uint32_t width, uint32_t height, uint8_t bpp);
 
 /**
+ * Initialize framebuffer from multiboot information
+ * @param mbi Pointer to multiboot info structure
+ * @return 0 on success, -1 on failure
+ */
+int framebuffer_init_from_multiboot(void* mbi);
+
+/**
  * Get framebuffer information
  * @return Pointer to framebuffer info structure
  */
