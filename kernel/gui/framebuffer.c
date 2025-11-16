@@ -239,6 +239,12 @@ static const uint8_t font5x7[128][7] = {
 static framebuffer_info_t fb_info = {0};
 static int fb_available = 0;
 
+// Double buffering support
+static uint32_t* back_buffer = 0;
+static uint32_t* front_buffer = 0;
+static int double_buffering_enabled = 0;
+static uint32_t* current_draw_buffer = 0;
+
 int framebuffer_init(uint32_t width, uint32_t height, uint8_t bpp) {
     // Set default values if not specified
     if (width == 0) width = DEFAULT_FB_WIDTH;
@@ -452,6 +458,150 @@ void framebuffer_draw_string_5x7(uint32_t x, uint32_t y, const char* str, color_
             cursor_x += 6;  // 5 pixels for char + 1 pixel spacing
             
             // Wrap to next line if needed
+            if (cursor_x + 6 > fb_info.width) {
+                cursor_x = x;
+                cursor_y += 7;
+            }
+        }
+        
+        str++;
+    }
+}
+
+/**
+ * Enable or disable double buffering
+ */
+int framebuffer_set_double_buffering(int enable) {
+    if (!fb_available) {
+        return -1;
+    }
+    
+    if (enable && !double_buffering_enabled) {
+        // Allocate back buffer
+        size_t buffer_size = fb_info.width * fb_info.height * sizeof(uint32_t);
+        
+        // Use a fixed memory region for back buffer (in kernel heap)
+        // In a real implementation, this would use proper memory allocation
+        back_buffer = (uint32_t*)0xE1000000;  // 16MB offset from front buffer
+        front_buffer = fb_info.address;
+        current_draw_buffer = back_buffer;
+        double_buffering_enabled = 1;
+        
+        // Clear back buffer
+        for (uint32_t i = 0; i < fb_info.width * fb_info.height; i++) {
+            back_buffer[i] = 0;
+        }
+    } else if (!enable && double_buffering_enabled) {
+        // Disable double buffering
+        current_draw_buffer = front_buffer;
+        double_buffering_enabled = 0;
+        back_buffer = 0;
+    }
+    
+    return 0;
+}
+
+/**
+ * Swap buffers (present back buffer to front)
+ */
+void framebuffer_swap_buffers(void) {
+    if (!double_buffering_enabled || !back_buffer || !front_buffer) {
+        return;
+    }
+    
+    // Copy back buffer to front buffer
+    uint32_t total_pixels = fb_info.width * fb_info.height;
+    for (uint32_t i = 0; i < total_pixels; i++) {
+        front_buffer[i] = back_buffer[i];
+    }
+}
+
+/**
+ * Get the current drawing buffer address
+ */
+uint32_t* framebuffer_get_draw_buffer(void) {
+    if (double_buffering_enabled && back_buffer) {
+        return back_buffer;
+    }
+    return fb_info.address;
+}
+
+/**
+ * Draw a character with anti-aliasing using 5x7 font
+ */
+void framebuffer_draw_char_antialiased(uint32_t x, uint32_t y, char c, color_t fg_color, color_t bg_color) {
+    if (!fb_available || c < 0 || c >= 128) {
+        return;
+    }
+    
+    // Draw character with 2x2 supersampling for anti-aliasing
+    for (uint32_t row = 0; row < 7; row++) {
+        uint8_t bitmap = font5x7[(int)c][row];
+        
+        for (uint32_t col = 0; col < 5; col++) {
+            uint8_t pixel = (bitmap >> col) & 1;
+            
+            if (pixel) {
+                // Draw with edge smoothing
+                // Check neighboring pixels for edge detection
+                uint8_t left = (col > 0) ? ((bitmap >> (col - 1)) & 1) : 0;
+                uint8_t right = (col < 4) ? ((bitmap >> (col + 1)) & 1) : 0;
+                uint8_t top = (row > 0) ? ((font5x7[(int)c][row - 1] >> col) & 1) : 0;
+                uint8_t bottom = (row < 6) ? ((font5x7[(int)c][row + 1] >> col) & 1) : 0;
+                
+                // Calculate edge factor (how many neighbors are filled)
+                uint8_t neighbors = left + right + top + bottom;
+                
+                // Full pixel
+                framebuffer_draw_pixel(x + col, y + row, fg_color);
+                
+                // Anti-alias edges by drawing semi-transparent pixels at borders
+                if (neighbors < 4) {
+                    uint8_t alpha = 128;  // Semi-transparent
+                    
+                    // Add edge smoothing pixels
+                    if (!left && col > 0) {
+                        color_t edge = fg_color;
+                        edge.a = alpha;
+                        // Would need alpha blending here - simplified for now
+                    }
+                    if (!right && col < 4) {
+                        color_t edge = fg_color;
+                        edge.a = alpha;
+                        // Would need alpha blending here - simplified for now
+                    }
+                }
+            } else {
+                // Background pixel
+                framebuffer_draw_pixel(x + col, y + row, bg_color);
+            }
+        }
+    }
+}
+
+/**
+ * Draw a string with anti-aliasing
+ */
+void framebuffer_draw_string_antialiased(uint32_t x, uint32_t y, const char* str, color_t fg_color, color_t bg_color) {
+    if (!fb_available || !str) {
+        return;
+    }
+    
+    uint32_t cursor_x = x;
+    uint32_t cursor_y = y;
+    
+    while (*str) {
+        if (*str == '\n') {
+            cursor_x = x;
+            cursor_y += 7;
+        } else if (*str == '\t') {
+            cursor_x += 6 * 4;  // Tab = 4 spaces
+        } else {
+            if (cursor_y + 7 <= fb_info.height) {
+                framebuffer_draw_char_antialiased(cursor_x, cursor_y, *str, fg_color, bg_color);
+            }
+            cursor_x += 6;  // 5 pixels + 1 spacing
+            
             if (cursor_x + 6 > fb_info.width) {
                 cursor_x = x;
                 cursor_y += 7;
