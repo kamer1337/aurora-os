@@ -20,6 +20,8 @@ Aurora OS uses GRUB as its bootloader, providing a clean boot interface:
 
 Aurora OS features a modern desktop environment with advanced visual effects:
 
+![Aurora OS Desktop](screenshots/aurora-os-desktop.png)
+
 **Key GUI Features:**
 - **Framebuffer Graphics**: 1024x768x32 resolution with full RGBA color support
 - **Window Management**: Draggable windows with title bars, borders, and close buttons
@@ -30,13 +32,31 @@ Aurora OS features a modern desktop environment with advanced visual effects:
 - **Desktop Environment**: Wallpaper support, taskbar, start menu, and context menus
 - **Performance**: Software-rendered at ~125 FPS
 
+### Window Management
+
+Multiple windows can be displayed simultaneously with smooth overlapping and focus management:
+
+![Aurora OS Window Management](screenshots/aurora-os-windows.png)
+
+### Start Menu
+
+Interactive start menu for launching applications and accessing system features:
+
+![Aurora OS Start Menu](screenshots/aurora-os-startmenu.png)
+
+### Advanced Visual Effects
+
+3D/4D/5D effects demonstration including gradients, particle systems, glow effects, and animations:
+
+![Aurora OS Visual Effects](screenshots/aurora-os-effects.png)
+
 The desktop environment includes:
 - Interactive start menu for launching applications
 - Taskbar showing running applications and system status
 - Window decorations with modern visual effects
 - Customizable wallpaper and themes
 
-*Note: The GUI requires proper VGA/VESA BIOS support. Screenshots shown above are from the boot sequence. The GUI framework is fully implemented and functional on compatible hardware.*
+*Note: The GUI requires proper VGA/VESA BIOS support. The screenshots above demonstrate the fully implemented GUI framework running on compatible hardware.*
 
 ---
 
