@@ -151,11 +151,11 @@ void framebuffer_scroll_up(uint32_t lines, color_t bg_color);
  * Draw a character at the specified position using 5x7 font
  * @param x X coordinate
  * @param y Y coordinate
- * @param c Character to draw
+ * @param c Character to draw (ASCII value as int)
  * @param fg_color Foreground color
  * @param bg_color Background color
  */
-void framebuffer_draw_char_5x7(uint32_t x, uint32_t y, char c, color_t fg_color, color_t bg_color);
+void framebuffer_draw_char_5x7(uint32_t x, uint32_t y, int c, color_t fg_color, color_t bg_color);
 
 /**
  * Draw a string at the specified position using 5x7 font

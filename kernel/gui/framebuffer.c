@@ -40,6 +40,8 @@ static const uint8_t font8x8[128][8] = {
 
 // 5x7 bitmap font with modified patterns for alphanumeric characters
 // Each character is encoded in 7 bytes, with 5 bits used per byte (bits 0-4)
+// Note: Characters 0-31 and 127 (control characters) are intentionally left zero-initialized
+// as they are not typically rendered. Access to these will render as blank characters.
 static const uint8_t font5x7[128][7] = {
     // Space (32)
     [32] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
@@ -413,10 +415,10 @@ void framebuffer_scroll_up(uint32_t lines, color_t bg_color) {
     framebuffer_draw_rect(0, fb_info.height - scroll_height, fb_info.width, scroll_height, bg_color);
 }
 
-void framebuffer_draw_char_5x7(uint32_t x, uint32_t y, char c, color_t fg_color, color_t bg_color) {
+void framebuffer_draw_char_5x7(uint32_t x, uint32_t y, int c, color_t fg_color, color_t bg_color) {
     if (!fb_available || c < 0 || c >= 128) return;
     
-    const uint8_t* glyph = font5x7[(int)c];
+    const uint8_t* glyph = font5x7[c];
     
     for (int dy = 0; dy < 7; dy++) {
         uint8_t row = glyph[dy];
@@ -441,13 +443,16 @@ void framebuffer_draw_string_5x7(uint32_t x, uint32_t y, const char* str, color_
             cursor_x = x;
             cursor_y += 7;
         } else if (*str == '\t') {
-            cursor_x += 5 * 4;  // Tab = 4 spaces
+            cursor_x += 6 * 4;  // Tab = 4 spaces (6 pixels per character including spacing)
         } else {
-            framebuffer_draw_char_5x7(cursor_x, cursor_y, *str, fg_color, bg_color);
+            // Check if we have space to render this character
+            if (cursor_y + 7 <= fb_info.height) {
+                framebuffer_draw_char_5x7(cursor_x, cursor_y, *str, fg_color, bg_color);
+            }
             cursor_x += 6;  // 5 pixels for char + 1 pixel spacing
             
             // Wrap to next line if needed
-            if (cursor_x + 5 > fb_info.width) {
+            if (cursor_x + 6 > fb_info.width) {
                 cursor_x = x;
                 cursor_y += 7;
             }

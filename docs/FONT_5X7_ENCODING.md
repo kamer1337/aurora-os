@@ -118,7 +118,7 @@ framebuffer_draw_string_5x7(10, 40, "5x7: The quick brown fox",
 
 ## Advantages of 5x7 Font
 
-1. **Compact Size**: 30% smaller than 8x8 font (5×7=35 pixels vs 8×8=64 pixels)
+1. **Compact Size**: 45% fewer pixels per character than 8x8 font (5×7=35 pixels vs 8×8=64 pixels)
 2. **More Text**: Can fit ~60% more characters on screen
 3. **Lower Memory**: Uses fewer bytes per character (7 bytes vs 8 bytes)
 4. **Maintains Readability**: Despite smaller size, patterns are clear and distinct
@@ -132,8 +132,13 @@ framebuffer_draw_string_5x7(10, 40, "5x7: The quick brown fox",
 | Height | 8 pixels | 7 pixels |
 | Total pixels | 64 | 35 |
 | Bytes per char | 8 | 7 |
-| Chars per line (1024px) | 128 | ~170 |
-| Lines per screen (768px) | 96 | ~109 |
+| Chars per line (1024px) | 128 | 170 |
+| Lines per screen (768px) | 96 | 109 |
+
+**Note:** Character spacing calculations:
+- 8x8 font: 8 pixels per character with no spacing = 1024/8 = 128 characters per line
+- 5x7 font: 6 pixels per character (5 for glyph + 1 for spacing) = 1024/6 = 170 characters per line
+- Vertical spacing: Both fonts use their respective heights (8 or 7 pixels) per line without additional vertical spacing
 
 ## Implementation Details
 

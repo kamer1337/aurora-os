@@ -8,6 +8,9 @@
 #include "../gui/gui.h"
 #include "../gui/framebuffer.h"
 
+// Window background color for font demo
+#define FONT_WINDOW_BG_COLOR ((color_t){40, 40, 60, 255})
+
 // Button click handlers
 static void button1_click(widget_t* widget, int32_t x, int32_t y) {
     (void)widget;
@@ -87,27 +90,27 @@ void gui_demo_init(void) {
             
             // Draw 8x8 font section
             framebuffer_draw_string(base_x, base_y, "8x8 Font:", COLOR_WHITE, 
-                                  (color_t){40, 40, 60, 255});
+                                  FONT_WINDOW_BG_COLOR);
             framebuffer_draw_string(base_x, base_y + 15, demo_text_1, COLOR_CYAN, 
-                                  (color_t){40, 40, 60, 255});
+                                  FONT_WINDOW_BG_COLOR);
             framebuffer_draw_string(base_x, base_y + 25, demo_text_2, COLOR_CYAN, 
-                                  (color_t){40, 40, 60, 255});
+                                  FONT_WINDOW_BG_COLOR);
             framebuffer_draw_string(base_x, base_y + 35, demo_text_3, COLOR_CYAN, 
-                                  (color_t){40, 40, 60, 255});
+                                  FONT_WINDOW_BG_COLOR);
             
             // Draw 5x7 font section
             framebuffer_draw_string_5x7(base_x, base_y + 100, "5x7 Font:", COLOR_WHITE, 
-                                       (color_t){40, 40, 60, 255});
+                                       FONT_WINDOW_BG_COLOR);
             framebuffer_draw_string_5x7(base_x, base_y + 115, demo_text_1, COLOR_GREEN, 
-                                       (color_t){40, 40, 60, 255});
+                                       FONT_WINDOW_BG_COLOR);
             framebuffer_draw_string_5x7(base_x, base_y + 125, demo_text_2, COLOR_GREEN, 
-                                       (color_t){40, 40, 60, 255});
+                                       FONT_WINDOW_BG_COLOR);
             framebuffer_draw_string_5x7(base_x, base_y + 135, demo_text_3, COLOR_GREEN, 
-                                       (color_t){40, 40, 60, 255});
+                                       FONT_WINDOW_BG_COLOR);
             
             // Add info text
             framebuffer_draw_string_5x7(base_x, base_y + 180, "5x7 font is more compact!", 
-                                       COLOR_YELLOW, (color_t){40, 40, 60, 255});
+                                       COLOR_YELLOW, FONT_WINDOW_BG_COLOR);
         }
         
         widget_t* font_btn = gui_create_button(font_win, "OK", 20, 220, 100, 30);
