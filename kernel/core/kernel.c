@@ -6,6 +6,7 @@
 
 #include "kernel.h"
 #include "plugin.h"
+#include "nfr.h"
 #include "../memory/memory.h"
 #include "../memory/paging.h"
 #include "../process/process.h"
@@ -28,6 +29,7 @@
 #include "../../tests/plugin_tests.h"
 #include "../../tests/phase5_tests.h"
 #include "../../tests/font_tests.h"
+#include "../../tests/nfr_tests.h"
 
 /* External plugin registration functions */
 extern void register_boot_diagnostic_plugin(void);
@@ -122,6 +124,10 @@ void kernel_init(void) {
     usb_init();
     vga_write("USB subsystem initialized\n");
     
+    /* Initialize Non-Functional Requirements monitoring */
+    nfr_init();
+    vga_write("NFR monitoring initialized\n");
+    
     /* Initialize plugin system */
     plugin_system_init();
     
@@ -175,6 +181,22 @@ void kernel_main(void) {
     /* Run font tests */
     run_font_tests();
     
+    /* Run NFR module tests */
+    vga_write("\n=== Testing Non-Functional Requirements Module ===\n");
+    run_nfr_tests();
+    int nfr_passed = 0, nfr_failed = 0;
+    get_nfr_test_results(&nfr_passed, &nfr_failed);
+    vga_write("NFR Tests: ");
+    vga_write_dec(nfr_passed);
+    vga_write(" passed, ");
+    vga_write_dec(nfr_failed);
+    vga_write(" failed\n");
+    
+    /* Display NFR metrics report */
+    vga_write("\n");
+    nfr_update_all();
+    nfr_print_report();
+    
     vga_write("\n=== Starting GUI Demo ===\n");
     
     /* Initialize and display GUI demo */
@@ -187,12 +209,19 @@ void kernel_main(void) {
     
     /* Main GUI event loop */
     vga_write("Entering main event loop...\n");
+    uint32_t loop_counter = 0;
     while (1) {
         /* Handle input events (mouse and keyboard) */
         gui_handle_input();
         
         /* Update and redraw GUI */
         gui_update();
+        
+        /* Periodically update NFR metrics */
+        if (++loop_counter % 10000 == 0) {
+            nfr_update_all();
+            nfr_update_performance(100); /* Simulate operation latency */
+        }
         
         /* Small delay to prevent excessive CPU usage */
         /* In a real system, this would wait for interrupts */
