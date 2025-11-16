@@ -62,6 +62,11 @@
 #define AURORA_VM_NET_MTU           1500                 /* Network MTU */
 #define AURORA_VM_NET_QUEUE_SIZE    64                   /* Packet queue size */
 
+/* File system configuration */
+#define AURORA_VM_MAX_FILES         16                   /* Max 16 open files */
+#define AURORA_VM_MAX_FILENAME      256                  /* Max filename length */
+#define AURORA_VM_MAX_FILE_SIZE     (64 * 1024)          /* Max 64KB per file */
+
 /* Memory-mapped I/O regions */
 #define AURORA_VM_MMIO_BASE         0xC000               /* MMIO base address */
 #define AURORA_VM_MMIO_SIZE         0x2000               /* 8KB MMIO region */
@@ -281,6 +286,22 @@ typedef struct {
     bool connected;                             /* Connection status */
 } aurora_network_t;
 
+/* File descriptor */
+typedef struct {
+    char path[AURORA_VM_MAX_FILENAME];          /* File path */
+    uint32_t offset;                            /* Current read/write offset */
+    uint32_t size;                              /* File size */
+    uint32_t storage_offset;                    /* Offset in VM storage */
+    bool open;                                  /* File descriptor is open */
+    uint8_t mode;                               /* Access mode (0=read, 1=write, 2=both) */
+} aurora_file_t;
+
+/* File system */
+typedef struct {
+    aurora_file_t files[AURORA_VM_MAX_FILES];   /* File descriptors */
+    uint32_t storage_used;                      /* Storage space used */
+} aurora_filesystem_t;
+
 /* Interrupt descriptor */
 typedef struct {
     uint32_t handler;                           /* Handler address */
@@ -373,6 +394,7 @@ typedef struct {
     aurora_timer_t timer;
     aurora_storage_t storage;
     aurora_network_t network;
+    aurora_filesystem_t filesystem;
     
     /* Advanced features */
     aurora_irq_ctrl_t irq_ctrl;
