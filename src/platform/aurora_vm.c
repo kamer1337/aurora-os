@@ -94,6 +94,40 @@ static void heap_free(aurora_heap_t *heap, uint32_t addr) {
     (void)addr;
 }
 
+/**
+ * Find a free file descriptor
+ */
+static int find_free_fd(aurora_filesystem_t *fs) {
+    /* Start from 1 to avoid confusion with stdin/stdout/stderr */
+    for (uint32_t i = 1; i < AURORA_VM_MAX_FILES; i++) {
+        if (!fs->files[i].open) {
+            return (int)i;
+        }
+    }
+    return -1;
+}
+
+/**
+ * Find an open file by descriptor
+ */
+static aurora_file_t *get_file(aurora_filesystem_t *fs, int fd) {
+    if (fd < 0 || fd >= (int)AURORA_VM_MAX_FILES) return NULL;
+    if (!fs->files[fd].open) return NULL;
+    return &fs->files[fd];
+}
+
+/**
+ * Find a file by path
+ */
+static aurora_file_t *find_file_by_path(aurora_filesystem_t *fs, const char *path) {
+    for (uint32_t i = 0; i < AURORA_VM_MAX_FILES; i++) {
+        if (fs->files[i].open && strcmp(fs->files[i].path, path) == 0) {
+            return &fs->files[i];
+        }
+    }
+    return NULL;
+}
+
 /* ===== System Call Implementation ===== */
 
 static int handle_syscall(AuroraVM *vm) {
@@ -185,13 +219,149 @@ static int handle_syscall(AuroraVM *vm) {
             return 0;
         }
         
-        case AURORA_SYSCALL_OPEN:
-        case AURORA_SYSCALL_CLOSE:
-        case AURORA_SYSCALL_READ_FILE:
-        case AURORA_SYSCALL_WRITE_FILE:
-            /* File I/O syscalls - placeholder implementation */
-            vm->cpu.registers[0] = (uint32_t)-1;
+        case AURORA_SYSCALL_OPEN: {
+            uint32_t path_addr = vm->cpu.registers[1];
+            uint32_t mode = vm->cpu.registers[2];
+            
+            /* Read path from memory */
+            char path[AURORA_VM_MAX_FILENAME];
+            uint32_t i;
+            for (i = 0; i < AURORA_VM_MAX_FILENAME - 1; i++) {
+                if (!check_memory_access(vm, path_addr + i, 1, AURORA_PAGE_READ)) {
+                    vm->cpu.registers[0] = (uint32_t)-1;
+                    return -1;
+                }
+                path[i] = (char)vm->memory[path_addr + i];
+                if (path[i] == '\0') break;
+            }
+            path[AURORA_VM_MAX_FILENAME - 1] = '\0';
+            
+            /* Check if file already exists */
+            aurora_file_t *existing = find_file_by_path(&vm->filesystem, path);
+            
+            if (existing && existing->open) {
+                /* File already open, return error */
+                vm->cpu.registers[0] = (uint32_t)-1;
+                return 0;
+            }
+            
+            /* Find free file descriptor */
+            int fd = find_free_fd(&vm->filesystem);
+            if (fd < 0) {
+                vm->cpu.registers[0] = (uint32_t)-1;
+                return 0;
+            }
+            
+            /* Allocate storage for the file if it doesn't exist */
+            aurora_file_t *file = &vm->filesystem.files[fd];
+            if (!existing) {
+                /* New file - allocate storage space */
+                if (vm->filesystem.storage_used + AURORA_VM_MAX_FILE_SIZE > vm->storage.size) {
+                    vm->cpu.registers[0] = (uint32_t)-1;
+                    return 0;
+                }
+                file->storage_offset = vm->filesystem.storage_used;
+                vm->filesystem.storage_used += AURORA_VM_MAX_FILE_SIZE;
+                file->size = 0;
+            } else {
+                /* Existing file - reuse storage */
+                file->storage_offset = existing->storage_offset;
+                file->size = existing->size;
+            }
+            
+            /* Initialize file descriptor */
+            strncpy(file->path, path, AURORA_VM_MAX_FILENAME - 1);
+            file->path[AURORA_VM_MAX_FILENAME - 1] = '\0';
+            file->offset = 0;
+            file->mode = (uint8_t)mode;
+            file->open = true;
+            
+            vm->cpu.registers[0] = (uint32_t)fd;
             return 0;
+        }
+        
+        case AURORA_SYSCALL_CLOSE: {
+            int fd = (int)vm->cpu.registers[1];
+            aurora_file_t *file = get_file(&vm->filesystem, fd);
+            
+            if (!file) {
+                vm->cpu.registers[0] = (uint32_t)-1;
+                return 0;
+            }
+            
+            file->open = false;
+            vm->cpu.registers[0] = 0;
+            return 0;
+        }
+        
+        case AURORA_SYSCALL_READ_FILE: {
+            int fd = (int)vm->cpu.registers[1];
+            uint32_t buf_addr = vm->cpu.registers[2];
+            uint32_t count = vm->cpu.registers[3];
+            
+            aurora_file_t *file = get_file(&vm->filesystem, fd);
+            if (!file || (file->mode != 0 && file->mode != 2)) {
+                vm->cpu.registers[0] = (uint32_t)-1;
+                return 0;
+            }
+            
+            /* Check memory access */
+            if (!check_memory_access(vm, buf_addr, count, AURORA_PAGE_WRITE)) {
+                vm->cpu.registers[0] = (uint32_t)-1;
+                return -1;
+            }
+            
+            /* Calculate how much we can read */
+            uint32_t available = file->size - file->offset;
+            if (available > count) available = count;
+            
+            /* Copy from storage to VM memory */
+            if (available > 0) {
+                memcpy(&vm->memory[buf_addr], 
+                       &vm->storage.data[file->storage_offset + file->offset],
+                       available);
+                file->offset += available;
+            }
+            
+            vm->cpu.registers[0] = available;
+            return 0;
+        }
+        
+        case AURORA_SYSCALL_WRITE_FILE: {
+            int fd = (int)vm->cpu.registers[1];
+            uint32_t buf_addr = vm->cpu.registers[2];
+            uint32_t count = vm->cpu.registers[3];
+            
+            aurora_file_t *file = get_file(&vm->filesystem, fd);
+            if (!file || (file->mode != 1 && file->mode != 2)) {
+                vm->cpu.registers[0] = (uint32_t)-1;
+                return 0;
+            }
+            
+            /* Check memory access */
+            if (!check_memory_access(vm, buf_addr, count, AURORA_PAGE_READ)) {
+                vm->cpu.registers[0] = (uint32_t)-1;
+                return -1;
+            }
+            
+            /* Calculate how much we can write */
+            uint32_t space_available = AURORA_VM_MAX_FILE_SIZE - file->offset;
+            if (count > space_available) count = space_available;
+            
+            /* Copy from VM memory to storage */
+            if (count > 0) {
+                memcpy(&vm->storage.data[file->storage_offset + file->offset],
+                       &vm->memory[buf_addr],
+                       count);
+                file->offset += count;
+                if (file->offset > file->size) {
+                    file->size = file->offset;
+                }
+            }
+            
+            vm->cpu.registers[0] = count;
+            return 0;
+        }
         
         /* Network syscalls */
         case AURORA_SYSCALL_NET_SEND: {
@@ -672,6 +842,13 @@ int aurora_vm_init(AuroraVM *vm) {
     memset(&vm->network, 0, sizeof(aurora_network_t));
     vm->network.connected = false;
     
+    /* Initialize file system */
+    memset(&vm->filesystem, 0, sizeof(aurora_filesystem_t));
+    vm->filesystem.storage_used = 0;
+    for (uint32_t i = 0; i < AURORA_VM_MAX_FILES; i++) {
+        vm->filesystem.files[i].open = false;
+    }
+    
     /* Initialize interrupt controller */
     memset(&vm->irq_ctrl, 0, sizeof(aurora_irq_ctrl_t));
     vm->irq_ctrl.enabled = false;
@@ -840,6 +1017,16 @@ void aurora_vm_set_register(AuroraVM *vm, uint32_t reg, uint32_t value) {
 
 int aurora_vm_read_memory(const AuroraVM *vm, uint32_t addr, size_t size, void *buffer) {
     if (!vm || !buffer) return -1;
+    
+    /* Check if this is an MMIO read */
+    if (addr >= AURORA_VM_MMIO_BASE && addr < AURORA_VM_MMIO_BASE + AURORA_VM_MMIO_SIZE) {
+        /* MMIO read - dispatch to device handlers */
+        /* For now, we return zeros for MMIO reads */
+        /* Devices are typically accessed via syscalls */
+        memset(buffer, 0, size);
+        return (int)size;
+    }
+    
     if (!check_memory_access(vm, addr, size, AURORA_PAGE_READ)) return -1;
     
     memcpy(buffer, &vm->memory[addr], size);
@@ -848,6 +1035,15 @@ int aurora_vm_read_memory(const AuroraVM *vm, uint32_t addr, size_t size, void *
 
 int aurora_vm_write_memory(AuroraVM *vm, uint32_t addr, size_t size, const void *buffer) {
     if (!vm || !buffer) return -1;
+    
+    /* Check if this is an MMIO write */
+    if (addr >= AURORA_VM_MMIO_BASE && addr < AURORA_VM_MMIO_BASE + AURORA_VM_MMIO_SIZE) {
+        /* MMIO write - dispatch to device handlers */
+        /* For now, we accept MMIO writes but don't process them */
+        /* Devices are typically accessed via syscalls */
+        return (int)size;
+    }
+    
     if (!check_memory_access(vm, addr, size, AURORA_PAGE_WRITE)) return -1;
     
     memcpy(&vm->memory[addr], buffer, size);
