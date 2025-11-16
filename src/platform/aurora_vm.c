@@ -687,10 +687,19 @@ int aurora_vm_init(AuroraVM *vm) {
     /* Initialize JIT compiler */
     memset(&vm->jit, 0, sizeof(aurora_jit_t));
     vm->jit.enabled = AURORA_VM_JIT_ENABLED;
-    vm->jit.cache = NULL;  /* Lazy allocation */
     vm->jit.cache_size = AURORA_VM_JIT_CACHE_SIZE;
     vm->jit.cache_used = 0;
     vm->jit.num_blocks = 0;
+    
+    /* Allocate JIT cache if JIT is enabled */
+    if (vm->jit.enabled) {
+        vm->jit.cache = (uint8_t *)malloc(vm->jit.cache_size);
+        if (vm->jit.cache) {
+            memset(vm->jit.cache, 0, vm->jit.cache_size);
+        }
+    } else {
+        vm->jit.cache = NULL;
+    }
     
     /* Initialize GDB server */
     memset(&vm->gdb, 0, sizeof(aurora_gdb_server_t));
@@ -717,6 +726,10 @@ void aurora_vm_destroy(AuroraVM *vm) {
     
     if (vm->storage.data) {
         free(vm->storage.data);
+    }
+    
+    if (vm->jit.cache) {
+        free(vm->jit.cache);
     }
     
     free(vm);
@@ -1173,7 +1186,7 @@ int aurora_vm_irq_trigger(AuroraVM *vm, uint32_t irq) {
         if (check_memory_access(vm, vm->cpu.sp, 4, AURORA_PAGE_WRITE)) {
             memcpy(&vm->memory[vm->cpu.sp], &vm->cpu.pc, 4);
             vm->cpu.pc = vm->irq_ctrl.interrupts[irq].handler;
-            vm->irq_ctrl.interrupts[irq].pending = false;
+            /* Note: pending flag remains true until interrupt is explicitly cleared */
         }
     }
     

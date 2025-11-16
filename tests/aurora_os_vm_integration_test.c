@@ -91,7 +91,7 @@ void test_memory_management(void) {
         
         // Try to write to allocated memory (use smaller value that fits in 16-bit)
         aurora_encode_i_type(AURORA_OP_LOADI, 3, 0x1234),
-        aurora_encode_r_type(AURORA_OP_STORE, 2, 3, 0),
+        aurora_encode_r_type(AURORA_OP_STORE, 3, 2, 0),  // Store r3 at address r2
         
         // Read it back
         aurora_encode_r_type(AURORA_OP_LOAD, 4, 2, 0),
@@ -277,21 +277,21 @@ void test_network_operations(void) {
     // Send a packet
     uint8_t test_data[] = "Hello, Network!";
     result = aurora_vm_net_send(vm, test_data, sizeof(test_data));
-    TEST_ASSERT(result == 0, "Packet sent successfully");
+    TEST_ASSERT(result > 0, "Packet sent successfully");  // Returns bytes sent
     
-    // Verify packet in TX queue
-    if (vm->network.tx_tail == 0) {
+    // Verify packet in TX queue (tx_head increments when packets are added)
+    if (vm->network.tx_head == 0) {
         add_issue("Medium", "Network Stack",
                   "Packet not added to TX queue after send",
-                  "After sending a packet via aurora_vm_net_send, the TX queue tail "
+                  "After sending a packet via aurora_vm_net_send, the TX queue head "
                   "should increment but remains at 0.");
     }
-    TEST_ASSERT(vm->network.tx_tail > 0, "Packet added to TX queue");
+    TEST_ASSERT(vm->network.tx_head > 0, "Packet added to TX queue");
     
     // Simulate receiving a packet
     result = aurora_vm_net_send(vm, test_data, sizeof(test_data));
     vm->network.rx_queue[0] = vm->network.tx_queue[0];
-    vm->network.rx_tail = 1;
+    vm->network.rx_head = 1;  // rx_head marks where packets are added
     
     uint8_t recv_buffer[64];
     result = aurora_vm_net_recv(vm, recv_buffer, sizeof(recv_buffer));
@@ -344,22 +344,40 @@ void test_atomic_operations(void) {
     int result = aurora_vm_init(vm);
     TEST_ASSERT(result == 0, "VM initialized successfully");
     
-    // Test atomic operations
+    // Test atomic operations with proper memory addresses
     uint32_t program[] = {
-        // Test XCHG
+        // Allocate memory for atomic operations
+        aurora_encode_i_type(AURORA_OP_LOADI, 0, AURORA_SYSCALL_ALLOC),
+        aurora_encode_i_type(AURORA_OP_LOADI, 1, 64),  // Allocate 64 bytes
+        aurora_encode_r_type(AURORA_OP_SYSCALL, 0, 0, 0),
+        aurora_encode_r_type(AURORA_OP_MOVE, 10, 0, 0),  // Save address in r10
+        
+        // Clear r0 to use as zero offset
+        aurora_encode_i_type(AURORA_OP_LOADI, 0, 0),
+        
+        // Initialize memory with value 42
         aurora_encode_i_type(AURORA_OP_LOADI, 1, 42),
+        aurora_encode_r_type(AURORA_OP_STORE, 1, 10, 0),  // Store 42 at address r10+r0
+        
+        // Test XCHG: exchange memory[r10] with value 100
         aurora_encode_i_type(AURORA_OP_LOADI, 2, 100),
-        aurora_encode_r_type(AURORA_OP_XCHG, 3, 1, 2),  // r3 = old value of r1, r1 = r2
+        aurora_encode_r_type(AURORA_OP_XCHG, 3, 10, 2),  // r3 = old value at [r10], [r10] = r2
         
-        // Test CAS (Compare-And-Swap)
-        aurora_encode_i_type(AURORA_OP_LOADI, 4, 100),  // Expected value
-        aurora_encode_i_type(AURORA_OP_LOADI, 5, 200),  // New value
-        aurora_encode_r_type(AURORA_OP_CAS, 6, 1, 4),   // Compare r1 with r4
+        // Test CAS (Compare-And-Swap) at r10+4
+        aurora_encode_i_type(AURORA_OP_LOADI, 11, 4),
+        aurora_encode_r_type(AURORA_OP_ADD, 11, 10, 11),  // r11 = r10 + 4
+        aurora_encode_i_type(AURORA_OP_LOADI, 4, 100),
+        aurora_encode_r_type(AURORA_OP_STORE, 4, 11, 0),  // Store 100 at [r11+r0]
+        aurora_encode_i_type(AURORA_OP_LOADI, 5, 200),    // New value
+        aurora_encode_r_type(AURORA_OP_CAS, 4, 11, 5),    // Compare [r11] with r4, if equal store r5
         
-        // Test FADD (Fetch-And-Add)
+        // Test FADD (Fetch-And-Add) at r10+8
+        aurora_encode_i_type(AURORA_OP_LOADI, 12, 8),
+        aurora_encode_r_type(AURORA_OP_ADD, 12, 10, 12),  // r12 = r10 + 8
         aurora_encode_i_type(AURORA_OP_LOADI, 7, 10),
-        aurora_encode_i_type(AURORA_OP_LOADI, 8, 5),
-        aurora_encode_r_type(AURORA_OP_FADD_ATOMIC, 9, 7, 8),
+        aurora_encode_r_type(AURORA_OP_STORE, 7, 12, 0),  // Store 10 at [r12+r0]
+        aurora_encode_i_type(AURORA_OP_LOADI, 8, 5),      // Add value
+        aurora_encode_r_type(AURORA_OP_FADD_ATOMIC, 9, 12, 8),  // r9 = old [r12], [r12] += r8
         
         aurora_encode_r_type(AURORA_OP_HALT, 0, 0, 0),
     };
@@ -368,19 +386,22 @@ void test_atomic_operations(void) {
     result = aurora_vm_run(vm);
     TEST_ASSERT(result == 0, "Atomic operations program ran successfully");
     
-    // Verify XCHG
+    // Verify XCHG - should have returned old value (42)
     uint32_t old_val = aurora_vm_get_register(vm, 3);
-    uint32_t new_val = aurora_vm_get_register(vm, 1);
     TEST_ASSERT(old_val == 42, "XCHG returned old value");
-    TEST_ASSERT(new_val == 100, "XCHG set new value");
     
-    // Verify CAS
-    uint32_t cas_result = aurora_vm_get_register(vm, 6);
+    // Verify CAS - should return 1 on success
+    uint32_t cas_result = aurora_vm_get_register(vm, 4);
     if (cas_result != 1) {
         add_issue("Low", "Synchronization",
                   "CAS operation result unclear",
                   "Compare-and-swap should return 1 on success, but returned different value.");
     }
+    TEST_ASSERT(cas_result == 1, "CAS operation succeeded");
+    
+    // Verify FADD - should have returned old value (10)
+    uint32_t fadd_old = aurora_vm_get_register(vm, 9);
+    TEST_ASSERT(fadd_old == 10, "FADD returned old value");
     
     aurora_vm_destroy(vm);
     TEST_PASS();
