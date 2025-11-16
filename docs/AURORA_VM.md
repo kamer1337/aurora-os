@@ -432,7 +432,7 @@ Part of the Aurora OS project - Proprietary license.
 
 ## Authors
 
-Aurora OS Development Team
+Aurora OS Development Team (kamer1337)
 
 ---
 
