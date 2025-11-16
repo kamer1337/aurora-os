@@ -21,6 +21,8 @@ typedef enum {
     WIDGET_LABEL,
     WIDGET_TEXTBOX,
     WIDGET_PANEL,
+    WIDGET_MENUBAR,
+    WIDGET_MENU,
     WIDGET_CUSTOM
 } widget_type_t;
 

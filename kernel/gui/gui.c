@@ -40,6 +40,11 @@ static int32_t cursor_x = 0;
 static int32_t cursor_y = 0;
 static uint8_t prev_mouse_buttons = 0;
 
+// Window dragging state
+static window_t* dragging_window = NULL;
+static int32_t drag_offset_x = 0;
+static int32_t drag_offset_y = 0;
+
 int gui_init(void) {
     if (gui_initialized) {
         return 0;
@@ -99,36 +104,80 @@ void gui_update(void) {
 void gui_process_event(event_t* event) {
     if (!gui_initialized || !event) return;
     
-    // Find which window should receive the event
-    window_t* target = focused_window;
-    if (!target) {
-        target = window_list;
-    }
-    
-    if (!target) return;
-    
     // Process event based on type
     switch (event->type) {
         case EVENT_MOUSE_DOWN:
-            // Check if click is on a widget
+            // Check if we clicked on a window's titlebar (for dragging)
             {
-                widget_t* widget = target->widgets;
-                while (widget) {
-                    rect_t abs_rect = {
-                        target->bounds.x + widget->bounds.x,
-                        target->bounds.y + widget->bounds.y,
-                        widget->bounds.width,
-                        widget->bounds.height
-                    };
-                    
-                    if (gui_point_in_rect(event->x, event->y, &abs_rect)) {
-                        if (widget->on_click) {
-                            widget->on_click(widget, event->x, event->y);
+                window_t* window = window_list;
+                window_t* clicked_window = NULL;
+                
+                // Find which window was clicked (iterate in reverse Z-order)
+                while (window) {
+                    if (window->visible) {
+                        rect_t titlebar_rect = {
+                            window->bounds.x,
+                            window->bounds.y,
+                            window->bounds.width,
+                            window->has_titlebar ? 30u : 0u
+                        };
+                        
+                        // Check if clicked on titlebar
+                        if (window->has_titlebar && gui_point_in_rect(event->x, event->y, &titlebar_rect)) {
+                            clicked_window = window;
+                            dragging_window = window;
+                            drag_offset_x = event->x - window->bounds.x;
+                            drag_offset_y = event->y - window->bounds.y;
+                            gui_focus_window(window);
+                            break;
                         }
-                        break;
+                        
+                        // Check if clicked anywhere on window
+                        if (gui_point_in_rect(event->x, event->y, &window->bounds)) {
+                            clicked_window = window;
+                            gui_focus_window(window);
+                        }
                     }
-                    widget = widget->next;
+                    window = window->next;
                 }
+                
+                // Check if click is on a widget in the focused window
+                if (clicked_window && !dragging_window) {
+                    widget_t* widget = clicked_window->widgets;
+                    while (widget) {
+                        rect_t abs_rect = {
+                            clicked_window->bounds.x + widget->bounds.x,
+                            clicked_window->bounds.y + (clicked_window->has_titlebar ? 30 : 0) + widget->bounds.y,
+                            widget->bounds.width,
+                            widget->bounds.height
+                        };
+                        
+                        if (gui_point_in_rect(event->x, event->y, &abs_rect)) {
+                            if (widget->on_click) {
+                                widget->on_click(widget, event->x, event->y);
+                            }
+                            break;
+                        }
+                        widget = widget->next;
+                    }
+                }
+            }
+            break;
+            
+        case EVENT_MOUSE_UP:
+            // Stop dragging
+            dragging_window = NULL;
+            break;
+            
+        case EVENT_MOUSE_MOVE:
+            // Handle window dragging
+            if (dragging_window) {
+                dragging_window->bounds.x = event->x - drag_offset_x;
+                dragging_window->bounds.y = event->y - drag_offset_y;
+                
+                // Keep window on screen
+                if (dragging_window->bounds.x < 0) dragging_window->bounds.x = 0;
+                if (dragging_window->bounds.y < 0) dragging_window->bounds.y = 0;
             }
             break;
             

@@ -13,6 +13,7 @@
 #include "../drivers/timer.h"
 #include "../drivers/serial.h"
 #include "../security/quantum_crypto.h"
+#include "../gui/gui.h"
 #include "../gui/gui_demo.h"
 #include "../../filesystem/vfs/vfs.h"
 #include "../../filesystem/ramdisk/ramdisk.h"
@@ -115,10 +116,20 @@ void kernel_main(void) {
     vga_write("(Note: In real hardware, VGA text would be replaced by framebuffer)\n");
     
     /* TODO: Start scheduler */
-    /* TODO: Enter main kernel loop */
+    
+    /* Main GUI event loop */
+    vga_write("Entering main event loop...\n");
+    while (1) {
+        /* Handle input events (mouse and keyboard) */
+        gui_handle_input();
+        
+        /* Update and redraw GUI */
+        gui_update();
+        
+        /* Small delay to prevent excessive CPU usage */
+        /* In a real system, this would wait for interrupts */
+        for (volatile int i = 0; i < 100000; i++);
+    }
     
     /* Kernel should never return */
-    while (1) {
-        /* Halt and wait for interrupts */
-    }
 }
