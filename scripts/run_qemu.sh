@@ -115,9 +115,11 @@ else
     echo "ISO: $ISO_FILE"
     echo "Memory: $MEMORY"
     
+    # Enable VGA graphics for VESA testing
     qemu-system-i386 \
         -cdrom "$ISO_FILE" \
         -m "$MEMORY" \
+        -vga std \
         -display "$DISPLAY_MODE" \
         $ENABLE_SERIAL \
         $ENABLE_GDB
