@@ -11,10 +11,26 @@ BOOT_DIR = boot
 FS_DIR = filesystem
 TEST_DIR = tests
 
+# Optional plugin compilation flags
+ENABLE_ML_PLUGIN ?= 1
+ENABLE_QUANTUM_PLUGIN ?= 1
+ENABLE_SYSTEM_OPT_PLUGIN ?= 1
+
 # Compiler flags
 CFLAGS = -Wall -Wextra -nostdlib -ffreestanding -m32 -fno-pie
 ASFLAGS = -f elf32
 LDFLAGS = -m elf_i386 -nostdlib
+
+# Add plugin flags
+ifeq ($(ENABLE_ML_PLUGIN),1)
+    CFLAGS += -DENABLE_ML_PLUGIN
+endif
+ifeq ($(ENABLE_QUANTUM_PLUGIN),1)
+    CFLAGS += -DENABLE_QUANTUM_PLUGIN
+endif
+ifeq ($(ENABLE_SYSTEM_OPT_PLUGIN),1)
+    CFLAGS += -DENABLE_SYSTEM_OPT_PLUGIN
+endif
 
 # Source files
 KERNEL_SOURCES = $(wildcard $(KERNEL_DIR)/core/*.c) \
@@ -104,3 +120,22 @@ help:
 	@echo "make run    - Build and run in QEMU (ISO boot)"
 	@echo "make test   - Build and run in QEMU (direct kernel boot)"
 	@echo "make help   - Show this help message"
+
+# Plugin-specific targets
+plugins: all
+	@echo "Building optional plugins..."
+	@echo "ML Plugin: $(ENABLE_ML_PLUGIN)"
+	@echo "Quantum Plugin: $(ENABLE_QUANTUM_PLUGIN)"
+	@echo "System Opt Plugin: $(ENABLE_SYSTEM_OPT_PLUGIN)"
+
+plugins-disable-ml:
+	$(MAKE) ENABLE_ML_PLUGIN=0
+
+plugins-disable-quantum:
+	$(MAKE) ENABLE_QUANTUM_PLUGIN=0
+
+plugins-disable-sysopt:
+	$(MAKE) ENABLE_SYSTEM_OPT_PLUGIN=0
+
+plugins-disable-all:
+	$(MAKE) ENABLE_ML_PLUGIN=0 ENABLE_QUANTUM_PLUGIN=0 ENABLE_SYSTEM_OPT_PLUGIN=0
