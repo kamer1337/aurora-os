@@ -169,7 +169,7 @@ typedef struct {
     uint8_t is_primary;           // Primary display flag
     int32_t position_x;           // Position in virtual desktop
     int32_t position_y;           // Position in virtual desktop
-    uint8_t rotation;             // Display rotation (0, 90, 180, 270)
+    uint16_t rotation;            // Display rotation (0, 90, 180, 270)
     uint8_t enabled;              // Display enabled flag
 } display_device_t;
 
@@ -330,7 +330,7 @@ int display_set_position(uint8_t display_id, int32_t x, int32_t y);
  * @param rotation Rotation angle (0, 90, 180, 270)
  * @return 0 on success, -1 on failure
  */
-int display_set_rotation(uint8_t display_id, uint8_t rotation);
+int display_set_rotation(uint8_t display_id, uint16_t rotation);
 
 /**
  * Register hardware acceleration interface

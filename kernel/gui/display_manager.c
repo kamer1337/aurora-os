@@ -570,7 +570,7 @@ int display_set_position(uint8_t display_id, int32_t x, int32_t y) {
 /**
  * Set display rotation
  */
-int display_set_rotation(uint8_t display_id, uint8_t rotation) {
+int display_set_rotation(uint8_t display_id, uint16_t rotation) {
     if (display_id >= display_manager.display_count) {
         return -1;
     }
