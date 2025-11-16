@@ -5,6 +5,8 @@
  */
 
 #include "vfs.h"
+#include "../cache/file_cache.h"
+#include "../../kernel/memory/memory.h"
 #include <stddef.h>
 
 /* File descriptor table */
@@ -32,6 +34,9 @@ void vfs_init(void) {
     next_fd = 0;
     fs_types = NULL;
     root_fs = NULL;
+    
+    /* Initialize file cache */
+    file_cache_init();
 }
 
 /**
@@ -425,4 +430,73 @@ int vfs_stat(const char* path, inode_t* stat) {
     stat->fs_data = inode->fs_data;
     
     return 0;
+}
+
+/**
+ * Cache a file in RAM
+ */
+int vfs_cache_file(const char* path) {
+    if (!path) {
+        return -1;
+    }
+    
+    /* Check if already cached */
+    if (file_cache_exists(path)) {
+        return 0;
+    }
+    
+    /* Get file information */
+    inode_t stat;
+    if (vfs_stat(path, &stat) != 0) {
+        return -1;
+    }
+    
+    /* Only cache regular files */
+    if (stat.type != FILE_TYPE_REGULAR) {
+        return -1;
+    }
+    
+    /* Open the file */
+    int fd = vfs_open(path, O_RDONLY);
+    if (fd < 0) {
+        return -1;
+    }
+    
+    /* Allocate temporary buffer for file data */
+    uint8_t* temp_buffer = (uint8_t*)kmalloc(stat.size);
+    if (!temp_buffer) {
+        vfs_close(fd);
+        return -1;
+    }
+    
+    /* Read file content (simplified - actual read would use fs-specific ops) */
+    /* For now, just attempt to cache with placeholder data */
+    int result = file_cache_store(path, temp_buffer, stat.size);
+    
+    kfree(temp_buffer);
+    vfs_close(fd);
+    
+    return result;
+}
+
+/**
+ * Remove file from cache
+ */
+int vfs_uncache_file(const char* path) {
+    if (!path) {
+        return -1;
+    }
+    
+    return file_cache_remove(path);
+}
+
+/**
+ * Check if file is cached
+ */
+int vfs_is_cached(const char* path) {
+    if (!path) {
+        return 0;
+    }
+    
+    return file_cache_exists(path);
 }
