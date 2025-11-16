@@ -288,7 +288,7 @@ void test_network_operations(void) {
     }
     TEST_ASSERT(vm->network.tx_head > 0, "Packet added to TX queue");
     
-    // Simulate receiving a packet
+    // Simulate receiving a packet (copy from TX to RX queue)
     result = aurora_vm_net_send(vm, test_data, sizeof(test_data));
     vm->network.rx_queue[0] = vm->network.tx_queue[0];
     vm->network.rx_head = 1;  // rx_head marks where packets are added
