@@ -148,6 +148,26 @@ void framebuffer_draw_string(uint32_t x, uint32_t y, const char* str, color_t fg
 void framebuffer_scroll_up(uint32_t lines, color_t bg_color);
 
 /**
+ * Draw a character at the specified position using 5x7 font
+ * @param x X coordinate
+ * @param y Y coordinate
+ * @param c Character to draw (ASCII value as int)
+ * @param fg_color Foreground color
+ * @param bg_color Background color
+ */
+void framebuffer_draw_char_5x7(uint32_t x, uint32_t y, int c, color_t fg_color, color_t bg_color);
+
+/**
+ * Draw a string at the specified position using 5x7 font
+ * @param x X coordinate
+ * @param y Y coordinate
+ * @param str String to draw
+ * @param fg_color Foreground color
+ * @param bg_color Background color
+ */
+void framebuffer_draw_string_5x7(uint32_t x, uint32_t y, const char* str, color_t fg_color, color_t bg_color);
+
+/**
  * Convert color_t to framebuffer pixel format
  * @param color Color to convert
  * @return Pixel value in framebuffer format
