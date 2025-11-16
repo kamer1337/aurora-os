@@ -25,6 +25,7 @@
 #include "../../filesystem/journal/journal.h"
 #include "../../tests/test_suite.h"
 #include "../../tests/advanced_tests.h"
+#include "../../tests/plugin_tests.h"
 
 /* External plugin registration functions */
 extern void register_boot_diagnostic_plugin(void);
@@ -149,6 +150,9 @@ void kernel_main(void) {
     
     /* Run advanced feature tests */
     run_advanced_tests();
+    
+    /* Run plugin system tests */
+    run_plugin_tests();
     
     vga_write("\n=== Starting GUI Demo ===\n");
     
