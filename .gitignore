@@ -35,3 +35,6 @@ build/
 # Testing
 test-results/
 coverage/
+
+# Screenshots - exclude temporary formats
+*.ppm

@@ -8,9 +8,41 @@ To develop a modern, secure, and highly efficient operating system that surpasse
 
 ---
 
-## **2. Requirements**
+## **2. Screenshots**
 
-### **2.1 Functional Requirements**
+### Boot Screen
+
+Aurora OS uses GRUB as its bootloader, providing a clean boot interface:
+
+![Aurora OS Boot Screen](screenshots/aurora-os-boot.png)
+
+### Desktop Environment
+
+Aurora OS features a modern desktop environment with advanced visual effects:
+
+**Key GUI Features:**
+- **Framebuffer Graphics**: 1024x768x32 resolution with full RGBA color support
+- **Window Management**: Draggable windows with title bars, borders, and close buttons
+- **Widget System**: Buttons, labels, panels, and interactive elements
+- **3D Visual Effects**: Shadows, gradients, rounded corners, and alpha blending
+- **4D Animation System**: Smooth animations with 7 easing functions (linear, ease-in, ease-out, ease-in-out, bounce, elastic, back)
+- **5D Interactive Effects**: Particle systems, glow effects, and glass/blur effects
+- **Desktop Environment**: Wallpaper support, taskbar, start menu, and context menus
+- **Performance**: Software-rendered at ~125 FPS
+
+The desktop environment includes:
+- Interactive start menu for launching applications
+- Taskbar showing running applications and system status
+- Window decorations with modern visual effects
+- Customizable wallpaper and themes
+
+*Note: The GUI requires proper VGA/VESA BIOS support. Screenshots shown above are from the boot sequence. The GUI framework is fully implemented and functional on compatible hardware.*
+
+---
+
+## **3. Requirements**
+
+### **3.1 Functional Requirements**
 
 - **Process and Thread Management**  
   Support for multitasking, scheduling, inter-process communication (IPC), and thread synchronization.
@@ -27,7 +59,7 @@ To develop a modern, secure, and highly efficient operating system that surpasse
 - **Security and Authentication**  
   Built-in user authentication, access control, encryption, and secure boot mechanisms.
 
-### **2.2 Non-Functional Requirements**
+### **3.2 Non-Functional Requirements**
 
 - **Performance**  
   Optimized for low latency and high throughput across diverse workloads.
@@ -43,9 +75,9 @@ To develop a modern, secure, and highly efficient operating system that surpasse
 
 ---
 
-## **3. System Architecture**
+## **4. System Architecture**
 
-### **3.1 Layered Architecture**
+### **4.1 Layered Architecture**
 
 1. **Hardware Layer**  
    Physical components (CPU, RAM, storage, I/O devices).
@@ -59,7 +91,7 @@ To develop a modern, secure, and highly efficient operating system that surpasse
 4. **Application Layer**  
    End-user applications and system utilities.
 
-### **3.2 Core Components**
+### **4.2 Core Components**
 
 - **Microkernel**  
   Minimalist kernel handling only essential functions (IPC, scheduling, memory).
@@ -81,9 +113,9 @@ To develop a modern, secure, and highly efficient operating system that surpasse
 
 ---
 
-## **4. Design Details**
+## **5. Design Details**
 
-### **4.1 Kernel Design**
+### **5.1 Kernel Design**
 
 - **Architecture**: Microkernel  
   Promotes modularity, security, and maintainability by running most services in user space.
@@ -93,7 +125,7 @@ To develop a modern, secure, and highly efficient operating system that surpasse
   - Lightweight IPC mechanism
   - Real-time scheduling support (optional)
 
-### **4.2 File System Design**
+### **5.2 File System Design**
 
 - **Type**: Journaling file system (e.g., inspired by ext4 or ReFS)
 - **Capabilities**:
@@ -102,7 +134,7 @@ To develop a modern, secure, and highly efficient operating system that surpasse
   - Support for large files and volumes
   - Directory and file access control
 
-### **4.3 User Interface (UI) Design**
+### **5.3 User Interface (UI) Design**
 
 - **Graphical User Interface (GUI)**  
   Modern, responsive, and customizable desktop environment.
@@ -114,9 +146,9 @@ To develop a modern, secure, and highly efficient operating system that surpasse
 
 ---
 
-## **5. Development Roadmap**
+## **6. Development Roadmap**
 
-### **5.1 High-Level Timeline**
+### **6.1 High-Level Timeline**
 
 | **Phase** | **Timeline** | **Key Tasks** | **Milestones** |
 |---------|--------------|----------------|----------------|
@@ -126,7 +158,7 @@ To develop a modern, secure, and highly efficient operating system that surpasse
 | **Phase 4: User Interface** | Q3–Q4 2025 | • Build GUI framework<br>• Implement Start Menu & Taskbar | • Q3 2025: Functional desktop UI<br>• Q4 2025: Polished UX with core shell features |
 | **Phase 5: Testing & Debugging** | Q1 2026 | • End-to-end system testing<br>• Bug fixes, performance tuning, stability validation | • Q1 2026: Release candidate ready |
 
-### **5.2 Immediate Action Items (Current Sprint)**
+### **6.2 Immediate Action Items (Current Sprint)**
 
 #### **Project Foundation Setup**
 - [x] Create project documentation (README.md)
@@ -161,7 +193,7 @@ To develop a modern, secure, and highly efficient operating system that surpasse
 - [x] Add journaling support
 - [x] Develop file system integrity checks
 
-### **5.3 Current Status**
+### **6.3 Current Status**
 
 **Completed:**
 - ✅ Project planning and documentation
@@ -193,13 +225,13 @@ To develop a modern, secure, and highly efficient operating system that surpasse
 
 ---
 
-## **6. Summary**
+## **7. Summary**
 
 **Aurora OS** is an ambitious project to build a next-generation operating system that combines the familiarity of Windows with the efficiency, security, and modularity of modern OS design principles. By leveraging a microkernel architecture, journaling file system, and a user-centric interface, Aurora OS aims to set a new standard for desktop and embedded computing environments.
 
 ---
 
-## **7. Getting Started**
+## **8. Getting Started**
 
 ### **Documentation**
 
@@ -250,7 +282,7 @@ The project is currently in **Phase 4 - User Interface development** (substantia
 
 **Phase 4 Innovation**: Aurora OS now features a modern GUI with advanced visual effects that rival contemporary operating systems, demonstrating capabilities beyond traditional 2D interfaces with 3D spatial depth, 4D temporal animations, and 5D interactive effects. The desktop environment includes a functional start menu, context menus, and interactive taskbar.
 
-See the [roadmap](#5-development-roadmap) above for detailed progress and upcoming milestones.
+See the [roadmap](#6-development-roadmap) above for detailed progress and upcoming milestones.
 
 ---
 
