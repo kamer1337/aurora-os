@@ -8,6 +8,7 @@
 #include "quick_launch.h"
 #include "system_tray.h"
 #include "window_switcher.h"
+#include "application.h"
 #include "../memory/memory.h"
 
 // Module registry
@@ -211,20 +212,77 @@ static void taskbar_module_shutdown(void) {
     // Taskbar cleanup
 }
 
+/* Desktop icons data structure */
+typedef struct desktop_icon {
+    char* label;
+    int x;
+    int y;
+    app_type_t app;
+    struct desktop_icon* next;
+} desktop_icon_t;
+
+static desktop_icon_t* desktop_icons = NULL;
+
 static void desktop_icons_module_init(void) {
-    // Desktop icons initialization
+    /* Create default desktop icons for common applications */
+    desktop_icon_t* icon;
+    
+    /* File Manager icon */
+    icon = (desktop_icon_t*)kmalloc(sizeof(desktop_icon_t));
+    if (icon) {
+        icon->label = "File Manager";
+        icon->x = 50;
+        icon->y = 100;
+        icon->app = APP_FILE_MANAGER;
+        icon->next = desktop_icons;
+        desktop_icons = icon;
+    }
+    
+    /* System Info icon */
+    icon = (desktop_icon_t*)kmalloc(sizeof(desktop_icon_t));
+    if (icon) {
+        icon->label = "System Info";
+        icon->x = 50;
+        icon->y = 200;
+        icon->app = APP_SYSTEM_INFO;
+        icon->next = desktop_icons;
+        desktop_icons = icon;
+    }
+    
+    /* Disk Manager icon */
+    icon = (desktop_icon_t*)kmalloc(sizeof(desktop_icon_t));
+    if (icon) {
+        icon->label = "Disk Manager";
+        icon->x = 50;
+        icon->y = 300;
+        icon->app = APP_DISK_MANAGER;
+        icon->next = desktop_icons;
+        desktop_icons = icon;
+    }
 }
 
 static void desktop_icons_module_update(void) {
-    // Desktop icons update logic
+    // Desktop icons update logic (check for clicks, etc.)
 }
 
 static void desktop_icons_module_draw(void) {
-    // Desktop icons drawing is handled in gui.c
+    // Desktop icons drawing - would need framebuffer access
+    // This is a placeholder showing that icons exist
+    desktop_icon_t* icon = desktop_icons;
+    while (icon) {
+        // In a full implementation, we would draw the icon here
+        // For now, this is handled by the main GUI system
+        icon = icon->next;
+    }
 }
 
 static void desktop_icons_module_shutdown(void) {
-    // Desktop icons cleanup
+    /* Free desktop icons */
+    while (desktop_icons) {
+        desktop_icon_t* next = desktop_icons->next;
+        kfree(desktop_icons);
+        desktop_icons = next;
+    }
 }
 
 static void start_menu_module_init(void) {
