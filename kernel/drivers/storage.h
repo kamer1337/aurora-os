@@ -129,24 +129,10 @@ int storage_get_partition_info(storage_device_t* device, uint8_t partition_num, 
 int storage_get_smart_status(storage_device_t* device, uint8_t* status);
 int storage_get_temperature(storage_device_t* device, int* temperature_celsius);
 
-/* Power management */
-int storage_set_power_mode(storage_device_t* device, uint8_t mode);
-int storage_spin_down(storage_device_t* device);
-int storage_spin_up(storage_device_t* device);
-
-/* ATA-specific functions */
-int ata_wait_ready(storage_device_t* device);
-int ata_wait_drq(storage_device_t* device);
-int ata_select_drive(storage_device_t* device, uint8_t drive);
-
-/* SATA-specific functions */
-int sata_init_port(uint32_t port);
-int sata_identify(uint32_t port, uint16_t* buffer);
-
-/* NVMe-specific functions */
-int nvme_init(void);
-int nvme_identify_controller(uint32_t nsid, uint8_t* buffer);
-int nvme_read(uint32_t nsid, uint64_t lba, uint32_t count, uint8_t* buffer);
-int nvme_write(uint32_t nsid, uint64_t lba, uint32_t count, const uint8_t* buffer);
+/* Utility functions */
+const char* storage_get_type_string(uint8_t type);
+const char* storage_get_status_string(storage_status_t status);
+uint64_t storage_get_capacity_mb(storage_device_t* device);
+uint64_t storage_get_capacity_gb(storage_device_t* device);
 
 #endif /* AURORA_STORAGE_H */
