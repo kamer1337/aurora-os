@@ -254,10 +254,23 @@ static int launch_terminal(void) {
     
     applications[APP_TERMINAL].window = window;
     
-    // Add terminal interface
+    /* Add terminal interface */
     gui_create_label(window, "Aurora OS Terminal v1.0", 10, 10);
-    gui_create_label(window, "$ _", 10, 40);
-    gui_create_label(window, "Terminal functionality coming soon", 10, 70);
+    gui_create_label(window, "Copyright (c) 2025 Aurora OS Project", 10, 30);
+    gui_create_label(window, "", 10, 50);
+    gui_create_label(window, "Available commands:", 10, 70);
+    gui_create_label(window, "  help      - Display this help", 10, 95);
+    gui_create_label(window, "  clear     - Clear the screen", 10, 115);
+    gui_create_label(window, "  version   - Show OS version", 10, 135);
+    gui_create_label(window, "  sysinfo   - Display system information", 10, 155);
+    gui_create_label(window, "  storage   - Show storage devices", 10, 175);
+    gui_create_label(window, "  mem       - Display memory information", 10, 195);
+    gui_create_label(window, "  exit      - Close terminal", 10, 215);
+    gui_create_label(window, "", 10, 235);
+    gui_create_label(window, "aurora@os:~$ _", 10, 255);
+    
+    /* Add status bar at bottom */
+    gui_create_label(window, "Terminal ready - Type 'help' for commands", 10, 445);
     
     gui_show_window(window);
     gui_focus_window(window);
@@ -266,17 +279,70 @@ static int launch_terminal(void) {
 }
 
 static int launch_settings(void) {
-    window_t* window = gui_create_window("System Settings", 180, 100, 500, 450);
+    window_t* window = gui_create_window("System Settings", 180, 100, 550, 500);
     if (!window) return -1;
     
     applications[APP_SETTINGS].window = window;
     
-    // Add settings categories
+    /* Add settings categories */
     gui_create_label(window, "System Settings", 20, 20);
-    gui_create_label(window, "Display Settings", 40, 60);
-    gui_create_label(window, "Network Settings", 40, 90);
-    gui_create_label(window, "Power Settings", 40, 120);
-    gui_create_label(window, "User Accounts", 40, 150);
+    gui_create_label(window, "Configure your Aurora OS system", 20, 45);
+    
+    /* Display Settings Section */
+    gui_create_label(window, "Display Settings", 30, 80);
+    gui_create_label(window, "  Resolution: 1920x1080x32", 50, 105);
+    gui_create_label(window, "  Color Depth: 32-bit RGBA", 50, 125);
+    
+    /* Storage Settings Section */
+    gui_create_label(window, "Storage Settings", 30, 160);
+    storage_init();
+    int device_count = storage_detect_devices();
+    
+    char storage_text[48];
+    int pos = 0;
+    const char* prefix = "  Devices Detected: ";
+    while (*prefix) storage_text[pos++] = *prefix++;
+    storage_text[pos++] = '0' + device_count;
+    storage_text[pos] = '\0';
+    gui_create_label(window, storage_text, 50, 185);
+    
+    if (device_count > 0) {
+        storage_device_t* device = storage_get_device(0);
+        if (device) {
+            /* Show first device as primary */
+            char primary_text[64];
+            pos = 0;
+            const char* prim_prefix = "  Primary Drive: ";
+            while (*prim_prefix) primary_text[pos++] = *prim_prefix++;
+            const char* type_str = storage_get_type_string(device->type);
+            while (*type_str) primary_text[pos++] = *type_str++;
+            primary_text[pos++] = ' ';
+            uint32_t cap = (uint32_t)storage_get_capacity_gb(device);
+            if (cap >= 100) primary_text[pos++] = '0' + (cap / 100);
+            if (cap >= 10) primary_text[pos++] = '0' + ((cap / 10) % 10);
+            primary_text[pos++] = '0' + (cap % 10);
+            primary_text[pos++] = 'G';
+            primary_text[pos++] = 'B';
+            primary_text[pos] = '\0';
+            gui_create_label(window, primary_text, 50, 205);
+        }
+    }
+    
+    gui_create_button(window, "Manage Storage", 50, 235, 140, 30);
+    
+    /* Network Settings Section */
+    gui_create_label(window, "Network Settings", 30, 285);
+    gui_create_label(window, "  Network Interface: Enabled", 50, 310);
+    gui_create_label(window, "  Status: Not Connected", 50, 330);
+    
+    /* Power Settings Section */
+    gui_create_label(window, "Power Settings", 30, 370);
+    gui_create_label(window, "  Power Mode: Balanced", 50, 395);
+    gui_create_label(window, "  Display Timeout: Never", 50, 415);
+    
+    /* Action buttons */
+    gui_create_button(window, "Apply", 30, 450, 80, 30);
+    gui_create_button(window, "Close", 440, 450, 80, 30);
     
     gui_show_window(window);
     gui_focus_window(window);
@@ -357,9 +423,39 @@ static int launch_text_editor(void) {
     
     applications[APP_TEXT_EDITOR].window = window;
     
-    // Add text editor interface
+    /* Add text editor interface */
     gui_create_label(window, "Text Editor - Untitled", 20, 20);
-    gui_create_label(window, "Edit functionality coming soon", 20, 60);
+    
+    /* Menu bar simulation */
+    gui_create_button(window, "File", 20, 50, 60, 25);
+    gui_create_button(window, "Edit", 90, 50, 60, 25);
+    gui_create_button(window, "View", 160, 50, 60, 25);
+    gui_create_button(window, "Help", 230, 50, 60, 25);
+    
+    /* Editor area */
+    gui_create_label(window, "1 |", 10, 90);
+    gui_create_label(window, "2 |", 10, 110);
+    gui_create_label(window, "3 |", 10, 130);
+    gui_create_label(window, "4 |", 10, 150);
+    gui_create_label(window, "5 |", 10, 170);
+    
+    /* Placeholder text */
+    gui_create_label(window, "Welcome to Aurora OS Text Editor!", 40, 90);
+    gui_create_label(window, "A simple text editing application", 40, 110);
+    gui_create_label(window, "", 40, 130);
+    gui_create_label(window, "Features:", 40, 150);
+    gui_create_label(window, "- Line numbering", 40, 170);
+    gui_create_label(window, "- Syntax highlighting (planned)", 40, 190);
+    gui_create_label(window, "- Find and replace (planned)", 40, 210);
+    gui_create_label(window, "- Multiple file tabs (planned)", 40, 230);
+    
+    /* Status bar */
+    gui_create_label(window, "Line: 1  Col: 1  |  UTF-8  |  Ready", 20, 460);
+    
+    /* Action buttons */
+    gui_create_button(window, "Save", 20, 420, 70, 30);
+    gui_create_button(window, "Save As", 100, 420, 80, 30);
+    gui_create_button(window, "Close", 600, 420, 70, 30);
     
     gui_show_window(window);
     gui_focus_window(window);
@@ -368,20 +464,49 @@ static int launch_text_editor(void) {
 }
 
 static int launch_calculator(void) {
-    window_t* window = gui_create_window("Calculator", 250, 200, 300, 400);
+    window_t* window = gui_create_window("Calculator", 250, 200, 320, 420);
     if (!window) return -1;
     
     applications[APP_CALCULATOR].window = window;
     
-    // Add calculator interface
+    /* Add calculator interface */
     gui_create_label(window, "Calculator", 20, 20);
-    gui_create_label(window, "0", 200, 60);
     
-    // Add button grid (placeholder)
-    gui_create_button(window, "7", 20, 100, 50, 40);
-    gui_create_button(window, "8", 80, 100, 50, 40);
-    gui_create_button(window, "9", 140, 100, 50, 40);
-    gui_create_button(window, "+", 200, 100, 50, 40);
+    /* Display area */
+    gui_create_label(window, "0", 240, 60);
+    
+    /* Button grid - Row 1 */
+    gui_create_button(window, "7", 20, 100, 60, 45);
+    gui_create_button(window, "8", 90, 100, 60, 45);
+    gui_create_button(window, "9", 160, 100, 60, 45);
+    gui_create_button(window, "/", 230, 100, 60, 45);
+    
+    /* Button grid - Row 2 */
+    gui_create_button(window, "4", 20, 155, 60, 45);
+    gui_create_button(window, "5", 90, 155, 60, 45);
+    gui_create_button(window, "6", 160, 155, 60, 45);
+    gui_create_button(window, "*", 230, 155, 60, 45);
+    
+    /* Button grid - Row 3 */
+    gui_create_button(window, "1", 20, 210, 60, 45);
+    gui_create_button(window, "2", 90, 210, 60, 45);
+    gui_create_button(window, "3", 160, 210, 60, 45);
+    gui_create_button(window, "-", 230, 210, 60, 45);
+    
+    /* Button grid - Row 4 */
+    gui_create_button(window, "0", 20, 265, 60, 45);
+    gui_create_button(window, ".", 90, 265, 60, 45);
+    gui_create_button(window, "=", 160, 265, 60, 45);
+    gui_create_button(window, "+", 230, 265, 60, 45);
+    
+    /* Function buttons - Row 5 */
+    gui_create_button(window, "C", 20, 320, 60, 45);
+    gui_create_button(window, "CE", 90, 320, 60, 45);
+    gui_create_button(window, "<-", 160, 320, 60, 45);
+    gui_create_button(window, "+/-", 230, 320, 60, 45);
+    
+    /* Status */
+    gui_create_label(window, "Standard Calculator", 20, 380);
     
     gui_show_window(window);
     gui_focus_window(window);
