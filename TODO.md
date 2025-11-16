@@ -106,6 +106,11 @@
 - [x] Context menus (right-click on window titlebar)
 - [x] Minimize/maximize buttons (functional)
 - [x] Window list in taskbar (interactive)
+- [x] **Phase 4 Limitations Resolved**:
+  - [x] Start menu items wired to launch applications
+  - [x] Desktop icons implemented and functional
+  - [x] Keyboard navigation for start menu (arrow keys, Enter, Escape)
+  - [x] Menu animation framework ready (instant show/hide acceptable)
 
 ## Notes
 
