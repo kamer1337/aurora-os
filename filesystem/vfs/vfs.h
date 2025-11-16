@@ -113,4 +113,9 @@ int vfs_create(const char* path);
 int vfs_unlink(const char* path);
 int vfs_stat(const char* path, inode_t* stat);
 
+/* Cache management functions */
+int vfs_cache_file(const char* path);
+int vfs_uncache_file(const char* path);
+int vfs_is_cached(const char* path);
+
 #endif /* AURORA_VFS_H */
