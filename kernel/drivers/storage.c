@@ -802,8 +802,8 @@ int sata_identify(uint32_t port, uint16_t* buffer) {
     return -1;
 }
 
-/* NVMe-specific functions */
-int nvme_init(void) {
+/* NVMe-specific placeholder functions (for legacy compatibility) */
+int storage_nvme_init_placeholder(void) {
     /* NVMe initialization requires:
      * 1. PCI enumeration to find NVMe controller
      * 2. Memory-mapped I/O setup for NVMe registers
@@ -821,7 +821,7 @@ int nvme_init(void) {
     return 0;
 }
 
-int nvme_identify_controller(uint32_t nsid, uint8_t* buffer) {
+int storage_nvme_identify_controller_placeholder(uint32_t nsid, uint8_t* buffer) {
     if (!buffer) {
         return -1;
     }
