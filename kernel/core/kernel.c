@@ -31,6 +31,9 @@
 /* External plugin registration functions */
 extern void register_boot_diagnostic_plugin(void);
 extern void register_hw_setup_plugin(void);
+extern void register_ml_optimization_plugin(void);
+extern void register_quantum_compute_plugin(void);
+extern void register_system_optimization_plugin(void);
 
 /**
  * Initialize device drivers
@@ -125,6 +128,12 @@ void kernel_init(void) {
     vga_write("\nRegistering boot plugins...\n");
     register_hw_setup_plugin();
     register_boot_diagnostic_plugin();
+    
+    /* Register optional optimization plugins */
+    vga_write("Registering optional optimization plugins...\n");
+    register_ml_optimization_plugin();
+    register_quantum_compute_plugin();
+    register_system_optimization_plugin();
     
     /* List registered plugins */
     plugin_list_all();

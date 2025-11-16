@@ -40,6 +40,9 @@ typedef enum {
     PLUGIN_TYPE_DIAGNOSTICS,  /* Diagnostic/testing plugin */
     PLUGIN_TYPE_SECURITY,     /* Security extension plugin */
     PLUGIN_TYPE_NETWORK,      /* Network protocol plugin */
+    PLUGIN_TYPE_ML_OPTIMIZATION,  /* Machine learning optimization plugin */
+    PLUGIN_TYPE_QUANTUM_COMPUTE,  /* Quantum computing plugin */
+    PLUGIN_TYPE_SYSTEM_OPTIMIZATION, /* System optimization plugin */
     PLUGIN_TYPE_OTHER         /* Other/custom plugin type */
 } plugin_type_t;
 
@@ -85,6 +88,19 @@ typedef void (*plugin_cleanup_func_t)(struct plugin_descriptor* plugin);
 /* Plugin optional function callback */
 typedef int (*plugin_function_t)(void* context, void* params);
 
+/* Plugin configuration callback */
+typedef int (*plugin_config_func_t)(struct plugin_descriptor* plugin, const char* key, const char* value);
+
+/**
+ * Plugin configuration structure
+ * Allows plugins to be configured at runtime
+ */
+typedef struct plugin_config {
+    char key[64];
+    char value[128];
+    struct plugin_config* next;
+} plugin_config_t;
+
 /**
  * Plugin descriptor structure
  * Each plugin must provide this structure
@@ -114,12 +130,19 @@ typedef struct plugin_descriptor {
     /* Optional function provided by plugin */
     plugin_function_t function;
     
+    /* Configuration callback */
+    plugin_config_func_t config;
+    
     /* Plugin-specific data */
     void* private_data;
+    
+    /* Plugin configuration */
+    plugin_config_t* config_list;
     
     /* Internal use by plugin manager */
     struct plugin_descriptor* next;
     int loaded;
+    int enabled;  /* 1 if plugin should be loaded, 0 if disabled */
 } plugin_descriptor_t;
 
 /**
@@ -153,6 +176,16 @@ void plugin_list_all(void);
 /* Get plugin count */
 int plugin_get_count(void);
 
+/* Plugin configuration functions */
+int plugin_set_config(const char* name, const char* key, const char* value);
+const char* plugin_get_config(const char* name, const char* key);
+void plugin_clear_config(const char* name);
+
+/* Plugin enable/disable functions */
+int plugin_enable(const char* name);
+int plugin_disable(const char* name);
+int plugin_is_enabled(const char* name);
+
 /* Security functions */
 int plugin_verify_signature(plugin_descriptor_t* plugin);
 int plugin_check_permission(plugin_descriptor_t* plugin, plugin_permissions_t required_perm);
@@ -183,7 +216,10 @@ void plugin_list_interference_flags(void);
         func_fn, \
         NULL, \
         NULL, \
-        0 \
+        NULL, \
+        NULL, \
+        0, \
+        1 \
     }
 
 /**
@@ -207,7 +243,10 @@ void plugin_list_interference_flags(void);
         func_fn, \
         NULL, \
         NULL, \
-        0 \
+        NULL, \
+        NULL, \
+        0, \
+        1 \
     }
 
 #endif /* AURORA_PLUGIN_H */

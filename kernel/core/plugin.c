@@ -201,6 +201,15 @@ int plugin_init_all(void) {
     int failed = 0;
     
     while (current) {
+        /* Skip disabled plugins */
+        if (!current->enabled) {
+            vga_write("Skipping disabled plugin: ");
+            vga_write(current->name);
+            vga_write("\n");
+            current = current->next;
+            continue;
+        }
+        
         vga_write("Initializing plugin: ");
         vga_write(current->name);
         vga_write(" ... ");
@@ -338,6 +347,15 @@ void plugin_list_all(void) {
                 break;
             case PLUGIN_TYPE_NETWORK:
                 vga_write("Network");
+                break;
+            case PLUGIN_TYPE_ML_OPTIMIZATION:
+                vga_write("ML Optimization");
+                break;
+            case PLUGIN_TYPE_QUANTUM_COMPUTE:
+                vga_write("Quantum Computing");
+                break;
+            case PLUGIN_TYPE_SYSTEM_OPTIMIZATION:
+                vga_write("System Optimization");
                 break;
             default:
                 vga_write("Other");
@@ -562,4 +580,157 @@ void plugin_list_interference_flags(void) {
     }
     
     vga_write("===========================================\n\n");
+}
+
+/**
+ * Set a configuration value for a plugin
+ */
+int plugin_set_config(const char* name, const char* key, const char* value) {
+    plugin_descriptor_t* plugin = plugin_find(name);
+    if (!plugin) {
+        return PLUGIN_ERROR_NOT_FOUND;
+    }
+    
+    /* Check if config key already exists */
+    plugin_config_t* config = plugin->config_list;
+    while (config) {
+        int key_match = 1;
+        for (int i = 0; i < 64 && key[i] != '\0' && config->key[i] != '\0'; i++) {
+            if (config->key[i] != key[i]) {
+                key_match = 0;
+                break;
+            }
+        }
+        
+        if (key_match) {
+            /* Update existing value */
+            int i;
+            for (i = 0; i < 127 && value[i] != '\0'; i++) {
+                config->value[i] = value[i];
+            }
+            config->value[i] = '\0';
+            
+            /* Call plugin's config callback if available */
+            if (plugin->config) {
+                return plugin->config(plugin, key, value);
+            }
+            return PLUGIN_SUCCESS;
+        }
+        config = config->next;
+    }
+    
+    /* Allocate new config entry */
+    plugin_config_t* new_config = (plugin_config_t*)kmalloc(sizeof(plugin_config_t));
+    if (!new_config) {
+        return PLUGIN_ERROR;
+    }
+    
+    /* Copy key */
+    int i;
+    for (i = 0; i < 63 && key[i] != '\0'; i++) {
+        new_config->key[i] = key[i];
+    }
+    new_config->key[i] = '\0';
+    
+    /* Copy value */
+    for (i = 0; i < 127 && value[i] != '\0'; i++) {
+        new_config->value[i] = value[i];
+    }
+    new_config->value[i] = '\0';
+    
+    /* Add to list */
+    new_config->next = plugin->config_list;
+    plugin->config_list = new_config;
+    
+    /* Call plugin's config callback if available */
+    if (plugin->config) {
+        return plugin->config(plugin, key, value);
+    }
+    
+    return PLUGIN_SUCCESS;
+}
+
+/**
+ * Get a configuration value for a plugin
+ */
+const char* plugin_get_config(const char* name, const char* key) {
+    plugin_descriptor_t* plugin = plugin_find(name);
+    if (!plugin) {
+        return NULL;
+    }
+    
+    plugin_config_t* config = plugin->config_list;
+    while (config) {
+        int key_match = 1;
+        for (int i = 0; i < 64 && key[i] != '\0' && config->key[i] != '\0'; i++) {
+            if (config->key[i] != key[i]) {
+                key_match = 0;
+                break;
+            }
+        }
+        
+        if (key_match) {
+            return config->value;
+        }
+        config = config->next;
+    }
+    
+    return NULL;
+}
+
+/**
+ * Clear all configuration for a plugin
+ */
+void plugin_clear_config(const char* name) {
+    plugin_descriptor_t* plugin = plugin_find(name);
+    if (!plugin) {
+        return;
+    }
+    
+    plugin_config_t* config = plugin->config_list;
+    while (config) {
+        plugin_config_t* next = config->next;
+        kfree(config);
+        config = next;
+    }
+    
+    plugin->config_list = NULL;
+}
+
+/**
+ * Enable a plugin
+ */
+int plugin_enable(const char* name) {
+    plugin_descriptor_t* plugin = plugin_find(name);
+    if (!plugin) {
+        return PLUGIN_ERROR_NOT_FOUND;
+    }
+    
+    plugin->enabled = 1;
+    return PLUGIN_SUCCESS;
+}
+
+/**
+ * Disable a plugin
+ */
+int plugin_disable(const char* name) {
+    plugin_descriptor_t* plugin = plugin_find(name);
+    if (!plugin) {
+        return PLUGIN_ERROR_NOT_FOUND;
+    }
+    
+    plugin->enabled = 0;
+    return PLUGIN_SUCCESS;
+}
+
+/**
+ * Check if a plugin is enabled
+ */
+int plugin_is_enabled(const char* name) {
+    plugin_descriptor_t* plugin = plugin_find(name);
+    if (!plugin) {
+        return 0;
+    }
+    
+    return plugin->enabled;
 }
