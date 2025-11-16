@@ -91,7 +91,7 @@ void test_memory_management(void) {
         
         // Try to write to allocated memory (use smaller value that fits in 16-bit)
         aurora_encode_i_type(AURORA_OP_LOADI, 3, 0x1234),
-        aurora_encode_r_type(AURORA_OP_STORE, 2, 3, 0),
+        aurora_encode_r_type(AURORA_OP_STORE, 3, 2, 0),  // mem[r2 + 0] = r3
         
         // Read it back
         aurora_encode_r_type(AURORA_OP_LOAD, 4, 2, 0),
@@ -277,21 +277,21 @@ void test_network_operations(void) {
     // Send a packet
     uint8_t test_data[] = "Hello, Network!";
     result = aurora_vm_net_send(vm, test_data, sizeof(test_data));
-    TEST_ASSERT(result == 0, "Packet sent successfully");
+    TEST_ASSERT(result > 0, "Packet sent successfully");
     
     // Verify packet in TX queue
-    if (vm->network.tx_tail == 0) {
+    if (vm->network.tx_head == 0) {
         add_issue("Medium", "Network Stack",
                   "Packet not added to TX queue after send",
-                  "After sending a packet via aurora_vm_net_send, the TX queue tail "
+                  "After sending a packet via aurora_vm_net_send, the TX queue head "
                   "should increment but remains at 0.");
     }
-    TEST_ASSERT(vm->network.tx_tail > 0, "Packet added to TX queue");
+    TEST_ASSERT(vm->network.tx_head > 0, "Packet added to TX queue");
     
-    // Simulate receiving a packet
+    // Simulate receiving a packet (copy from TX to RX queue)
     result = aurora_vm_net_send(vm, test_data, sizeof(test_data));
     vm->network.rx_queue[0] = vm->network.tx_queue[0];
-    vm->network.rx_tail = 1;
+    vm->network.rx_head = 1;  // Set head to indicate data available
     
     uint8_t recv_buffer[64];
     result = aurora_vm_net_recv(vm, recv_buffer, sizeof(recv_buffer));

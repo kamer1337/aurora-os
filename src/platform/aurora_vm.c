@@ -802,6 +802,25 @@ int aurora_vm_step(AuroraVM *vm) {
         return 1;
     }
     
+    /* Check for pending interrupts and dispatch them */
+    if (vm->irq_ctrl.enabled) {
+        for (uint32_t i = 0; i < AURORA_VM_MAX_INTERRUPTS; i++) {
+            if (vm->irq_ctrl.interrupts[i].pending && 
+                vm->irq_ctrl.interrupts[i].enabled &&
+                vm->irq_ctrl.interrupts[i].handler != 0) {
+                /* Dispatch interrupt - save state and jump to handler */
+                vm->cpu.sp -= 4;
+                if (check_memory_access(vm, vm->cpu.sp, 4, AURORA_PAGE_WRITE)) {
+                    memcpy(&vm->memory[vm->cpu.sp], &vm->cpu.pc, 4);
+                    vm->cpu.pc = vm->irq_ctrl.interrupts[i].handler;
+                    vm->irq_ctrl.interrupts[i].pending = false;
+                    vm->irq_ctrl.active &= ~(1 << i);
+                    break;  /* Handle one interrupt per step */
+                }
+            }
+        }
+    }
+    
     /* Check single-step mode */
     if (vm->debugger.enabled && vm->debugger.single_step) {
         return 2;  /* Paused for debugging */
@@ -1163,19 +1182,9 @@ int aurora_vm_irq_trigger(AuroraVM *vm, uint32_t irq) {
     if (!vm || irq >= AURORA_VM_MAX_INTERRUPTS) return -1;
     if (!vm->irq_ctrl.enabled || !vm->irq_ctrl.interrupts[irq].enabled) return -1;
     
+    /* Mark interrupt as pending - will be dispatched in next VM step */
     vm->irq_ctrl.interrupts[irq].pending = true;
     vm->irq_ctrl.active |= (1 << irq);
-    
-    /* Simple interrupt handling - save state and jump to handler */
-    if (vm->irq_ctrl.interrupts[irq].handler != 0) {
-        /* Push PC to stack */
-        vm->cpu.sp -= 4;
-        if (check_memory_access(vm, vm->cpu.sp, 4, AURORA_PAGE_WRITE)) {
-            memcpy(&vm->memory[vm->cpu.sp], &vm->cpu.pc, 4);
-            vm->cpu.pc = vm->irq_ctrl.interrupts[irq].handler;
-            vm->irq_ctrl.interrupts[irq].pending = false;
-        }
-    }
     
     return 0;
 }
