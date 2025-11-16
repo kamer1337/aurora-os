@@ -114,15 +114,17 @@ static int boot_diagnostic_function(void* context, void* params) {
 
 /**
  * Plugin descriptor - this is the main entry point for the plugin
- * Use the DEFINE_PLUGIN macro for convenience
+ * Use the DEFINE_SECURE_PLUGIN macro to specify security permissions
  */
-DEFINE_PLUGIN(
+DEFINE_SECURE_PLUGIN(
     boot_diagnostic_plugin,           /* Variable name */
     "Boot Diagnostics",               /* Plugin name */
     1,                                 /* Major version */
     0,                                 /* Minor version */
     PLUGIN_TYPE_DIAGNOSTICS,          /* Type */
     PLUGIN_PRIORITY_NORMAL,            /* Priority */
+    PLUGIN_PERM_MEMORY | PLUGIN_PERM_IO,  /* Permissions: needs memory and I/O */
+    PLUGIN_INTERFERE_MEMORY,           /* May interfere with memory management */
     boot_diagnostic_init,              /* Init function */
     boot_diagnostic_cleanup,           /* Cleanup function */
     boot_diagnostic_function           /* Optional function */

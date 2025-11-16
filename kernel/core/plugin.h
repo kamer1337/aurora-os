@@ -22,9 +22,15 @@
 #define PLUGIN_ERROR_INIT_FAILED -3
 #define PLUGIN_ERROR_NOT_FOUND -4
 #define PLUGIN_ERROR_ALREADY_REGISTERED -5
+#define PLUGIN_ERROR_VERIFICATION_FAILED -6
+#define PLUGIN_ERROR_SECURITY_VIOLATION -7
+#define PLUGIN_ERROR_PERMISSION_DENIED -8
 
 /* Maximum plugin name length */
 #define PLUGIN_NAME_MAX 64
+
+/* Plugin signature size (for quantum crypto verification) */
+#define PLUGIN_SIGNATURE_SIZE 32
 
 /* Plugin types */
 typedef enum {
@@ -45,6 +51,27 @@ typedef enum {
     PLUGIN_PRIORITY_LOW = 3,
     PLUGIN_PRIORITY_OPTIONAL = 4    /* Can fail without affecting boot */
 } plugin_priority_t;
+
+/* Plugin security permissions */
+typedef enum {
+    PLUGIN_PERM_NONE = 0x00,
+    PLUGIN_PERM_MEMORY = 0x01,       /* Can allocate/free memory */
+    PLUGIN_PERM_IO = 0x02,           /* Can perform I/O operations */
+    PLUGIN_PERM_CRYPTO = 0x04,       /* Can access crypto functions */
+    PLUGIN_PERM_KERNEL = 0x08,       /* Can access kernel internals */
+    PLUGIN_PERM_ALL = 0xFF           /* All permissions */
+} plugin_permissions_t;
+
+/* Functions that plugin may interfere with */
+typedef enum {
+    PLUGIN_INTERFERE_NONE = 0x00,
+    PLUGIN_INTERFERE_QUANTUM_CRYPTO = 0x01,  /* May affect quantum crypto verification */
+    PLUGIN_INTERFERE_MEMORY = 0x02,          /* May affect memory management */
+    PLUGIN_INTERFERE_PROCESS = 0x04,         /* May affect process scheduling */
+    PLUGIN_INTERFERE_FILESYSTEM = 0x08,      /* May affect filesystem operations */
+    PLUGIN_INTERFERE_NETWORK = 0x10,         /* May affect networking */
+    PLUGIN_INTERFERE_SECURITY = 0x20         /* May affect security subsystem */
+} plugin_interference_t;
 
 /* Forward declaration */
 struct plugin_descriptor;
@@ -73,6 +100,12 @@ typedef struct plugin_descriptor {
     /* API version this plugin was built against */
     uint32_t api_version_major;
     uint32_t api_version_minor;
+    
+    /* Security fields */
+    uint8_t signature[PLUGIN_SIGNATURE_SIZE];  /* Quantum crypto signature */
+    uint32_t permissions;                       /* Plugin permissions bitmask */
+    uint32_t interference_flags;                /* Functions this plugin may interfere with */
+    uint8_t verified;                           /* 1 if signature verified, 0 otherwise */
     
     /* Plugin lifecycle callbacks */
     plugin_init_func_t init;
@@ -120,6 +153,12 @@ void plugin_list_all(void);
 /* Get plugin count */
 int plugin_get_count(void);
 
+/* Security functions */
+int plugin_verify_signature(plugin_descriptor_t* plugin);
+int plugin_check_permission(plugin_descriptor_t* plugin, plugin_permissions_t required_perm);
+void plugin_report_interference(const char* plugin_name);
+void plugin_list_interference_flags(void);
+
 /**
  * Helper macro for plugin definition
  * Usage in plugin code:
@@ -135,6 +174,34 @@ int plugin_get_count(void);
         plugin_priority, \
         PLUGIN_API_VERSION_MAJOR, \
         PLUGIN_API_VERSION_MINOR, \
+        {0}, \
+        PLUGIN_PERM_NONE, \
+        PLUGIN_INTERFERE_NONE, \
+        0, \
+        init_fn, \
+        cleanup_fn, \
+        func_fn, \
+        NULL, \
+        NULL, \
+        0 \
+    }
+
+/**
+ * Helper macro for secure plugin definition with permissions
+ */
+#define DEFINE_SECURE_PLUGIN(var_name, plugin_name_str, major, minor, plugin_type, plugin_priority, perms, interference, init_fn, cleanup_fn, func_fn) \
+    plugin_descriptor_t var_name = { \
+        plugin_name_str, \
+        major, \
+        minor, \
+        plugin_type, \
+        plugin_priority, \
+        PLUGIN_API_VERSION_MAJOR, \
+        PLUGIN_API_VERSION_MINOR, \
+        {0}, \
+        perms, \
+        interference, \
+        0, \
         init_fn, \
         cleanup_fn, \
         func_fn, \

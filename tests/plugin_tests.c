@@ -49,22 +49,9 @@ static int test_plugin_fail_init(plugin_descriptor_t* plugin) {
 static void test_plugin_registration(void) {
     vga_write("\n=== Testing Plugin Registration ===\n");
     
-    /* Create test plugin */
-    plugin_descriptor_t test_plugin = {
-        "Test Plugin",
-        1,
-        0,
-        PLUGIN_TYPE_OTHER,
-        PLUGIN_PRIORITY_NORMAL,
-        PLUGIN_API_VERSION_MAJOR,
-        PLUGIN_API_VERSION_MINOR,
-        test_plugin_init,
-        test_plugin_cleanup,
-        test_plugin_function,
-        NULL,
-        NULL,
-        0
-    };
+    /* Create test plugin using macro */
+    DEFINE_PLUGIN(test_plugin, "Test Plugin", 1, 0, PLUGIN_TYPE_OTHER,
+                  PLUGIN_PRIORITY_NORMAL, test_plugin_init, test_plugin_cleanup, test_plugin_function);
     
     /* Test registration */
     int result = plugin_register(&test_plugin);
@@ -118,22 +105,9 @@ static void test_plugin_initialization(void) {
     test_cleanup_called = 0;
     test_function_called = 0;
     
-    /* Create and register test plugin */
-    plugin_descriptor_t test_plugin = {
-        "Init Test Plugin",
-        1,
-        0,
-        PLUGIN_TYPE_OTHER,
-        PLUGIN_PRIORITY_NORMAL,
-        PLUGIN_API_VERSION_MAJOR,
-        PLUGIN_API_VERSION_MINOR,
-        test_plugin_init,
-        test_plugin_cleanup,
-        test_plugin_function,
-        NULL,
-        NULL,
-        0
-    };
+    /* Create and register test plugin using macro */
+    DEFINE_PLUGIN(test_plugin, "Init Test Plugin", 1, 0, PLUGIN_TYPE_OTHER,
+                  PLUGIN_PRIORITY_NORMAL, test_plugin_init, test_plugin_cleanup, test_plugin_function);
     
     plugin_register(&test_plugin);
     
@@ -171,36 +145,15 @@ static void test_plugin_initialization(void) {
 static void test_plugin_priority(void) {
     vga_write("\n=== Testing Plugin Priority ===\n");
     
-    /* Create plugins with different priorities */
-    plugin_descriptor_t low_priority = {
-        "Low Priority",
-        1, 0,
-        PLUGIN_TYPE_OTHER,
-        PLUGIN_PRIORITY_LOW,
-        PLUGIN_API_VERSION_MAJOR,
-        PLUGIN_API_VERSION_MINOR,
-        test_plugin_init, NULL, NULL, NULL, NULL, 0
-    };
+    /* Create plugins with different priorities using macros */
+    DEFINE_PLUGIN(low_priority, "Low Priority", 1, 0, PLUGIN_TYPE_OTHER,
+                  PLUGIN_PRIORITY_LOW, test_plugin_init, NULL, NULL);
     
-    plugin_descriptor_t high_priority = {
-        "High Priority",
-        1, 0,
-        PLUGIN_TYPE_OTHER,
-        PLUGIN_PRIORITY_HIGH,
-        PLUGIN_API_VERSION_MAJOR,
-        PLUGIN_API_VERSION_MINOR,
-        test_plugin_init, NULL, NULL, NULL, NULL, 0
-    };
+    DEFINE_PLUGIN(high_priority, "High Priority", 1, 0, PLUGIN_TYPE_OTHER,
+                  PLUGIN_PRIORITY_HIGH, test_plugin_init, NULL, NULL);
     
-    plugin_descriptor_t critical_priority = {
-        "Critical Priority",
-        1, 0,
-        PLUGIN_TYPE_OTHER,
-        PLUGIN_PRIORITY_CRITICAL,
-        PLUGIN_API_VERSION_MAJOR,
-        PLUGIN_API_VERSION_MINOR,
-        test_plugin_init, NULL, NULL, NULL, NULL, 0
-    };
+    DEFINE_PLUGIN(critical_priority, "Critical Priority", 1, 0, PLUGIN_TYPE_OTHER,
+                  PLUGIN_PRIORITY_CRITICAL, test_plugin_init, NULL, NULL);
     
     /* Register in wrong order */
     plugin_register(&low_priority);
@@ -233,17 +186,9 @@ static void test_plugin_priority(void) {
 static void test_plugin_failure_handling(void) {
     vga_write("\n=== Testing Plugin Failure Handling ===\n");
     
-    /* Create plugin that fails initialization */
-    plugin_descriptor_t fail_plugin = {
-        "Fail Plugin",
-        1, 0,
-        PLUGIN_TYPE_OTHER,
-        PLUGIN_PRIORITY_OPTIONAL,
-        PLUGIN_API_VERSION_MAJOR,
-        PLUGIN_API_VERSION_MINOR,
-        test_plugin_fail_init,
-        NULL, NULL, NULL, NULL, 0
-    };
+    /* Create plugin that fails initialization using macro */
+    DEFINE_PLUGIN(fail_plugin, "Fail Plugin", 1, 0, PLUGIN_TYPE_OTHER,
+                  PLUGIN_PRIORITY_OPTIONAL, test_plugin_fail_init, NULL, NULL);
     
     plugin_register(&fail_plugin);
     
@@ -273,17 +218,37 @@ static void test_plugin_failure_handling(void) {
 static void test_api_version(void) {
     vga_write("\n=== Testing API Version Checking ===\n");
     
-    /* Create plugin with wrong API version */
-    plugin_descriptor_t bad_version = {
-        "Bad Version Plugin",
-        1, 0,
-        PLUGIN_TYPE_OTHER,
-        PLUGIN_PRIORITY_NORMAL,
-        99,  /* Wrong major version */
-        0,
-        test_plugin_init,
-        NULL, NULL, NULL, NULL, 0
-    };
+    /* Create plugin with wrong API version - must manually initialize */
+    plugin_descriptor_t bad_version;
+    
+    /* Copy name */
+    const char* name = "Bad Version Plugin";
+    for (int i = 0; i < PLUGIN_NAME_MAX && name[i] != '\0'; i++) {
+        bad_version.name[i] = name[i];
+    }
+    bad_version.name[PLUGIN_NAME_MAX-1] = '\0';
+    
+    bad_version.version_major = 1;
+    bad_version.version_minor = 0;
+    bad_version.type = PLUGIN_TYPE_OTHER;
+    bad_version.priority = PLUGIN_PRIORITY_NORMAL;
+    bad_version.api_version_major = 99;  /* Wrong major version */
+    bad_version.api_version_minor = 0;
+    
+    /* Initialize security fields */
+    for (int i = 0; i < PLUGIN_SIGNATURE_SIZE; i++) {
+        bad_version.signature[i] = 0;
+    }
+    bad_version.permissions = PLUGIN_PERM_NONE;
+    bad_version.interference_flags = PLUGIN_INTERFERE_NONE;
+    bad_version.verified = 0;
+    
+    bad_version.init = test_plugin_init;
+    bad_version.cleanup = NULL;
+    bad_version.function = NULL;
+    bad_version.private_data = NULL;
+    bad_version.next = NULL;
+    bad_version.loaded = 0;
     
     /* Try to register - should fail */
     int result = plugin_register(&bad_version);

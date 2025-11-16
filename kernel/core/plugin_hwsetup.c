@@ -54,15 +54,17 @@ static int hw_setup_function(void* context, void* params) {
 }
 
 /**
- * Plugin descriptor
+ * Plugin descriptor - demonstrates security setup
  */
-DEFINE_PLUGIN(
+DEFINE_SECURE_PLUGIN(
     hw_setup_plugin,                   /* Variable name */
     "Hardware Setup",                  /* Plugin name */
     1,                                  /* Major version */
     0,                                  /* Minor version */
     PLUGIN_TYPE_BOOT_SETUP,            /* Type */
     PLUGIN_PRIORITY_HIGH,               /* Priority - runs early */
+    PLUGIN_PERM_IO | PLUGIN_PERM_KERNEL,  /* Permissions: I/O and kernel access */
+    PLUGIN_INTERFERE_NONE,              /* No interference with critical systems */
     hw_setup_init,                      /* Init function */
     hw_setup_cleanup,                   /* Cleanup function */
     hw_setup_function                   /* Optional function */

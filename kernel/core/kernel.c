@@ -131,6 +131,9 @@ void kernel_init(void) {
     /* Initialize all plugins */
     plugin_init_all();
     
+    /* SECURITY: Audit plugin interference with quantum crypto */
+    plugin_list_interference_flags();
+    
     vga_write("\nAurora OS initialization complete!\n");
     
 #ifdef QUANTUM_CRYPTO_TESTS
