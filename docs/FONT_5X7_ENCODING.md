@@ -1,59 +1,68 @@
-# Aurora OS - 5x7 Font Encoding
+# Aurora OS - Crystalline 5x7 Font Encoding
 
 ## Overview
 
-This document describes the 5x7 bitmap font encoding added to Aurora OS as a compact alternative to the existing 8x8 font.
+This document describes the 5x7 bitmap font encoding added to Aurora OS as a compact, futuristic alternative to the existing 8x8 font. The font features a modern, angular, crystalline aesthetic inspired by sci-fi and alien technology while maintaining excellent readability.
 
 ## Font Specifications
 
 - **Size**: 5 pixels wide × 7 pixels tall
+- **Style**: Angular, crystalline, futuristic aesthetic
 - **Encoding**: Each character uses 7 bytes, with 5 bits per byte (bits 0-4)
 - **Character Set**: Full ASCII printable characters (32-126)
-  - Uppercase letters: A-Z
-  - Lowercase letters: a-z
-  - Digits: 0-9
+  - Uppercase letters: A-Z (sharp, angular forms)
+  - Lowercase letters: a-z (compact, modern curves)
+  - Digits: 0-9 (diamond and crystal shapes)
   - Punctuation and symbols: ! @ # $ % ^ & * ( ) - + = [ ] { } ; : ' " , . / < > ? | \ ~ `
+
+## Design Philosophy
+
+The Crystalline 5x7 font combines:
+- **Angular Geometry**: Sharp edges and precise angles for a tech-forward look
+- **Crystal Patterns**: Diamond and geometric shapes reminiscent of crystalline structures
+- **Alien Aesthetics**: Unique character forms that feel otherworldly yet familiar
+- **Readability**: Despite the futuristic styling, all characters remain clearly distinguishable
 
 ## Character Pattern Examples
 
-### Letter 'A' (ASCII 65)
+### Letter 'A' (ASCII 65) - Sharp Crystalline Triangle
 ```
 Binary Pattern (5x7):
-0 1 1 1 0   → 0x0E
-1 0 0 0 1   → 0x11
-1 0 0 0 1   → 0x11
-1 0 0 0 1   → 0x11
-1 1 1 1 1   → 0x1F
-1 0 0 0 1   → 0x11
-1 0 0 0 1   → 0x11
+  █      → 0x04
+ █ █     → 0x0A
+█   █    → 0x11
+█   █    → 0x11
+█████    → 0x1F
+█   █    → 0x11
+█   █    → 0x11
 
-Encoded: {0x0E, 0x11, 0x11, 0x11, 0x1F, 0x11, 0x11}
+Encoded: {0x04, 0x0A, 0x11, 0x11, 0x1F, 0x11, 0x11}
 ```
 
-### Digit '0' (ASCII 48)
-```
-Binary Pattern (5x7):
-0 1 1 1 0   → 0x0E
-1 0 0 0 1   → 0x11
-1 0 0 1 1   → 0x13
-1 0 1 0 1   → 0x15
-1 1 0 0 1   → 0x19
-1 0 0 0 1   → 0x11
-0 1 1 1 0   → 0x0E
-
-Encoded: {0x0E, 0x11, 0x13, 0x15, 0x19, 0x11, 0x0E}
-```
-
-### Digit '5' (ASCII 53)
+### Digit '0' (ASCII 48) - Diamond Crystal with Inner Details
 ```
 Binary Pattern (5x7):
-1 1 1 1 1   → 0x1F
-1 0 0 0 0   → 0x10
-1 1 1 1 0   → 0x1E
-0 0 0 0 1   → 0x01
-0 0 0 0 1   → 0x01
-1 0 0 0 1   → 0x11
-0 1 1 1 0   → 0x0E
+ ███     → 0x0E
+█ █ █    → 0x15
+█ █ █    → 0x15
+█ █ █    → 0x15
+█ █ █    → 0x15
+█ █ █    → 0x15
+ ███     → 0x0E
+
+Encoded: {0x0E, 0x15, 0x15, 0x15, 0x15, 0x15, 0x0E}
+```
+
+### Digit '5' (ASCII 53) - Angular Transformation
+```
+Binary Pattern (5x7):
+█████    → 0x1F
+█        → 0x10
+████     → 0x1E
+    █    → 0x01
+    █    → 0x01
+█   █    → 0x11
+ ███     → 0x0E
 
 Encoded: {0x1F, 0x10, 0x1E, 0x01, 0x01, 0x11, 0x0E}
 ```
@@ -116,13 +125,14 @@ framebuffer_draw_string_5x7(10, 40, "5x7: The quick brown fox",
                             COLOR_GREEN, COLOR_BLACK);
 ```
 
-## Advantages of 5x7 Font
+## Advantages of Crystalline 5x7 Font
 
 1. **Compact Size**: 45% fewer pixels per character than 8x8 font (5×7=35 pixels vs 8×8=64 pixels)
 2. **More Text**: Can fit ~60% more characters on screen
 3. **Lower Memory**: Uses fewer bytes per character (7 bytes vs 8 bytes)
-4. **Maintains Readability**: Despite smaller size, patterns are clear and distinct
-5. **Professional Look**: Modern, clean appearance suitable for status bars and compact UIs
+4. **Futuristic Aesthetic**: Angular, crystalline design evokes sci-fi and alien technology
+5. **Modern Look**: Perfect for cyberpunk, space-themed, and tech-forward UIs
+6. **Maintains Readability**: Despite stylistic design, patterns remain clear and distinct
 
 ## Comparison Table
 
@@ -146,15 +156,25 @@ The 5x7 font is implemented as a static array in `kernel/gui/framebuffer.c`:
 
 ```c
 static const uint8_t font5x7[128][7] = {
-    // Character definitions...
+    // Character definitions with crystalline, angular patterns...
 };
 ```
 
-Each character's pattern is defined with slight modifications to ensure:
-- Clear distinction between similar characters (e.g., 'O' vs '0', 'I' vs 'l')
-- Balanced visual weight across the character set
-- Consistent baseline alignment for lowercase letters
-- Proper descenders for characters like 'g', 'j', 'p', 'q', 'y'
+Each character's pattern is defined with:
+- **Angular geometry** for a futuristic, tech-forward appearance
+- **Crystal-inspired shapes** particularly visible in digits (diamond '0', etc.)
+- **Sharp edges and precise forms** creating an alien-like aesthetic
+- **Clear distinction** between similar characters (e.g., 'O' vs '0', 'I' vs 'l', '1' vs 'l')
+- **Balanced visual weight** across the character set
+- **Consistent baseline alignment** for lowercase letters
+- **Proper descenders** for characters like 'g', 'j', 'p', 'q', 'y'
+
+### Design Details
+
+**Uppercase Letters**: Feature sharp angles, crystalline triangles, and geometric precision
+**Lowercase Letters**: Maintain modern curves with angular touches
+**Digits**: Designed with diamond/crystal shapes and angular paths
+**Symbols**: Enhanced with futuristic geometric patterns
 
 ## Testing
 

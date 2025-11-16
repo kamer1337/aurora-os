@@ -75,11 +75,16 @@ void gui_demo_init(void) {
     }
     
     // Create a font demo window
-    window_t* font_win = gui_create_window("Font Demo - 5x7 vs 8x8", 250, 200, 520, 300);
+    window_t* font_win = gui_create_window("Font Demo - Crystalline 5x7", 250, 200, 520, 300);
     if (font_win) {
         // Draw comparison using framebuffer directly
         framebuffer_info_t* fb_info = framebuffer_get_info();
         if (fb_info && fb_info->address) {
+            // Futuristic cyan/magenta color scheme
+            color_t cyber_cyan = {0, 255, 255, 255};
+            color_t cyber_magenta = {255, 0, 255, 255};
+            color_t neon_green = {0, 255, 100, 255};
+            
             // Demo text for both fonts
             const char* demo_text_1 = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
             const char* demo_text_2 = "abcdefghijklmnopqrstuvwxyz";
@@ -89,7 +94,7 @@ void gui_demo_init(void) {
             uint32_t base_y = font_win->bounds.y + 50;
             
             // Draw 8x8 font section
-            framebuffer_draw_string(base_x, base_y, "8x8 Font:", COLOR_WHITE, 
+            framebuffer_draw_string(base_x, base_y, "Standard 8x8:", COLOR_WHITE, 
                                   FONT_WINDOW_BG_COLOR);
             framebuffer_draw_string(base_x, base_y + 15, demo_text_1, COLOR_CYAN, 
                                   FONT_WINDOW_BG_COLOR);
@@ -98,18 +103,18 @@ void gui_demo_init(void) {
             framebuffer_draw_string(base_x, base_y + 35, demo_text_3, COLOR_CYAN, 
                                   FONT_WINDOW_BG_COLOR);
             
-            // Draw 5x7 font section
-            framebuffer_draw_string_5x7(base_x, base_y + 100, "5x7 Font:", COLOR_WHITE, 
+            // Draw 5x7 font section with futuristic styling
+            framebuffer_draw_string_5x7(base_x, base_y + 100, "Crystalline 5x7:", cyber_magenta, 
                                        FONT_WINDOW_BG_COLOR);
-            framebuffer_draw_string_5x7(base_x, base_y + 115, demo_text_1, COLOR_GREEN, 
+            framebuffer_draw_string_5x7(base_x, base_y + 115, demo_text_1, cyber_cyan, 
                                        FONT_WINDOW_BG_COLOR);
-            framebuffer_draw_string_5x7(base_x, base_y + 125, demo_text_2, COLOR_GREEN, 
+            framebuffer_draw_string_5x7(base_x, base_y + 125, demo_text_2, neon_green, 
                                        FONT_WINDOW_BG_COLOR);
-            framebuffer_draw_string_5x7(base_x, base_y + 135, demo_text_3, COLOR_GREEN, 
+            framebuffer_draw_string_5x7(base_x, base_y + 135, demo_text_3, cyber_magenta, 
                                        FONT_WINDOW_BG_COLOR);
             
-            // Add info text
-            framebuffer_draw_string_5x7(base_x, base_y + 180, "5x7 font is more compact!", 
+            // Add info text with style
+            framebuffer_draw_string_5x7(base_x, base_y + 180, "Angular. Modern. Alien.", 
                                        COLOR_YELLOW, FONT_WINDOW_BG_COLOR);
         }
         
