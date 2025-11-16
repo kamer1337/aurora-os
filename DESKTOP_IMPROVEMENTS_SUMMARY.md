@@ -1,7 +1,7 @@
 # Aurora OS - Desktop Functions & Storage Implementation Summary
 
 ## Overview
-This implementation adds comprehensive desktop functionality and storage driver improvements to Aurora OS, addressing the requirement to "add more desktop functions, improvements, implement hard drive/SSD support if not implemented, find stubs and implement functions."
+This implementation adds comprehensive desktop functionality and storage driver improvements to Aurora OS
 
 ## Storage Driver Enhancements
 
