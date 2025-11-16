@@ -137,7 +137,10 @@ void test_interrupts(void) {
     aurora_vm_step(vm);  /* Execute first instruction */
     aurora_vm_irq_trigger(vm, AURORA_VM_IRQ_TIMER);  /* Trigger timer interrupt */
     
-    TEST_ASSERT(vm->irq_ctrl.interrupts[AURORA_VM_IRQ_TIMER].pending == false, "Interrupt handled");
+    /* Interrupt should be pending after trigger, then cleared on next step */
+    TEST_ASSERT(vm->irq_ctrl.interrupts[AURORA_VM_IRQ_TIMER].pending == true, "Interrupt pending after trigger");
+    aurora_vm_step(vm);  /* This step will dispatch the interrupt */
+    TEST_ASSERT(vm->irq_ctrl.interrupts[AURORA_VM_IRQ_TIMER].pending == false, "Interrupt handled after step");
     
     aurora_vm_destroy(vm);
 }
