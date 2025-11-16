@@ -6,6 +6,7 @@
 
 #include "gui.h"
 #include "framebuffer.h"
+#include "gui_effects.h"
 #include "../memory/memory.h"
 #include "../drivers/mouse.h"
 #include "../drivers/keyboard.h"
@@ -343,48 +344,70 @@ void gui_draw_window(window_t* window) {
     
     uint32_t title_height = window->has_titlebar ? 24 : 0;
     
-    // Draw window border
-    if (window->has_border) {
-        framebuffer_draw_rect_outline(window->bounds.x, window->bounds.y, 
-                                      window->bounds.width, window->bounds.height,
-                                      COLOR_DARK_GRAY);
+    // Draw 3D shadow for depth (5-pixel offset, 8-pixel blur)
+    if (window->focused) {
+        gui_draw_shadow(window->bounds.x, window->bounds.y, 
+                       window->bounds.width, window->bounds.height, 5, 8);
+    } else {
+        // Lighter shadow for unfocused windows
+        gui_draw_shadow(window->bounds.x, window->bounds.y, 
+                       window->bounds.width, window->bounds.height, 3, 5);
     }
     
-    // Draw titlebar
+    // Draw window border with rounded corners
+    if (window->has_border) {
+        gui_draw_rounded_rect(window->bounds.x, window->bounds.y,
+                             window->bounds.width, window->bounds.height,
+                             8, COLOR_DARK_GRAY);
+    }
+    
+    // Draw titlebar with gradient
     if (window->has_titlebar) {
-        color_t title_color = window->focused ? 
-            (color_t){0, 120, 215, 255} :  // Active window blue
-            (color_t){128, 128, 128, 255}; // Inactive gray
-            
-        framebuffer_draw_rect(window->bounds.x + 1, window->bounds.y + 1,
-                             window->bounds.width - 2, title_height,
-                             title_color);
-        
-        // Draw window title
-        if (window->title) {
-            framebuffer_draw_string(window->bounds.x + 8, window->bounds.y + 8,
-                                  window->title, COLOR_WHITE, title_color);
+        color_t title_color1, title_color2;
+        if (window->focused) {
+            // Active window - blue gradient
+            title_color1 = (color_t){30, 140, 235, 255};
+            title_color2 = (color_t){0, 100, 195, 255};
+        } else {
+            // Inactive window - gray gradient
+            title_color1 = (color_t){148, 148, 148, 255};
+            title_color2 = (color_t){108, 108, 108, 255};
         }
         
-        // Draw window control buttons (minimize, maximize, close)
+        gui_draw_gradient(window->bounds.x + 1, window->bounds.y + 1,
+                         window->bounds.width - 2, title_height,
+                         title_color1, title_color2);
+        
+        // Draw window title with shadow for depth
+        if (window->title) {
+            // Draw text shadow
+            framebuffer_draw_string(window->bounds.x + 9, window->bounds.y + 9,
+                                  window->title, COLOR_BLACK, title_color1);
+            // Draw text
+            framebuffer_draw_string(window->bounds.x + 8, window->bounds.y + 8,
+                                  window->title, COLOR_WHITE, title_color1);
+        }
+        
+        // Draw window control buttons with 3D effects
         uint32_t button_size = 16;
         uint32_t button_spacing = 4;
         uint32_t button_y = window->bounds.y + 4;
         
-        // Close button (red X)
+        // Close button (red X) with 3D effect
         uint32_t close_x = window->bounds.x + window->bounds.width - 20;
-        framebuffer_draw_rect(close_x, button_y, button_size, button_size, COLOR_RED);
+        gui_draw_3d_button(close_x, button_y, button_size, button_size, COLOR_RED, 0);
         framebuffer_draw_string(close_x + 4, button_y + 4, "X", COLOR_WHITE, COLOR_RED);
         
-        // Maximize button (square)
+        // Maximize button (square) with 3D effect
         uint32_t max_x = close_x - button_size - button_spacing;
         color_t max_color = window->maximized ? (color_t){100, 100, 100, 255} : (color_t){50, 150, 50, 255};
-        framebuffer_draw_rect(max_x, button_y, button_size, button_size, max_color);
+        gui_draw_3d_button(max_x, button_y, button_size, button_size, max_color, 0);
         framebuffer_draw_rect_outline(max_x + 3, button_y + 3, 10, 10, COLOR_WHITE);
         
-        // Minimize button (dash)
+        // Minimize button (dash) with 3D effect
         uint32_t min_x = max_x - button_size - button_spacing;
-        framebuffer_draw_rect(min_x, button_y, button_size, button_size, (color_t){200, 150, 50, 255});
+        gui_draw_3d_button(min_x, button_y, button_size, button_size, 
+                          (color_t){200, 150, 50, 255}, 0);
         framebuffer_draw_hline(min_x + 3, min_x + 13, button_y + 12, COLOR_WHITE);
     }
     
@@ -495,19 +518,20 @@ void gui_draw_widget(widget_t* widget, int32_t window_x, int32_t window_y) {
     
     switch (widget->type) {
         case WIDGET_BUTTON:
-            // Draw button background
-            framebuffer_draw_rect(abs_x, abs_y, widget->bounds.width, widget->bounds.height,
-                                widget->bg_color);
+            // Draw button with 3D effect
+            gui_draw_3d_button(abs_x, abs_y, widget->bounds.width, widget->bounds.height,
+                              widget->bg_color, 0);
             
-            // Draw button border
-            framebuffer_draw_rect_outline(abs_x, abs_y, widget->bounds.width, widget->bounds.height,
-                                        COLOR_BLACK);
-            
-            // Draw button text (centered)
+            // Draw button text (centered) with shadow for depth
             if (widget->text) {
                 uint32_t text_width = strlen(widget->text) * 8;
                 uint32_t text_x = abs_x + (widget->bounds.width - text_width) / 2;
                 uint32_t text_y = abs_y + (widget->bounds.height - 8) / 2;
+                
+                // Draw text shadow for depth
+                framebuffer_draw_string(text_x + 1, text_y + 1, widget->text,
+                                      COLOR_DARK_GRAY, widget->bg_color);
+                // Draw text
                 framebuffer_draw_string(text_x, text_y, widget->text,
                                       widget->fg_color, widget->bg_color);
             }

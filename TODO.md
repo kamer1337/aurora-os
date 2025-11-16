@@ -84,9 +84,14 @@
 - [x] Mouse cursor support
 - [x] Keyboard input for GUI
 - [x] Advanced window manager (window dragging, focus)
+- [x] 3D depth effects (shadows, gradients, rounded corners)
+- [x] 4D animation system (easing, interpolation)
+- [x] 5D interactive effects (particles, glow, glass)
+- [x] Alpha blending and transparency
+- [x] Advanced visual effects demo
 - [ ] Desktop environment (partial)
 - [ ] Menu system (widget types added)
-- [ ] Minimize/maximize buttons
+- [ ] Minimize/maximize buttons (functional)
 - [ ] Context menus
 - [ ] Window list in taskbar
 
