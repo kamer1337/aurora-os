@@ -291,7 +291,7 @@ void test_network_operations(void) {
     // Simulate receiving a packet
     result = aurora_vm_net_send(vm, test_data, sizeof(test_data));
     vm->network.rx_queue[0] = vm->network.tx_queue[0];
-    vm->network.rx_tail = 1;
+    vm->network.rx_head = 1;  // rx_head marks where packets are added
     
     uint8_t recv_buffer[64];
     result = aurora_vm_net_recv(vm, recv_buffer, sizeof(recv_buffer));
@@ -352,9 +352,12 @@ void test_atomic_operations(void) {
         aurora_encode_r_type(AURORA_OP_SYSCALL, 0, 0, 0),
         aurora_encode_r_type(AURORA_OP_MOVE, 10, 0, 0),  // Save address in r10
         
+        // Clear r0 to use as zero offset
+        aurora_encode_i_type(AURORA_OP_LOADI, 0, 0),
+        
         // Initialize memory with value 42
         aurora_encode_i_type(AURORA_OP_LOADI, 1, 42),
-        aurora_encode_r_type(AURORA_OP_STORE, 1, 10, 0),  // Store 42 at address r10
+        aurora_encode_r_type(AURORA_OP_STORE, 1, 10, 0),  // Store 42 at address r10+r0
         
         // Test XCHG: exchange memory[r10] with value 100
         aurora_encode_i_type(AURORA_OP_LOADI, 2, 100),
@@ -364,7 +367,7 @@ void test_atomic_operations(void) {
         aurora_encode_i_type(AURORA_OP_LOADI, 11, 4),
         aurora_encode_r_type(AURORA_OP_ADD, 11, 10, 11),  // r11 = r10 + 4
         aurora_encode_i_type(AURORA_OP_LOADI, 4, 100),
-        aurora_encode_r_type(AURORA_OP_STORE, 4, 11, 0),  // Store 100 at [r11]
+        aurora_encode_r_type(AURORA_OP_STORE, 4, 11, 0),  // Store 100 at [r11+r0]
         aurora_encode_i_type(AURORA_OP_LOADI, 5, 200),    // New value
         aurora_encode_r_type(AURORA_OP_CAS, 4, 11, 5),    // Compare [r11] with r4, if equal store r5
         
@@ -372,7 +375,7 @@ void test_atomic_operations(void) {
         aurora_encode_i_type(AURORA_OP_LOADI, 12, 8),
         aurora_encode_r_type(AURORA_OP_ADD, 12, 10, 12),  // r12 = r10 + 8
         aurora_encode_i_type(AURORA_OP_LOADI, 7, 10),
-        aurora_encode_r_type(AURORA_OP_STORE, 7, 12, 0),  // Store 10 at [r12]
+        aurora_encode_r_type(AURORA_OP_STORE, 7, 12, 0),  // Store 10 at [r12+r0]
         aurora_encode_i_type(AURORA_OP_LOADI, 8, 5),      // Add value
         aurora_encode_r_type(AURORA_OP_FADD_ATOMIC, 9, 12, 8),  // r9 = old [r12], [r12] += r8
         
