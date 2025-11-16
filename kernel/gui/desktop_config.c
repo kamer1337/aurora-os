@@ -137,16 +137,16 @@ void desktop_config_show_settings(void) {
     y_pos += 30;
     
     gui_create_label(settings_window, "Font:", x_label, y_pos);
-    widget_t* font_dropdown = create_dropdown(settings_window, "", x_control, y_pos - 5, 200);
+    create_dropdown(settings_window, "", x_control, y_pos - 5, 200);
     y_pos += spacing;
     
-    // Show available fonts
-    const char* fonts[] = {
-        "Standard 8x8",
-        "Crystalline 8x8 (Default)",
-        "Crystalline 5x7",
-        "Monospace 6x8"
-    };
+    // Show available fonts (for reference)
+    // const char* fonts[] = {
+    //     "Standard 8x8",
+    //     "Crystalline 8x8 (Default)",
+    //     "Crystalline 5x7",
+    //     "Monospace 6x8"
+    // };
     
     // Display current font selection
     const font_info_t* current_font_info = font_manager_get_info(config.default_font);
@@ -159,19 +159,19 @@ void desktop_config_show_settings(void) {
     y_pos += 30;
     
     gui_create_label(settings_window, "Show Desktop Icons:", x_label, y_pos);
-    widget_t* icons_checkbox = gui_create_button(settings_window, 
+    gui_create_button(settings_window, 
         config.show_desktop_icons ? "[X]" : "[ ]", 
         x_control, y_pos - 5, 40, 25);
     y_pos += spacing;
     
     gui_create_label(settings_window, "Show Taskbar:", x_label, y_pos);
-    widget_t* taskbar_checkbox = gui_create_button(settings_window, 
+    gui_create_button(settings_window, 
         config.show_taskbar ? "[X]" : "[ ]", 
         x_control, y_pos - 5, 40, 25);
     y_pos += spacing;
     
     gui_create_label(settings_window, "Show System Tray:", x_label, y_pos);
-    widget_t* tray_checkbox = gui_create_button(settings_window, 
+    gui_create_button(settings_window, 
         config.show_system_tray ? "[X]" : "[ ]", 
         x_control, y_pos - 5, 40, 25);
     y_pos += spacing;
@@ -181,28 +181,28 @@ void desktop_config_show_settings(void) {
     y_pos += 30;
     
     gui_create_label(settings_window, "Enable Animations:", x_label, y_pos);
-    widget_t* anim_checkbox = gui_create_button(settings_window, 
+    gui_create_button(settings_window, 
         config.enable_animations ? "[X]" : "[ ]", 
         x_control, y_pos - 5, 40, 25);
     y_pos += spacing;
     
     gui_create_label(settings_window, "Enable Shadows:", x_label, y_pos);
-    widget_t* shadow_checkbox = gui_create_button(settings_window, 
+    gui_create_button(settings_window, 
         config.enable_shadows ? "[X]" : "[ ]", 
         x_control, y_pos - 5, 40, 25);
     y_pos += spacing;
     
     gui_create_label(settings_window, "Window Snapping:", x_label, y_pos);
-    widget_t* snap_checkbox = gui_create_button(settings_window, 
+    gui_create_button(settings_window, 
         config.window_snap_enabled ? "[X]" : "[ ]", 
         x_control, y_pos - 5, 40, 25);
     y_pos += spacing;
     
     // Action buttons
     y_pos += 20;
-    widget_t* apply_button = gui_create_button(settings_window, "Apply", 150, y_pos, 80, 30);
-    widget_t* reset_button = gui_create_button(settings_window, "Reset", 240, y_pos, 80, 30);
-    widget_t* close_button = gui_create_button(settings_window, "Close", 330, y_pos, 80, 30);
+    gui_create_button(settings_window, "Apply", 150, y_pos, 80, 30);
+    gui_create_button(settings_window, "Reset", 240, y_pos, 80, 30);
+    gui_create_button(settings_window, "Close", 330, y_pos, 80, 30);
     
     // Show the window
     gui_show_window(settings_window);
