@@ -43,6 +43,9 @@ typedef struct {
     uint8_t window_snap_enabled;
     uint8_t window_animations;
     uint32_t animation_speed;
+    
+    // Live wallpaper settings
+    uint8_t enable_live_wallpaper;
 } desktop_config_t;
 
 /**

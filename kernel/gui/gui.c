@@ -10,6 +10,7 @@
 #include "application.h"
 #include "font_manager.h"
 #include "desktop_config.h"
+#include "live_wallpaper.h"
 #include "../memory/memory.h"
 #include "../drivers/mouse.h"
 #include "../drivers/keyboard.h"
@@ -105,6 +106,9 @@ int gui_init(void) {
     font_manager_init();
     desktop_config_init();
     
+    // Initialize live wallpaper system
+    live_wallpaper_init();
+    
     window_list = NULL;
     focused_window = NULL;
     gui_initialized = 1;
@@ -119,6 +123,9 @@ int gui_init(void) {
 }
 
 void gui_shutdown(void) {
+    // Shutdown live wallpaper
+    live_wallpaper_shutdown();
+    
     // Free all windows
     window_t* window = window_list;
     while (window) {
@@ -134,6 +141,12 @@ void gui_shutdown(void) {
 
 void gui_update(void) {
     if (!gui_initialized) return;
+    
+    // Update live wallpaper animations (pass current cursor position for parallax)
+    desktop_config_t* cfg = desktop_config_get();
+    if (cfg && cfg->enable_live_wallpaper) {
+        live_wallpaper_update(16, cursor_x, cursor_y);  // ~60 FPS (16ms per frame)
+    }
     
     // Redraw desktop background
     gui_draw_desktop();
@@ -217,8 +230,18 @@ void gui_process_event(event_t* event) {
                                 case 7: // Calculator
                                     app_launch(APP_CALCULATOR);
                                     break;
-                                case 8: // Disk Manager
-                                    app_launch(APP_DISK_MANAGER);
+                                case 8: // Toggle Wallpaper
+                                    {
+                                        desktop_config_t* cfg = desktop_config_get();
+                                        if (cfg) {
+                                            cfg->enable_live_wallpaper = !cfg->enable_live_wallpaper;
+                                            live_wallpaper_set_enabled(cfg->enable_live_wallpaper);
+                                            if (cfg->enable_live_wallpaper) {
+                                                // Set default forest scene
+                                                live_wallpaper_set_type(WALLPAPER_NATURE_FOREST);
+                                            }
+                                        }
+                                    }
                                     break;
                                 case 9: // Power Options (placeholder)
                                     break;
@@ -500,8 +523,18 @@ void gui_process_event(event_t* event) {
                             case 7: // Calculator
                                 app_launch(APP_CALCULATOR);
                                 break;
-                            case 8: // Disk Manager
-                                app_launch(APP_DISK_MANAGER);
+                            case 8: // Toggle Wallpaper
+                                {
+                                    desktop_config_t* cfg = desktop_config_get();
+                                    if (cfg) {
+                                        cfg->enable_live_wallpaper = !cfg->enable_live_wallpaper;
+                                        live_wallpaper_set_enabled(cfg->enable_live_wallpaper);
+                                        if (cfg->enable_live_wallpaper) {
+                                            // Set default forest scene
+                                            live_wallpaper_set_type(WALLPAPER_NATURE_FOREST);
+                                        }
+                                    }
+                                }
                                 break;
                             case 9: // Power Options (placeholder)
                                 break;
@@ -846,13 +879,20 @@ void gui_draw_desktop(void) {
     framebuffer_info_t* fb = framebuffer_get_info();
     if (!fb) return;
     
-    // Draw background with vivid gradient (bright sky blue to lighter blue)
-    for (uint32_t y = 0; y < fb->height - 40; y++) {
-        uint8_t r = 40 + (y * 40 / fb->height);
-        uint8_t g = 150 + (y * 30 / fb->height);
-        uint8_t b = 230 + (y * 25 / fb->height);
-        color_t line_color = {r, g, b, 255};
-        framebuffer_draw_hline(0, fb->width - 1, y, line_color);
+    // Check if live wallpaper is enabled
+    desktop_config_t* cfg = desktop_config_get();
+    if (cfg && cfg->enable_live_wallpaper && live_wallpaper_is_enabled()) {
+        // Draw live wallpaper (excludes taskbar area)
+        live_wallpaper_draw(fb->width, fb->height - 40);
+    } else {
+        // Draw default background with vivid gradient (bright sky blue to lighter blue)
+        for (uint32_t y = 0; y < fb->height - 40; y++) {
+            uint8_t r = 40 + (y * 40 / fb->height);
+            uint8_t g = 150 + (y * 30 / fb->height);
+            uint8_t b = 230 + (y * 25 / fb->height);
+            color_t line_color = {r, g, b, 255};
+            framebuffer_draw_hline(0, fb->width - 1, y, line_color);
+        }
     }
     
     // Draw desktop title
@@ -1163,7 +1203,7 @@ static void gui_draw_start_menu(void) {
         "System Settings",
         "System Information",
         "Calculator",
-        "Disk Manager",
+        "Toggle Wallpaper",
         "Power Options"
     };
     
