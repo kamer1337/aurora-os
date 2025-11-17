@@ -89,4 +89,14 @@ int desktop_config_load(void);
  */
 void desktop_config_show_settings(void);
 
+/**
+ * Show theme selection window
+ */
+void desktop_config_show_theme_selector(void);
+
+/**
+ * Show wallpaper selection window
+ */
+void desktop_config_show_wallpaper_selector(void);
+
 #endif // DESKTOP_CONFIG_H
