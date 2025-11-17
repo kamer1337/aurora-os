@@ -37,6 +37,9 @@ static int launch_notebook(void);
 static int launch_my_pc(void);
 static int launch_recycle_bin(void);
 static int launch_uninstaller(void);
+static int launch_task_manager(void);
+static int launch_control_panel(void);
+static int launch_help(void);
 
 void app_init(void) {
     if (app_framework_initialized) return;
@@ -146,6 +149,30 @@ void app_init(void) {
         .running = 0
     };
     
+    applications[APP_TASK_MANAGER] = (application_t){
+        .type = APP_TASK_MANAGER,
+        .name = "Task Manager",
+        .description = "Monitor system resources and processes",
+        .window = NULL,
+        .running = 0
+    };
+    
+    applications[APP_CONTROL_PANEL] = (application_t){
+        .type = APP_CONTROL_PANEL,
+        .name = "Control Panel",
+        .description = "System configuration and settings",
+        .window = NULL,
+        .running = 0
+    };
+    
+    applications[APP_HELP] = (application_t){
+        .type = APP_HELP,
+        .name = "Help & Support",
+        .description = "Aurora OS help and documentation",
+        .window = NULL,
+        .running = 0
+    };
+    
     app_framework_initialized = 1;
 }
 
@@ -202,6 +229,15 @@ int app_launch(app_type_t type) {
             break;
         case APP_UNINSTALLER:
             result = launch_uninstaller();
+            break;
+        case APP_TASK_MANAGER:
+            result = launch_task_manager();
+            break;
+        case APP_CONTROL_PANEL:
+            result = launch_control_panel();
+            break;
+        case APP_HELP:
+            result = launch_help();
             break;
         default:
             return -1;
@@ -1058,6 +1094,178 @@ static int launch_uninstaller(void) {
     
     /* Status bar */
     gui_create_label(window, "Total size: 17.3 MB", 20, 505);
+    
+    gui_show_window(window);
+    gui_focus_window(window);
+    
+    return 0;
+}
+
+static int launch_task_manager(void) {
+    window_t* window = gui_create_window("Task Manager", 100, 80, 750, 580);
+    if (!window) return -1;
+    
+    applications[APP_TASK_MANAGER].window = window;
+    
+    /* Header */
+    gui_create_label(window, "Task Manager - System Monitor", 20, 20);
+    
+    /* Tabs */
+    gui_create_button(window, "Processes", 20, 55, 100, 30);
+    gui_create_button(window, "Performance", 125, 55, 110, 30);
+    gui_create_button(window, "Services", 240, 55, 90, 30);
+    gui_create_button(window, "Startup", 335, 55, 80, 30);
+    
+    /* Process list header */
+    gui_create_label(window, "Name", 30, 100);
+    gui_create_label(window, "PID", 280, 100);
+    gui_create_label(window, "CPU %", 360, 100);
+    gui_create_label(window, "Memory", 450, 100);
+    gui_create_label(window, "Status", 570, 100);
+    
+    /* Sample processes */
+    gui_create_label(window, "kernel.bin", 30, 135);
+    gui_create_label(window, "1", 280, 135);
+    gui_create_label(window, "5%", 360, 135);
+    gui_create_label(window, "128 MB", 450, 135);
+    gui_create_label(window, "Running", 570, 135);
+    
+    gui_create_label(window, "gui_manager", 30, 170);
+    gui_create_label(window, "2", 280, 170);
+    gui_create_label(window, "15%", 360, 170);
+    gui_create_label(window, "64 MB", 450, 170);
+    gui_create_label(window, "Running", 570, 170);
+    
+    gui_create_label(window, "file_manager", 30, 205);
+    gui_create_label(window, "3", 280, 205);
+    gui_create_label(window, "3%", 360, 205);
+    gui_create_label(window, "32 MB", 450, 205);
+    gui_create_label(window, "Running", 570, 205);
+    
+    gui_create_label(window, "terminal", 30, 240);
+    gui_create_label(window, "4", 280, 240);
+    gui_create_label(window, "2%", 360, 240);
+    gui_create_label(window, "16 MB", 450, 240);
+    gui_create_label(window, "Running", 570, 240);
+    
+    gui_create_label(window, "paint_editor", 30, 275);
+    gui_create_label(window, "5", 280, 275);
+    gui_create_label(window, "8%", 360, 275);
+    gui_create_label(window, "48 MB", 450, 275);
+    gui_create_label(window, "Running", 570, 275);
+    
+    /* System resources summary */
+    gui_create_label(window, "System Resources:", 20, 330);
+    gui_create_label(window, "CPU Usage: 33%", 40, 355);
+    gui_create_label(window, "Memory: 288 MB / 8 GB (3.5%)", 40, 380);
+    gui_create_label(window, "Disk: 128 GB / 256 GB (50%)", 40, 405);
+    gui_create_label(window, "Network: 2.5 MB/s", 40, 430);
+    gui_create_label(window, "Uptime: 2 hours 15 minutes", 40, 455);
+    
+    /* Action buttons */
+    gui_create_button(window, "End Task", 20, 510, 100, 30);
+    gui_create_button(window, "New Task", 130, 510, 100, 30);
+    gui_create_button(window, "Refresh", 240, 510, 100, 30);
+    gui_create_button(window, "Details", 620, 510, 100, 30);
+    
+    gui_show_window(window);
+    gui_focus_window(window);
+    
+    return 0;
+}
+
+static int launch_control_panel(void) {
+    window_t* window = gui_create_window("Control Panel", 120, 90, 720, 600);
+    if (!window) return -1;
+    
+    applications[APP_CONTROL_PANEL].window = window;
+    
+    /* Header */
+    gui_create_label(window, "Control Panel - System Settings", 20, 20);
+    gui_create_label(window, "Adjust settings and configure your system", 20, 45);
+    
+    /* System and Security */
+    gui_create_label(window, "System and Security", 20, 85);
+    gui_create_button(window, "System Information", 40, 110, 180, 35);
+    gui_create_button(window, "Security Settings", 230, 110, 180, 35);
+    gui_create_button(window, "Firewall", 420, 110, 180, 35);
+    
+    /* Hardware and Sound */
+    gui_create_label(window, "Hardware and Sound", 20, 165);
+    gui_create_button(window, "Device Manager", 40, 190, 180, 35);
+    gui_create_button(window, "Sound Settings", 230, 190, 180, 35);
+    gui_create_button(window, "Display Settings", 420, 190, 180, 35);
+    
+    /* Network and Internet */
+    gui_create_label(window, "Network and Internet", 20, 245);
+    gui_create_button(window, "Network Status", 40, 270, 180, 35);
+    gui_create_button(window, "Network Settings", 230, 270, 180, 35);
+    gui_create_button(window, "Proxy Settings", 420, 270, 180, 35);
+    
+    /* Appearance and Personalization */
+    gui_create_label(window, "Appearance and Personalization", 20, 325);
+    gui_create_button(window, "Themes", 40, 350, 180, 35);
+    gui_create_button(window, "Wallpaper", 230, 350, 180, 35);
+    gui_create_button(window, "Colors", 420, 350, 180, 35);
+    
+    /* User Accounts */
+    gui_create_label(window, "User Accounts", 20, 405);
+    gui_create_button(window, "Manage Accounts", 40, 430, 180, 35);
+    gui_create_button(window, "Change Password", 230, 430, 180, 35);
+    gui_create_button(window, "User Permissions", 420, 430, 180, 35);
+    
+    /* Programs */
+    gui_create_label(window, "Programs", 20, 485);
+    gui_create_button(window, "Uninstall Programs", 40, 510, 180, 35);
+    gui_create_button(window, "Default Programs", 230, 510, 180, 35);
+    gui_create_button(window, "Startup Programs", 420, 510, 180, 35);
+    
+    gui_show_window(window);
+    gui_focus_window(window);
+    
+    return 0;
+}
+
+static int launch_help(void) {
+    window_t* window = gui_create_window("Help & Support", 140, 100, 680, 550);
+    if (!window) return -1;
+    
+    applications[APP_HELP].window = window;
+    
+    /* Header */
+    gui_create_label(window, "Aurora OS Help & Support", 20, 20);
+    gui_create_label(window, "Find answers and learn about Aurora OS", 20, 45);
+    
+    /* Search */
+    gui_create_label(window, "Search for help:", 20, 85);
+    gui_create_button(window, "Search", 540, 80, 110, 30);
+    
+    /* Quick Help Topics */
+    gui_create_label(window, "Quick Help Topics:", 20, 130);
+    
+    gui_create_button(window, "Getting Started", 40, 160, 280, 40);
+    gui_create_label(window, "Learn the basics of Aurora OS", 60, 210);
+    
+    gui_create_button(window, "Desktop Environment", 360, 160, 280, 40);
+    gui_create_label(window, "Using the desktop and windows", 380, 210);
+    
+    gui_create_button(window, "File Management", 40, 240, 280, 40);
+    gui_create_label(window, "Working with files and folders", 60, 290);
+    
+    gui_create_button(window, "System Settings", 360, 240, 280, 40);
+    gui_create_label(window, "Configuring your system", 380, 290);
+    
+    gui_create_button(window, "Applications", 40, 320, 280, 40);
+    gui_create_label(window, "Using built-in applications", 60, 370);
+    
+    gui_create_button(window, "Troubleshooting", 360, 320, 280, 40);
+    gui_create_label(window, "Solving common problems", 380, 370);
+    
+    /* Support Resources */
+    gui_create_label(window, "Support Resources:", 20, 415);
+    gui_create_label(window, "• Online Documentation: docs.aurora-os.org", 40, 440);
+    gui_create_label(window, "• Community Forums: forums.aurora-os.org", 40, 465);
+    gui_create_label(window, "• Version: 1.0.0 (Release Candidate)", 40, 490);
     
     gui_show_window(window);
     gui_focus_window(window);

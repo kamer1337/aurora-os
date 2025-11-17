@@ -65,7 +65,7 @@ static uint8_t start_menu_animating = 0;
 
 // Start menu keyboard navigation state
 static int32_t start_menu_selected_item = 0;
-static const int32_t start_menu_item_count = 11;  // Updated for new items
+static const int32_t start_menu_item_count = 14;  // Updated for new items
 
 // Desktop icons
 typedef struct desktop_icon {
@@ -83,9 +83,11 @@ static desktop_icon_t desktop_icons[] = {
     {"System Info", 30, 380, APP_SYSTEM_INFO, 1},
     {"Paint", 30, 480, APP_PAINT_EDITOR, 1},
     {"Images", 30, 580, APP_IMAGE_VIEWER, 1},
-    {"Notebook", 150, 80, APP_NOTEBOOK, 1}
+    {"Notebook", 150, 80, APP_NOTEBOOK, 1},
+    {"My PC", 150, 180, APP_MY_PC, 1},
+    {"Recycle Bin", 150, 280, APP_RECYCLE_BIN, 1}
 };
-static const int32_t desktop_icon_count = 7;
+static const int32_t desktop_icon_count = 9;
 
 // Forward declarations for desktop environment functions
 static void gui_draw_start_menu(void);
@@ -201,7 +203,7 @@ void gui_process_event(event_t* event) {
                         int32_t relative_y = event->y - (int32_t)menu_y - (int32_t)header_height;
                         
                         // Check if clicked on a menu item (not header)
-                        if (relative_y >= 0 && relative_y < (int32_t)((item_height + item_spacing) * 10)) {
+                        if (relative_y >= 0 && relative_y < (int32_t)((item_height + item_spacing) * 14)) {
                             uint32_t item_index = (uint32_t)relative_y / (item_height + item_spacing);
                             
                             // Launch the corresponding application
@@ -221,16 +223,28 @@ void gui_process_event(event_t* event) {
                                 case 4: // Notebook
                                     app_launch(APP_NOTEBOOK);
                                     break;
-                                case 5: // System Settings
+                                case 5: // Apps Uninstaller
+                                    app_launch(APP_UNINSTALLER);
+                                    break;
+                                case 6: // Task Manager
+                                    app_launch(APP_TASK_MANAGER);
+                                    break;
+                                case 7: // Control Panel
+                                    app_launch(APP_CONTROL_PANEL);
+                                    break;
+                                case 8: // System Settings
                                     app_launch(APP_SETTINGS);
                                     break;
-                                case 6: // System Information
+                                case 9: // System Information
                                     app_launch(APP_SYSTEM_INFO);
                                     break;
-                                case 7: // Calculator
+                                case 10: // Calculator
                                     app_launch(APP_CALCULATOR);
                                     break;
-                                case 8: // Toggle Wallpaper
+                                case 11: // Help & Support
+                                    app_launch(APP_HELP);
+                                    break;
+                                case 12: // Toggle Wallpaper
                                     {
                                         desktop_config_t* cfg = desktop_config_get();
                                         if (cfg) {
@@ -243,7 +257,7 @@ void gui_process_event(event_t* event) {
                                         }
                                     }
                                     break;
-                                case 9: // Power Options (placeholder)
+                                case 13: // Power Options (placeholder)
                                     break;
                             }
                         }
@@ -517,16 +531,25 @@ void gui_process_event(event_t* event) {
                             case 5: // Apps Uninstaller
                                 app_launch(APP_UNINSTALLER);
                                 break;
-                            case 6: // System Settings
+                            case 6: // Task Manager
+                                app_launch(APP_TASK_MANAGER);
+                                break;
+                            case 7: // Control Panel
+                                app_launch(APP_CONTROL_PANEL);
+                                break;
+                            case 8: // System Settings
                                 app_launch(APP_SETTINGS);
                                 break;
-                            case 7: // System Information
+                            case 9: // System Information
                                 app_launch(APP_SYSTEM_INFO);
                                 break;
-                            case 8: // Calculator
+                            case 10: // Calculator
                                 app_launch(APP_CALCULATOR);
                                 break;
-                            case 9: // Toggle Wallpaper
+                            case 11: // Help & Support
+                                app_launch(APP_HELP);
+                                break;
+                            case 12: // Toggle Wallpaper
                                 {
                                     desktop_config_t* cfg = desktop_config_get();
                                     if (cfg) {
@@ -539,7 +562,7 @@ void gui_process_event(event_t* event) {
                                     }
                                 }
                                 break;
-                            case 10: // Power Options (placeholder)
+                            case 13: // Power Options (placeholder)
                                 break;
                         }
                         start_menu_visible = 0;
@@ -1174,7 +1197,7 @@ static void gui_draw_start_menu(void) {
     if (!fb) return;
     
     uint32_t menu_width = 250;
-    uint32_t menu_height = 550;  // Increased height for more items
+    uint32_t menu_height = 680;  // Increased height for more items
     uint32_t menu_x = 5;
     uint32_t menu_y = fb->height - 40 - menu_height;
     
@@ -1204,9 +1227,12 @@ static void gui_draw_start_menu(void) {
         "Image Viewer",
         "Notebook",
         "Apps Uninstaller",
+        "Task Manager",
+        "Control Panel",
         "System Settings",
         "System Information",
         "Calculator",
+        "Help & Support",
         "Toggle Wallpaper",
         "Power Options"
     };
@@ -1214,7 +1240,7 @@ static void gui_draw_start_menu(void) {
     uint32_t item_height = 40;
     uint32_t item_y = menu_y + 70;
     
-    for (int i = 0; i < 11; i++) {
+    for (int i = 0; i < 14; i++) {
         // Draw item background (highlight selected item)
         color_t item_bg;
         if (i == start_menu_selected_item) {

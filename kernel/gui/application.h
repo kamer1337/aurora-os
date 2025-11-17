@@ -25,6 +25,9 @@ typedef enum {
     APP_MY_PC,
     APP_RECYCLE_BIN,
     APP_UNINSTALLER,
+    APP_TASK_MANAGER,
+    APP_CONTROL_PANEL,
+    APP_HELP,
     APP_MAX
 } app_type_t;
 
