@@ -206,7 +206,11 @@ The desktop environment includes:
 
 ## **6. Development Roadmap**
 
-### **6.1 High-Level Timeline**
+> **📋 For detailed next steps and long-term vision, see [ROADMAP.md](ROADMAP.md)**
+
+This section shows the historical development phases (completed). For future plans, prioritized tasks, and strategic direction, refer to the comprehensive **[Next Steps Roadmap](ROADMAP.md)**.
+
+### **6.1 High-Level Timeline (Completed Phases)**
 
 | **Phase** | **Timeline** | **Key Tasks** | **Milestones** |
 |---------|--------------|----------------|----------------|
@@ -330,6 +334,7 @@ The desktop environment includes:
 For comprehensive documentation, see **[DOCUMENTATION_INDEX.md](DOCUMENTATION_INDEX.md)** for a complete guide.
 
 **Quick Links:**
+- **[Next Steps Roadmap](ROADMAP.md)** - Future plans and development priorities ⭐
 - **[Getting Started Guide](docs/GETTING_STARTED.md)** - Setup development environment and build instructions
 - **[TODO List](TODO.md)** - Current tasks and priorities
 - **[Implementation Summary](IMPLEMENTATION_SUMMARY.md)** - Overall project statistics

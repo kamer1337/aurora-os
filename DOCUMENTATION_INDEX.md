@@ -1,6 +1,6 @@
 # Aurora OS - Documentation Index
 
-**Last Updated**: November 16, 2025  
+**Last Updated**: November 17, 2025  
 **Project Status**: Release Candidate
 
 ---
@@ -10,6 +10,7 @@
 These are the key documents for understanding Aurora OS:
 
 - **[README.md](README.md)** - Project overview, requirements, and roadmap ⭐ START HERE
+- **[ROADMAP.md](ROADMAP.md)** - Next steps and long-term vision ⭐ NEW
 - **[TODO.md](TODO.md)** - Current tasks, priorities, and completion status
 - **[IMPLEMENTATION_SUMMARY.md](IMPLEMENTATION_SUMMARY.md)** - Overall implementation statistics and status
 - **[RELEASE_CANDIDATE_SUMMARY.md](RELEASE_CANDIDATE_SUMMARY.md)** - Current release information
@@ -20,19 +21,22 @@ These are the key documents for understanding Aurora OS:
 
 ### For New Users
 1. Read: [README.md](README.md) - Understand the project
-2. Review: [RELEASE_CANDIDATE_SUMMARY.md](RELEASE_CANDIDATE_SUMMARY.md) - See what's available
-3. Setup: [docs/GETTING_STARTED.md](docs/GETTING_STARTED.md) - Build and run
+2. Review: [ROADMAP.md](ROADMAP.md) - See the next steps and future plans ⭐
+3. Check: [RELEASE_CANDIDATE_SUMMARY.md](RELEASE_CANDIDATE_SUMMARY.md) - See what's available
+4. Setup: [docs/GETTING_STARTED.md](docs/GETTING_STARTED.md) - Build and run
 
 ### For Developers
 1. Read: [README.md](README.md) - Project overview
-2. Setup: [docs/GETTING_STARTED.md](docs/GETTING_STARTED.md) - Development environment
-3. Structure: [docs/PROJECT_STRUCTURE.md](docs/PROJECT_STRUCTURE.md) - Code organization
-4. Current work: [TODO.md](TODO.md) - What's in progress
+2. Review: [ROADMAP.md](ROADMAP.md) - Understand the development direction
+3. Setup: [docs/GETTING_STARTED.md](docs/GETTING_STARTED.md) - Development environment
+4. Structure: [docs/PROJECT_STRUCTURE.md](docs/PROJECT_STRUCTURE.md) - Code organization
+5. Current work: [TODO.md](TODO.md) - What's in progress
 
 ### For Contributors
-1. Status: [TODO.md](TODO.md) - What needs work
-2. APIs: See Technical Documentation below
-3. Standards: This document's "Documentation Standards" section
+1. Check: [ROADMAP.md](ROADMAP.md) - Understand priorities and long-term plans
+2. Status: [TODO.md](TODO.md) - What needs work
+3. APIs: See Technical Documentation below
+4. Standards: This document's "Documentation Standards" section
 
 ---
 
