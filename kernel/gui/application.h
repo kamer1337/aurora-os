@@ -28,6 +28,8 @@ typedef enum {
     APP_TASK_MANAGER,
     APP_CONTROL_PANEL,
     APP_HELP,
+    APP_WEB_BROWSER,
+    APP_FILE_EXPLORER,
     APP_MAX
 } app_type_t;
 
