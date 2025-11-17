@@ -8,6 +8,8 @@
 #include "gui.h"
 #include "font_manager.h"
 #include "framebuffer.h"
+#include "theme_manager.h"
+#include "wallpaper_manager.h"
 #include "../memory/memory.h"
 
 // Global configuration
@@ -52,6 +54,10 @@ int desktop_config_init(void) {
     config.enable_live_wallpaper = 0;  // Disabled by default (optional feature)
     
     config_initialized = 1;
+    
+    // Initialize theme and wallpaper managers
+    theme_manager_init();
+    wallpaper_manager_init();
     
     // Apply initial configuration
     desktop_config_apply(&config);
@@ -122,8 +128,8 @@ void desktop_config_show_settings(void) {
         desktop_config_init();
     }
     
-    // Create settings window
-    window_t* settings_window = gui_create_window("Desktop Settings", 200, 100, 500, 450);
+    // Create settings window (increased height for new options)
+    window_t* settings_window = gui_create_window("Desktop Settings", 200, 100, 500, 520);
     if (!settings_window) {
         return;
     }
@@ -207,6 +213,18 @@ void desktop_config_show_settings(void) {
         x_control, y_pos - 5, 40, 25);
     y_pos += spacing;
     
+    // Theme and Wallpaper Section
+    gui_create_label(settings_window, "=== Theme & Wallpaper ===", x_label, y_pos);
+    y_pos += 30;
+    
+    gui_create_label(settings_window, "Theme:", x_label, y_pos);
+    gui_create_button(settings_window, "Change Theme...", x_control, y_pos - 5, 120, 25);
+    y_pos += spacing;
+    
+    gui_create_label(settings_window, "Wallpaper:", x_label, y_pos);
+    gui_create_button(settings_window, "Change Wallpaper...", x_control, y_pos - 5, 120, 25);
+    y_pos += spacing;
+    
     // Action buttons
     y_pos += 20;
     gui_create_button(settings_window, "Apply", 150, y_pos, 80, 30);
@@ -216,4 +234,12 @@ void desktop_config_show_settings(void) {
     // Show the window
     gui_show_window(settings_window);
     gui_focus_window(settings_window);
+}
+
+void desktop_config_show_theme_selector(void) {
+    theme_manager_show_selector();
+}
+
+void desktop_config_show_wallpaper_selector(void) {
+    wallpaper_manager_show_selector();
 }
