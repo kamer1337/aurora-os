@@ -52,11 +52,47 @@ Interactive start menu for launching applications and accessing system features:
 
 ![Aurora OS Visual Effects](screenshots/aurora-os-effects.png)
 
+### 4D/5D Spatial Depth Features
+
+Aurora OS features advanced photorealistic 4D/5D spatial depth rendering with multiple parallax layers:
+
+#### 4D Parallax Spatial Depth
+
+Photorealistic multi-layer parallax rendering with depth-based animation, atmospheric perspective, and perspective-correct scaling:
+
+![Aurora OS 4D Parallax Depth](screenshots/aurora-os-4d-parallax-depth.png)
+
+#### 5D Interactive Particle Effects
+
+Photorealistic real-time particle systems with volumetric lighting, dynamic glow, specular highlights, and alpha-blended compositing:
+
+![Aurora OS 5D Particle Effects](screenshots/aurora-os-5d-particle-effects.png)
+
+#### 5D Glass & Blur Effects
+
+Photorealistic frosted glass effects with real background blur, transparency, color tinting, and multi-layer compositing:
+
+![Aurora OS 5D Glass Blur](screenshots/aurora-os-5d-glass-blur.png)
+
+#### Live Wallpaper with Spatial Depth
+
+Photorealistic interactive nature scenes with volumetric clouds, atmospheric perspective, and depth-based parallax motion:
+
+![Aurora OS Live Wallpaper Depth](screenshots/aurora-os-live-wallpaper-depth.png)
+
+#### Combined 4D/5D Showcase
+
+Comprehensive photorealistic demonstration of all spatial depth and interactive effects working together:
+
+![Aurora OS 4D/5D Showcase](screenshots/aurora-os-4d-5d-showcase.png)
+
 The desktop environment includes:
 - Interactive start menu for launching applications
 - Taskbar showing running applications and system status
 - Window decorations with modern visual effects
 - Customizable wallpaper and themes
+- Photorealistic 4D/5D spatial depth rendering with parallax layers
+- Real-time particle systems with volumetric lighting and interactive effects
 
 *Note: The GUI requires proper VGA/VESA BIOS support. The screenshots above demonstrate the fully implemented GUI framework running on compatible hardware.*
 
