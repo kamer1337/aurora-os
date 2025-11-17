@@ -53,6 +53,7 @@ These are the key documents for understanding Aurora OS:
 ### GUI & Visual Effects
 - **[docs/PHASE4_IMPLEMENTATION.md](docs/PHASE4_IMPLEMENTATION.md)** - GUI framework and basic features
 - **[docs/3D_4D_5D_GUI_IMPLEMENTATION.md](docs/3D_4D_5D_GUI_IMPLEMENTATION.md)** - Advanced visual effects API
+- **[docs/LIVE_WALLPAPER.md](docs/LIVE_WALLPAPER.md)** - 4D/5D spatial depth live wallpaper system
 - **[docs/3D_4D_5D_COMPLETION_REPORT.md](docs/3D_4D_5D_COMPLETION_REPORT.md)** - Effects implementation details
 - **[docs/IMPLEMENTATION_3D_4D_5D.md](docs/IMPLEMENTATION_3D_4D_5D.md)** - Quick reference for effects
 - **[docs/DESKTOP_ENVIRONMENT_COMPLETION.md](docs/DESKTOP_ENVIRONMENT_COMPLETION.md)** - Desktop integration
@@ -97,6 +98,7 @@ These are the key documents for understanding Aurora OS:
 - **Framework**: [docs/PHASE4_IMPLEMENTATION.md](docs/PHASE4_IMPLEMENTATION.md), [docs/PHASE4_SUMMARY.md](docs/PHASE4_SUMMARY.md)
 - **Window Management**: [docs/PHASE4_IMPLEMENTATION.md](docs/PHASE4_IMPLEMENTATION.md)
 - **Visual Effects (3D/4D/5D)**: [docs/3D_4D_5D_GUI_IMPLEMENTATION.md](docs/3D_4D_5D_GUI_IMPLEMENTATION.md)
+- **Live Wallpaper System**: [docs/LIVE_WALLPAPER.md](docs/LIVE_WALLPAPER.md)
 - **Desktop Environment**: [docs/DESKTOP_ENVIRONMENT_COMPLETION.md](docs/DESKTOP_ENVIRONMENT_COMPLETION.md)
 
 ### Security
