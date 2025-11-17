@@ -263,6 +263,28 @@ static void desktop_icons_module_init(void) {
         icon->next = desktop_icons;
         desktop_icons = icon;
     }
+    
+    /* My PC icon */
+    icon = (desktop_icon_t*)kmalloc(sizeof(desktop_icon_t));
+    if (icon) {
+        icon->label = "My PC";
+        icon->x = 50;
+        icon->y = 400;
+        icon->app = APP_MY_PC;
+        icon->next = desktop_icons;
+        desktop_icons = icon;
+    }
+    
+    /* Recycle Bin icon */
+    icon = (desktop_icon_t*)kmalloc(sizeof(desktop_icon_t));
+    if (icon) {
+        icon->label = "Recycle Bin";
+        icon->x = 50;
+        icon->y = 500;
+        icon->app = APP_RECYCLE_BIN;
+        icon->next = desktop_icons;
+        desktop_icons = icon;
+    }
 }
 
 static void desktop_icons_module_update(void) {
