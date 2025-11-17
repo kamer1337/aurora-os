@@ -19,6 +19,9 @@ typedef enum {
     APP_TEXT_EDITOR,
     APP_CALCULATOR,
     APP_DISK_MANAGER,
+    APP_PAINT_EDITOR,
+    APP_IMAGE_VIEWER,
+    APP_NOTEBOOK,
     APP_MAX
 } app_type_t;
 
