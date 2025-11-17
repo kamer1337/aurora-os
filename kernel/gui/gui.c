@@ -65,7 +65,7 @@ static uint8_t start_menu_animating = 0;
 
 // Start menu keyboard navigation state
 static int32_t start_menu_selected_item = 0;
-static const int32_t start_menu_item_count = 10;  // Updated for new items
+static const int32_t start_menu_item_count = 11;  // Updated for new items
 
 // Desktop icons
 typedef struct desktop_icon {
@@ -514,16 +514,19 @@ void gui_process_event(event_t* event) {
                             case 4: // Notebook
                                 app_launch(APP_NOTEBOOK);
                                 break;
-                            case 5: // System Settings
+                            case 5: // Apps Uninstaller
+                                app_launch(APP_UNINSTALLER);
+                                break;
+                            case 6: // System Settings
                                 app_launch(APP_SETTINGS);
                                 break;
-                            case 6: // System Information
+                            case 7: // System Information
                                 app_launch(APP_SYSTEM_INFO);
                                 break;
-                            case 7: // Calculator
+                            case 8: // Calculator
                                 app_launch(APP_CALCULATOR);
                                 break;
-                            case 8: // Toggle Wallpaper
+                            case 9: // Toggle Wallpaper
                                 {
                                     desktop_config_t* cfg = desktop_config_get();
                                     if (cfg) {
@@ -536,7 +539,7 @@ void gui_process_event(event_t* event) {
                                     }
                                 }
                                 break;
-                            case 9: // Power Options (placeholder)
+                            case 10: // Power Options (placeholder)
                                 break;
                         }
                         start_menu_visible = 0;
@@ -1171,7 +1174,7 @@ static void gui_draw_start_menu(void) {
     if (!fb) return;
     
     uint32_t menu_width = 250;
-    uint32_t menu_height = 500;  // Increased height for more items
+    uint32_t menu_height = 550;  // Increased height for more items
     uint32_t menu_x = 5;
     uint32_t menu_y = fb->height - 40 - menu_height;
     
@@ -1200,6 +1203,7 @@ static void gui_draw_start_menu(void) {
         "Paint Editor",
         "Image Viewer",
         "Notebook",
+        "Apps Uninstaller",
         "System Settings",
         "System Information",
         "Calculator",
@@ -1210,7 +1214,7 @@ static void gui_draw_start_menu(void) {
     uint32_t item_height = 40;
     uint32_t item_y = menu_y + 70;
     
-    for (int i = 0; i < 10; i++) {
+    for (int i = 0; i < 11; i++) {
         // Draw item background (highlight selected item)
         color_t item_bg;
         if (i == start_menu_selected_item) {

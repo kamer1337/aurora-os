@@ -22,6 +22,9 @@ typedef enum {
     APP_PAINT_EDITOR,
     APP_IMAGE_VIEWER,
     APP_NOTEBOOK,
+    APP_MY_PC,
+    APP_RECYCLE_BIN,
+    APP_UNINSTALLER,
     APP_MAX
 } app_type_t;
 

@@ -34,6 +34,9 @@ static int launch_disk_manager(void);
 static int launch_paint_editor(void);
 static int launch_image_viewer(void);
 static int launch_notebook(void);
+static int launch_my_pc(void);
+static int launch_recycle_bin(void);
+static int launch_uninstaller(void);
 
 void app_init(void) {
     if (app_framework_initialized) return;
@@ -119,6 +122,30 @@ void app_init(void) {
         .running = 0
     };
     
+    applications[APP_MY_PC] = (application_t){
+        .type = APP_MY_PC,
+        .name = "My PC",
+        .description = "View system resources and storage",
+        .window = NULL,
+        .running = 0
+    };
+    
+    applications[APP_RECYCLE_BIN] = (application_t){
+        .type = APP_RECYCLE_BIN,
+        .name = "Recycle Bin",
+        .description = "Manage deleted files",
+        .window = NULL,
+        .running = 0
+    };
+    
+    applications[APP_UNINSTALLER] = (application_t){
+        .type = APP_UNINSTALLER,
+        .name = "Apps Uninstaller",
+        .description = "Uninstall applications",
+        .window = NULL,
+        .running = 0
+    };
+    
     app_framework_initialized = 1;
 }
 
@@ -166,6 +193,15 @@ int app_launch(app_type_t type) {
             break;
         case APP_NOTEBOOK:
             result = launch_notebook();
+            break;
+        case APP_MY_PC:
+            result = launch_my_pc();
+            break;
+        case APP_RECYCLE_BIN:
+            result = launch_recycle_bin();
+            break;
+        case APP_UNINSTALLER:
+            result = launch_uninstaller();
             break;
         default:
             return -1;
@@ -834,6 +870,194 @@ static int launch_notebook(void) {
     
     /* Battery indicator placeholder */
     gui_create_label(window, "Battery: 85%", 520, 430);
+    
+    gui_show_window(window);
+    gui_focus_window(window);
+    
+    return 0;
+}
+
+static int launch_my_pc(void) {
+    window_t* window = gui_create_window("My PC", 100, 80, 720, 560);
+    if (!window) return -1;
+    
+    applications[APP_MY_PC].window = window;
+    
+    /* Header */
+    gui_create_label(window, "My PC - Computer Resources", 20, 20);
+    
+    /* System Overview */
+    gui_create_label(window, "System Information:", 20, 60);
+    gui_create_label(window, "Computer Name: AURORA-PC", 40, 85);
+    gui_create_label(window, "Operating System: Aurora OS", 40, 110);
+    gui_create_label(window, "Processor: Intel Core i7", 40, 135);
+    gui_create_label(window, "Installed RAM: 8.00 GB", 40, 160);
+    
+    /* Storage Devices */
+    gui_create_label(window, "Storage Devices:", 20, 200);
+    
+    /* Drive C: */
+    gui_create_label(window, "[C:] System Drive", 40, 230);
+    gui_create_label(window, "Total: 256 GB | Used: 128 GB | Free: 128 GB", 60, 255);
+    gui_create_label(window, "Capacity: 50%", 60, 280);
+    gui_create_button(window, "Open", 580, 250, 100, 30);
+    
+    /* Drive D: */
+    gui_create_label(window, "[D:] Data Drive", 40, 310);
+    gui_create_label(window, "Total: 512 GB | Used: 200 GB | Free: 312 GB", 60, 335);
+    gui_create_label(window, "Capacity: 39%", 60, 360);
+    gui_create_button(window, "Open", 580, 330, 100, 30);
+    
+    /* Network Locations */
+    gui_create_label(window, "Network Locations:", 20, 400);
+    gui_create_label(window, "No network locations configured", 40, 425);
+    
+    /* Action buttons */
+    gui_create_button(window, "System Properties", 20, 480, 150, 30);
+    gui_create_button(window, "Device Manager", 180, 480, 140, 30);
+    gui_create_button(window, "Disk Cleanup", 330, 480, 120, 30);
+    gui_create_button(window, "Refresh", 580, 480, 100, 30);
+    
+    gui_show_window(window);
+    gui_focus_window(window);
+    
+    return 0;
+}
+
+static int launch_recycle_bin(void) {
+    window_t* window = gui_create_window("Recycle Bin", 120, 100, 700, 540);
+    if (!window) return -1;
+    
+    applications[APP_RECYCLE_BIN].window = window;
+    
+    /* Header */
+    gui_create_label(window, "Recycle Bin - Deleted Items", 20, 20);
+    gui_create_label(window, "Items in Recycle Bin: 3", 20, 45);
+    
+    /* Toolbar */
+    gui_create_button(window, "Empty Bin", 20, 75, 100, 30);
+    gui_create_button(window, "Restore All", 130, 75, 100, 30);
+    gui_create_button(window, "Refresh", 240, 75, 80, 30);
+    
+    /* Deleted files list header */
+    gui_create_label(window, "Name", 40, 120);
+    gui_create_label(window, "Original Location", 250, 120);
+    gui_create_label(window, "Date Deleted", 480, 120);
+    
+    /* Sample deleted files */
+    gui_create_label(window, "document.txt", 40, 155);
+    gui_create_label(window, "/home/user/documents/", 250, 155);
+    gui_create_label(window, "Nov 17, 2025", 480, 155);
+    gui_create_button(window, "Restore", 600, 150, 70, 30);
+    
+    gui_create_label(window, "photo.jpg", 40, 200);
+    gui_create_label(window, "/home/user/pictures/", 250, 200);
+    gui_create_label(window, "Nov 16, 2025", 480, 200);
+    gui_create_button(window, "Restore", 600, 195, 70, 30);
+    
+    gui_create_label(window, "oldapp.exe", 40, 245);
+    gui_create_label(window, "/home/user/programs/", 250, 245);
+    gui_create_label(window, "Nov 15, 2025", 480, 245);
+    gui_create_button(window, "Restore", 600, 240, 70, 30);
+    
+    /* Info section */
+    gui_create_label(window, "Total size: 15.2 MB", 40, 290);
+    gui_create_label(window, "Space available after empty: 15.2 MB", 40, 315);
+    
+    /* Recycle Bin options */
+    gui_create_label(window, "Recycle Bin Settings:", 20, 360);
+    gui_create_label(window, "[ ] Don't move files to Recycle Bin", 40, 385);
+    gui_create_label(window, "[ ] Display deletion confirmation", 40, 410);
+    gui_create_label(window, "Maximum size: 10% of each drive", 40, 435);
+    
+    /* Action buttons */
+    gui_create_button(window, "Properties", 20, 480, 100, 30);
+    gui_create_button(window, "Close", 580, 480, 90, 30);
+    
+    gui_show_window(window);
+    gui_focus_window(window);
+    
+    return 0;
+}
+
+static int launch_uninstaller(void) {
+    window_t* window = gui_create_window("Apps Uninstaller", 140, 110, 680, 550);
+    if (!window) return -1;
+    
+    applications[APP_UNINSTALLER].window = window;
+    
+    /* Header */
+    gui_create_label(window, "Applications Manager - Uninstall Programs", 20, 20);
+    gui_create_label(window, "Total installed applications: 10", 20, 45);
+    
+    /* Toolbar */
+    gui_create_button(window, "Uninstall", 20, 75, 100, 30);
+    gui_create_button(window, "Modify", 130, 75, 80, 30);
+    gui_create_button(window, "Refresh", 220, 75, 80, 30);
+    gui_create_label(window, "Sort by:", 340, 80);
+    gui_create_button(window, "Name", 400, 75, 60, 30);
+    gui_create_button(window, "Size", 465, 75, 60, 30);
+    gui_create_button(window, "Date", 530, 75, 60, 30);
+    
+    /* Applications list header */
+    gui_create_label(window, "Application", 40, 120);
+    gui_create_label(window, "Publisher", 280, 120);
+    gui_create_label(window, "Size", 450, 120);
+    gui_create_label(window, "Install Date", 530, 120);
+    
+    /* List of installed applications */
+    gui_create_label(window, "File Manager", 40, 155);
+    gui_create_label(window, "Aurora OS", 280, 155);
+    gui_create_label(window, "2.5 MB", 450, 155);
+    gui_create_label(window, "Nov 10, 2025", 530, 155);
+    
+    gui_create_label(window, "Text Editor", 40, 190);
+    gui_create_label(window, "Aurora OS", 280, 190);
+    gui_create_label(window, "1.8 MB", 450, 190);
+    gui_create_label(window, "Nov 10, 2025", 530, 190);
+    
+    gui_create_label(window, "Calculator", 40, 225);
+    gui_create_label(window, "Aurora OS", 280, 225);
+    gui_create_label(window, "0.5 MB", 450, 225);
+    gui_create_label(window, "Nov 10, 2025", 530, 225);
+    
+    gui_create_label(window, "Paint Editor", 40, 260);
+    gui_create_label(window, "Aurora OS", 280, 260);
+    gui_create_label(window, "3.2 MB", 450, 260);
+    gui_create_label(window, "Nov 10, 2025", 530, 260);
+    
+    gui_create_label(window, "Image Viewer", 40, 295);
+    gui_create_label(window, "Aurora OS", 280, 295);
+    gui_create_label(window, "1.2 MB", 450, 295);
+    gui_create_label(window, "Nov 10, 2025", 530, 295);
+    
+    gui_create_label(window, "Terminal", 40, 330);
+    gui_create_label(window, "Aurora OS", 280, 330);
+    gui_create_label(window, "1.0 MB", 450, 330);
+    gui_create_label(window, "Nov 10, 2025", 530, 330);
+    
+    gui_create_label(window, "Notebook", 40, 365);
+    gui_create_label(window, "Aurora OS", 280, 365);
+    gui_create_label(window, "2.0 MB", 450, 365);
+    gui_create_label(window, "Nov 10, 2025", 530, 365);
+    
+    gui_create_label(window, "Disk Manager", 40, 400);
+    gui_create_label(window, "Aurora OS", 280, 400);
+    gui_create_label(window, "1.5 MB", 450, 400);
+    gui_create_label(window, "Nov 10, 2025", 530, 400);
+    
+    gui_create_label(window, "System Settings", 40, 435);
+    gui_create_label(window, "Aurora OS", 280, 435);
+    gui_create_label(window, "2.8 MB", 450, 435);
+    gui_create_label(window, "Nov 10, 2025", 530, 435);
+    
+    gui_create_label(window, "System Info", 40, 470);
+    gui_create_label(window, "Aurora OS", 280, 470);
+    gui_create_label(window, "0.8 MB", 450, 470);
+    gui_create_label(window, "Nov 10, 2025", 530, 470);
+    
+    /* Status bar */
+    gui_create_label(window, "Total size: 17.3 MB", 20, 505);
     
     gui_show_window(window);
     gui_focus_window(window);
