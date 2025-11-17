@@ -29,6 +29,7 @@ Aurora OS features a modern desktop environment with advanced visual effects:
 - **3D Visual Effects**: Enhanced shadows, vivid gradients, prominent rounded corners (12px radius), and alpha blending
 - **4D Animation System**: Smooth animations with 7 easing functions (linear, ease-in, ease-out, ease-in-out, bounce, elastic, back)
 - **5D Interactive Effects**: Particle systems, glow effects, and glass/blur effects
+- **Live Wallpaper System**: Optional 4D/5D spatial depth wallpaper with interactive parallax and animated nature scenes (trees, mountains, clouds, flowers)
 - **Desktop Environment**: Modular architecture with wallpaper support, taskbar, start menu, and context menus
 - **Visual Design**: Modern UI with vivid colors, gradient window titles, and rounded interface elements
 - **Performance**: Software-rendered at ~125 FPS
@@ -307,6 +308,7 @@ For comprehensive documentation, see **[DOCUMENTATION_INDEX.md](DOCUMENTATION_IN
 - **[Phase 4 Summary](docs/PHASE4_SUMMARY.md)** - GUI comprehensive guide
 - **[Phase 5 Completion Report](docs/PHASE5_COMPLETION_REPORT.md)** - Testing and debugging
 - **[3D/4D/5D Visual Effects](docs/3D_4D_5D_GUI_IMPLEMENTATION.md)** - Advanced effects API
+- **[Live Wallpaper System](docs/LIVE_WALLPAPER.md)** - 4D/5D spatial depth wallpaper
 - **[Quantum Encryption](docs/QUANTUM_ENCRYPTION.md)** - Cryptography module
 - **[Plugin System](docs/PLUGIN_SYSTEM.md)** - Extensibility system
 - **[Aurora VM](docs/AURORA_VM.md)** - Virtual machine

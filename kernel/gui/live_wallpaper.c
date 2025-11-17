@@ -327,9 +327,9 @@ static void draw_tree(float x, float y, float scale, color_t color, float sway) 
     // Apply sway to trunk position
     int sway_offset = (int)(sway * 3.0f);
     
-    framebuffer_draw_filled_rect((int)x - trunk_width/2 + sway_offset, 
-                                  (int)y - trunk_height,
-                                  trunk_width, trunk_height, trunk_color);
+    framebuffer_draw_rect((int)x - trunk_width/2 + sway_offset, 
+                          (int)y - trunk_height,
+                          trunk_width, trunk_height, trunk_color);
     
     // Tree foliage (simple circle/ellipse approximation)
     int foliage_radius = (int)(40.0f * scale);
@@ -551,7 +551,7 @@ void live_wallpaper_draw(uint32_t width, uint32_t height) {
     
     // Draw ground in lower portion
     uint32_t horizon_y = height * 2 / 3;
-    framebuffer_draw_filled_rect(0, horizon_y, width, height - horizon_y, ground_color);
+    framebuffer_draw_rect(0, horizon_y, width, height - horizon_y, ground_color);
     
     // Sort elements by depth (background to foreground)
     // Simple bubble sort is fine for small number of elements
