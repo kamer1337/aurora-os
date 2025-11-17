@@ -48,6 +48,9 @@ int desktop_config_init(void) {
     config.window_animations = 1;
     config.animation_speed = 200;  // milliseconds
     
+    // Live wallpaper settings
+    config.enable_live_wallpaper = 0;  // Disabled by default (optional feature)
+    
     config_initialized = 1;
     
     // Apply initial configuration
@@ -195,6 +198,12 @@ void desktop_config_show_settings(void) {
     gui_create_label(settings_window, "Window Snapping:", x_label, y_pos);
     gui_create_button(settings_window, 
         config.window_snap_enabled ? "[X]" : "[ ]", 
+        x_control, y_pos - 5, 40, 25);
+    y_pos += spacing;
+    
+    gui_create_label(settings_window, "Live Wallpaper:", x_label, y_pos);
+    gui_create_button(settings_window, 
+        config.enable_live_wallpaper ? "[X]" : "[ ]", 
         x_control, y_pos - 5, 40, 25);
     y_pos += spacing;
     
