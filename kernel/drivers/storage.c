@@ -5,6 +5,7 @@
  */
 
 #include "storage.h"
+#include "ahci.h"
 #include "../core/port_io.h"
 #include <stddef.h>
 
@@ -769,21 +770,32 @@ int storage_spin_up(storage_device_t* device) {
 
 /* SATA-specific functions */
 int sata_init_port(uint32_t port) {
-    /* SATA initialization requires AHCI controller setup
-     * This is a basic implementation that checks for port availability */
+    /* SATA initialization through AHCI controller */
     if (port >= 32) {
         return -1;
     }
     
-    /* Note: Full SATA/AHCI support would require:
-     * 1. PCI enumeration to find AHCI controller
-     * 2. Memory-mapped I/O setup for AHCI registers
-     * 3. Port initialization (setting up command lists, FIS structures)
-     * 4. Port start and spin-up
-     * 
-     * For now, this is a placeholder that returns success
-     * to indicate the port slot is available */
-    return 0;
+    /* Get the first AHCI controller (index 0) */
+    ahci_controller_t* ctrl = ahci_get_controller(0);
+    if (!ctrl) {
+        /* No AHCI controller found, return error */
+        return -1;
+    }
+    
+    /* Check if the port is implemented */
+    if (!(ctrl->ports_impl & (1 << port))) {
+        return -1;
+    }
+    
+    /* Find the port in the controller's port array */
+    for (int i = 0; i < ctrl->port_count; i++) {
+        if (ctrl->ports[i].port_num == port) {
+            /* Port already initialized during AHCI detection */
+            return 0;
+        }
+    }
+    
+    return -1;
 }
 
 int sata_identify(uint32_t port, uint16_t* buffer) {
@@ -791,19 +803,27 @@ int sata_identify(uint32_t port, uint16_t* buffer) {
         return -1;
     }
     
-    /* SATA identification through AHCI would involve:
-     * 1. Building an IDENTIFY DEVICE command FIS
-     * 2. Submitting to the command list
-     * 3. Waiting for completion
-     * 4. Reading the result from the receive FIS
-     * 
-     * For compatibility, we return error to fall back to ATA/PIO
-     * which is already implemented above */
+    /* Get the first AHCI controller (index 0) */
+    ahci_controller_t* ctrl = ahci_get_controller(0);
+    if (!ctrl) {
+        /* No AHCI controller found, fall back to ATA/PIO */
+        return -1;
+    }
+    
+    /* Find the port in the controller's port array */
+    for (int i = 0; i < ctrl->port_count; i++) {
+        if (ctrl->ports[i].port_num == port) {
+            /* Use AHCI identify command */
+            return ahci_identify(&ctrl->ports[i], buffer);
+        }
+    }
+    
+    /* Port not found, fall back to ATA/PIO */
     return -1;
 }
 
-/* NVMe-specific placeholder functions (for legacy compatibility) */
-int storage_nvme_init_placeholder(void) {
+/* NVMe-specific stub functions (for legacy compatibility) */
+int storage_nvme_init_stub(void) {
     /* NVMe initialization requires:
      * 1. PCI enumeration to find NVMe controller
      * 2. Memory-mapped I/O setup for NVMe registers
@@ -816,12 +836,12 @@ int storage_nvme_init_placeholder(void) {
      * - Physical memory management for queue buffers
      * - Interrupt handling for completion notifications
      * 
-     * For now, this returns 0 to indicate the subsystem is available
-     * but actual NVMe devices would need full implementation */
+     * This returns 0 to indicate the subsystem is available.
+     * Full NVMe support is provided by the nvme.c driver module. */
     return 0;
 }
 
-int storage_nvme_identify_controller_placeholder(uint32_t nsid, uint8_t* buffer) {
+int storage_nvme_identify_controller_stub(uint32_t nsid, uint8_t* buffer) {
     if (!buffer) {
         return -1;
     }
@@ -833,7 +853,8 @@ int storage_nvme_identify_controller_placeholder(uint32_t nsid, uint8_t* buffer)
      * 4. Waiting for completion in admin completion queue
      * 5. Copying result to buffer
      * 
-     * Without full NVMe implementation, return error */
+     * This stub returns error to indicate the nvme.c driver module
+     * should be used directly for NVMe operations. */
     (void)nsid;
     return -1;
 }
