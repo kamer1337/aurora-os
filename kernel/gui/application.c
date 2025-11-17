@@ -8,6 +8,9 @@
 #include "gui.h"
 #include "framebuffer.h"
 #include "desktop_config.h"
+#include "terminal.h"
+#include "webview.h"
+#include "file_explorer.h"
 #include "../memory/memory.h"
 #include "../drivers/storage.h"
 #include <stddef.h>
@@ -40,6 +43,8 @@ static int launch_uninstaller(void);
 static int launch_task_manager(void);
 static int launch_control_panel(void);
 static int launch_help(void);
+static int launch_web_browser(void);
+static int launch_file_explorer(void);
 
 void app_init(void) {
     if (app_framework_initialized) return;
@@ -173,6 +178,22 @@ void app_init(void) {
         .running = 0
     };
     
+    applications[APP_WEB_BROWSER] = (application_t){
+        .type = APP_WEB_BROWSER,
+        .name = "Web Browser",
+        .description = "Browse the web",
+        .window = NULL,
+        .running = 0
+    };
+    
+    applications[APP_FILE_EXPLORER] = (application_t){
+        .type = APP_FILE_EXPLORER,
+        .name = "File Explorer",
+        .description = "Advanced file browser with extensions toggle",
+        .window = NULL,
+        .running = 0
+    };
+    
     app_framework_initialized = 1;
 }
 
@@ -238,6 +259,12 @@ int app_launch(app_type_t type) {
             break;
         case APP_HELP:
             result = launch_help();
+            break;
+        case APP_WEB_BROWSER:
+            result = launch_web_browser();
+            break;
+        case APP_FILE_EXPLORER:
+            result = launch_file_explorer();
             break;
         default:
             return -1;
@@ -379,31 +406,14 @@ static int launch_file_manager(void) {
 }
 
 static int launch_terminal(void) {
-    window_t* window = gui_create_window("Terminal", 100, 150, 640, 480);
+    // Initialize terminal system
+    terminal_init();
+    
+    // Create terminal window
+    window_t* window = terminal_create();
     if (!window) return -1;
     
     applications[APP_TERMINAL].window = window;
-    
-    /* Add terminal interface */
-    gui_create_label(window, "Aurora OS Terminal v1.0", 10, 10);
-    gui_create_label(window, "Copyright (c) 2025 Aurora OS Project", 10, 30);
-    gui_create_label(window, "", 10, 50);
-    gui_create_label(window, "Available commands:", 10, 70);
-    gui_create_label(window, "  help      - Display this help", 10, 95);
-    gui_create_label(window, "  clear     - Clear the screen", 10, 115);
-    gui_create_label(window, "  version   - Show OS version", 10, 135);
-    gui_create_label(window, "  sysinfo   - Display system information", 10, 155);
-    gui_create_label(window, "  storage   - Show storage devices", 10, 175);
-    gui_create_label(window, "  mem       - Display memory information", 10, 195);
-    gui_create_label(window, "  exit      - Close terminal", 10, 215);
-    gui_create_label(window, "", 10, 235);
-    gui_create_label(window, "aurora@os:~$ _", 10, 255);
-    
-    /* Add status bar at bottom */
-    gui_create_label(window, "Terminal ready - Type 'help' for commands", 10, 445);
-    
-    gui_show_window(window);
-    gui_focus_window(window);
     
     return 0;
 }
@@ -1269,6 +1279,32 @@ static int launch_help(void) {
     
     gui_show_window(window);
     gui_focus_window(window);
+    
+    return 0;
+}
+
+static int launch_web_browser(void) {
+    // Initialize browser system
+    browser_init();
+    
+    // Create browser window
+    window_t* window = browser_create();
+    if (!window) return -1;
+    
+    applications[APP_WEB_BROWSER].window = window;
+    
+    return 0;
+}
+
+static int launch_file_explorer(void) {
+    // Initialize file explorer
+    file_explorer_init();
+    
+    // Create file explorer window
+    window_t* window = file_explorer_create(NULL);
+    if (!window) return -1;
+    
+    applications[APP_FILE_EXPLORER].window = window;
     
     return 0;
 }
