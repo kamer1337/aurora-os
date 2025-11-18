@@ -142,4 +142,4 @@ Aurora OS has completed all five development phases and is now ready for release
 - Priority should be on getting a minimal bootable kernel first
 - Focus on core functionality before adding features
 - Keep code modular and well-documented
-- Test frequently in QEMU
+- Test frequently in Aurora VM
