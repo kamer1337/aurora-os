@@ -404,7 +404,7 @@ The VM is designed for testing and debugging, not maximum performance. Typical p
 
 Performance counters allow profiling VM programs to identify bottlenecks.
 
-**JIT Compilation**: The VM now includes JIT compilation infrastructure that can compile hot basic blocks to native code for improved performance. JIT is enabled by default with a 256KB code cache and compiles blocks after 10 executions.
+**JIT Compilation**: The VM includes JIT compilation infrastructure with a 256KB code cache and threshold-based compilation (compile after 10 executions). The framework for tracking basic blocks and compilation is complete. Native code generation backend is planned for future implementation.
 
 ## New Features (v2.0)
 
@@ -412,23 +412,21 @@ Performance counters allow profiling VM programs to identify bottlenecks.
 
 The VM now supports extended instruction sets:
 
-**Floating-Point Operations (8 opcodes)**:
+**Floating-Point Operations (8 opcodes)** ✓:
 - `FADD`, `FSUB`, `FMUL`, `FDIV` - Basic floating-point arithmetic
 - `FCMP` - Floating-point comparison
 - `FCVT`, `ICVT` - Float/int conversions
 - `FMOV` - Float register move
 
-**SIMD/Vector Operations (4 opcodes)**:
-- `VADD`, `VSUB`, `VMUL` - Vector arithmetic
+**SIMD/Vector Operations (4 opcodes)** ✓:
+- `VADD`, `VSUB`, `VMUL` - Vector arithmetic (4x8-bit packed operations)
 - `VDOT` - Vector dot product
 
-**Atomic Operations (4 opcodes)**:
+**Atomic Operations (4 opcodes)** ✓:
 - `XCHG` - Atomic exchange
 - `CAS` - Compare-and-swap
 - `FADD_ATOMIC` - Atomic fetch-and-add
 - `LOCK` - Lock prefix for atomic operations
-
-*Note: Floating-point and SIMD operations are currently stubbed for future implementation.*
 
 ### Memory-Mapped Device I/O
 
@@ -492,14 +490,16 @@ New syscalls:
 
 ### GDB Remote Debugging Protocol
 
-The VM supports remote debugging via GDB:
+The VM includes GDB remote debugging protocol infrastructure:
 
-- **GDB RSP server** on configurable port (default: 1234)
+- **GDB RSP framework** with protocol support
 - **Breakpoint management** integrated with debugger
 - **Single-stepping and continue** operations
-- **Register and memory inspection**
+- **Register and memory inspection** capabilities
 
-Use `aurora_vm_gdb_start()` to enable GDB debugging.
+The GDB protocol infrastructure is in place. Full socket server implementation for remote connections is planned for future work.
+
+Use `aurora_vm_gdb_start()` to enable the GDB debugging interface.
 
 ### JIT Compilation
 
@@ -510,15 +510,30 @@ The VM includes a JIT compiler infrastructure:
 - **Basic block tracking** with execution counts
 - **Runtime enablement** via API
 
-The JIT compiler is designed for future x86-64 code generation.
+The JIT infrastructure is complete with block management and cache allocation. Native code generation backend (x86-64, ARM) is planned for future implementation.
+
+Use `aurora_vm_jit_enable()` to control JIT compilation at runtime.
 
 ## Enhanced Test Suite
 
-The VM now includes comprehensive tests for all new features:
+The VM now includes comprehensive tests for all features:
 
-- **Original test suite**: 29 tests covering core VM functionality
-- **Extension test suite**: 46 tests covering new features
-- **Total**: 75 tests, all passing
+- **Original test suite**: 29 tests covering core VM functionality ✓ All passing
+- **Extension test suite**: 47 tests covering new features ✓ All passing
+- **Total**: 76 tests, all passing
+
+Test coverage includes:
+- Core CPU operations (arithmetic, logic, memory, control flow)
+- System calls (allocation, I/O, graphics, timing)
+- Device I/O (display, keyboard, mouse, timer, storage)
+- Debugger features (breakpoints, single-step, disassembly)
+- Instruction set extensions (floating-point, SIMD, atomic operations)
+- Interrupt handling and IRQ controller
+- Multi-threading and synchronization
+- Network device emulation
+- JIT compilation infrastructure
+- GDB debugging protocol
+- Memory-mapped I/O
 
 Run tests:
 ```bash
@@ -538,29 +553,33 @@ The following limitations have been addressed in v2.0:
 - ~~**Simplified memory model**: No memory-mapped I/O, simple page protection~~ ✓ **RESOLVED**: MMIO regions now available
 - ~~**Single-threaded**: No multi-threading or concurrency support~~ ✓ **RESOLVED**: Up to 8 threads supported
 - ~~**Software-only**: No JIT compilation or hardware acceleration~~ ✓ **RESOLVED**: JIT infrastructure added
+- ~~**Floating-point/SIMD**: Opcodes defined but not yet implemented~~ ✓ **RESOLVED**: All floating-point and SIMD operations fully implemented
+- ~~**Limited I/O**: File operations are stubs~~ ✓ **RESOLVED**: File operations (open, close, read, write) fully implemented
 - **Basic heap allocator**: Bump allocator without free list (fragmentation) - *Still applicable*
-- **Limited I/O**: File operations are stubs (not fully implemented) - *Still applicable*
-- **Floating-point/SIMD**: Opcodes defined but not yet implemented - *Future work*
+- **JIT code generation**: Infrastructure present but native code generation not yet implemented - *Future work*
+- **GDB server**: Protocol infrastructure present but socket implementation not yet complete - *Future work*
 
 ## Future Enhancements
 
 Completed enhancements:
 
-- ✓ JIT compilation for better performance
+- ✓ JIT compilation infrastructure for better performance
 - ✓ Memory-mapped device I/O
-- ✓ Interrupt support
-- ✓ Multi-threading/SMP support
+- ✓ Interrupt support with IRQ controller
+- ✓ Multi-threading/SMP support (up to 8 threads)
 - ✓ Network device emulation
-- ✓ GDB remote debugging protocol
-- ✓ Instruction set extensions (opcodes defined)
+- ✓ GDB remote debugging protocol infrastructure
+- ✓ Instruction set extensions (floating-point, SIMD, atomic operations)
+- ✓ File system operations (open, close, read, write)
 
 Potential future improvements:
 
-- Complete floating-point and SIMD implementations
-- Implement actual JIT code generation backend
-- Add more sophisticated heap allocator
-- Implement full file system integration
-- Add more device emulation (disk, serial, etc.)
+- Complete JIT native code generation backend (x86-64, ARM)
+- Complete GDB server socket implementation for remote debugging
+- Add more sophisticated heap allocator with free list management
+- Add more device emulation (disk controller, serial port, audio)
+- Implement hardware acceleration for graphics operations
+- Add profiling and performance analysis tools
 
 ## License
 
