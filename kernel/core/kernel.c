@@ -266,7 +266,8 @@ void kernel_main(uint32_t magic, uint32_t multiboot_addr) {
     vga_write("GUI Demo initialized - Switching to framebuffer mode\n");
     vga_write("(Note: In real hardware, VGA text would be replaced by framebuffer)\n");
     
-    /* TODO: Start scheduler */
+    /* Scheduler is already initialized and running via timer interrupts */
+    /* The scheduler_schedule() function is called automatically by the timer IRQ */
     
     /* Main GUI event loop */
     vga_write("Entering main event loop...\n");
