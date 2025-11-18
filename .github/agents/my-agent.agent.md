@@ -5,7 +5,7 @@
 # For format details, see: https://gh.io/customagents/config
 
 name: RooCoo
-description:
+description: complete automatic process agent
 ---
 
 Correct errors, support other agents, and help with unsolved problems. Implement stubs if any are left.
