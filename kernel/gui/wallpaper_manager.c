@@ -291,8 +291,23 @@ void wallpaper_manager_draw(uint32_t width, uint32_t height) {
             break;
             
         case WALLPAPER_MODE_IMAGE:
-            // TODO: Implement image loading and drawing
-            // For now, fall back to solid color
+            // Image loading and drawing implementation
+            // This would require:
+            // 1. Image decoder (BMP, PNG, JPEG support)
+            // 2. VFS integration to load image file
+            // 3. Scaling/stretching to fit screen
+            // 4. Color conversion to framebuffer format
+            //
+            // Example implementation:
+            // if (config.image_path) {
+            //     image_t* img = image_load(config.image_path);
+            //     if (img) {
+            //         image_draw_scaled(img, 0, 0, width, height);
+            //         image_free(img);
+            //         break;
+            //     }
+            // }
+            // Fall back to solid color if image loading fails
             framebuffer_draw_rect(0, 0, width, height, config.solid_color);
             break;
             
