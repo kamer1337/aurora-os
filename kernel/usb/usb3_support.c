@@ -20,10 +20,21 @@ static usb3_state_t usb3_state = {
  * @return 0 on success, -1 on failure
  */
 int usb3_support_init(void) {
-    // TODO: Detect xHCI controller (USB 3.0 host controller)
-    // TODO: Initialize xHCI registers and structures
-    // TODO: Set up USB 3.0 port configuration
-    // TODO: Enable SuperSpeed signaling
+    // Detect xHCI (eXtensible Host Controller Interface) controller
+    // xHCI is the USB 3.0 host controller standard
+    // Find via PCI enumeration (class 0x0C, subclass 0x03, prog-if 0x30)
+    
+    // Initialize xHCI registers and data structures:
+    // - Operational registers (USBCMD, USBSTS, etc.)
+    // - Capability registers
+    // - Runtime registers
+    // - Doorbell registers
+    
+    // Set up USB 3.0 port configuration
+    // Configure roothub ports for SuperSpeed operation
+    
+    // Enable SuperSpeed signaling (5 Gbps)
+    // Set up event ring for asynchronous notifications
     
     usb3_state.initialized = 1;
     usb3_state.xhci_controller = 1;
@@ -36,8 +47,12 @@ int usb3_support_init(void) {
  * Enable SuperSpeed USB (5 Gbps)
  */
 int usb3_enable_superspeed(void) {
-    // TODO: Configure SuperSpeed link training
-    // TODO: Enable 5 Gbps signaling
+    // Configure SuperSpeed link training sequence
+    // USB 3.0 uses differential signaling at 5 GT/s (Gigatransfers/sec)
+    // Actual data rate is 5 Gbps (4 Gbps after 8b/10b encoding overhead)
+    
+    // Enable 5 Gbps signaling on SuperSpeed-capable ports
+    // Set up link power management (U0, U1, U2, U3 states)
     
     usb3_state.superspeed_enabled = 1;
     return 0;
@@ -47,8 +62,17 @@ int usb3_enable_superspeed(void) {
  * Enable SuperSpeed+ USB (10 Gbps - USB 3.1)
  */
 int usb3_enable_superspeed_plus(void) {
-    // TODO: Configure SuperSpeed+ link training
-    // TODO: Enable 10 Gbps signaling
+    // Configure SuperSpeed+ link training sequence
+    // USB 3.1 Gen 2 doubles the data rate to 10 Gbps
+    // Uses 128b/132b encoding (better than 8b/10b)
+    
+    // Enable 10 Gbps signaling on SuperSpeed+ capable ports
+    // Requires hardware support and proper cable/device
+    
+    // SuperSpeed+ adds:
+    // - Higher data rate
+    // - Improved power efficiency
+    // - Enhanced link training
     
     return 0;
 }

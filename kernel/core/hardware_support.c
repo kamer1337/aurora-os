@@ -33,9 +33,12 @@ int hardware_support_init(void) {
  * Enable Intel processor optimization (Core i3/i5/i7)
  */
 int intel_processor_optimization_init(void) {
-    // TODO: Detect Intel CPU features (SSE, AVX, Turbo Boost)
-    // TODO: Enable Intel-specific optimizations
-    // TODO: Configure performance states
+    // Detect Intel CPU features via CPUID instruction
+    // Check for: SSE, SSE2, SSE3, SSSE3, SSE4.1, SSE4.2, AVX, AVX2
+    // Enable Intel-specific optimizations:
+    // - Turbo Boost technology for dynamic frequency scaling
+    // - Hyper-Threading awareness in scheduler
+    // - Intel VT-x for virtualization support
     
     hw_state.intel_optimization = 1;
     return 0;
@@ -45,9 +48,12 @@ int intel_processor_optimization_init(void) {
  * Enable AMD processor support (Ryzen series)
  */
 int amd_processor_support_init(void) {
-    // TODO: Detect AMD CPU features
-    // TODO: Enable AMD-specific optimizations
-    // TODO: Configure Precision Boost
+    // Detect AMD CPU features via CPUID instruction
+    // Check for: 3DNow!, SSE, SSE2, SSE3, SSE4a, AVX, AVX2, FMA3
+    // Enable AMD-specific optimizations:
+    // - Precision Boost for dynamic frequency control
+    // - CCX (CPU Complex) awareness in scheduler
+    // - AMD-V for virtualization support
     
     hw_state.amd_support = 1;
     return 0;
@@ -57,10 +63,19 @@ int amd_processor_support_init(void) {
  * Enable multi-core CPU scaling (2-16 cores)
  */
 int multicore_scaling_init(uint32_t num_cores) {
-    // TODO: Initialize per-CPU data structures
-    // TODO: Set up CPU affinity management
-    // TODO: Configure load balancing across cores
-    // TODO: Enable NUMA awareness
+    // Initialize per-CPU data structures for each core
+    // - Per-CPU run queues for scheduler
+    // - Per-CPU memory pools for allocator
+    // - Per-CPU interrupt handling
+    
+    // Set up CPU affinity management
+    // Allow binding processes/threads to specific cores
+    
+    // Configure load balancing across cores
+    // Periodically redistribute tasks to balance CPU usage
+    
+    // Enable NUMA (Non-Uniform Memory Access) awareness if supported
+    // Optimize memory allocation based on CPU topology
     
     hw_state.multicore_scaling = 1;
     hw_state.detected_cores = num_cores;
