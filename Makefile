@@ -16,10 +16,21 @@ ENABLE_ML_PLUGIN ?= 1
 ENABLE_QUANTUM_PLUGIN ?= 1
 ENABLE_SYSTEM_OPT_PLUGIN ?= 1
 
+# Architecture selection (32 or 64)
+ARCH ?= 32
+
 # Compiler flags
+ifeq ($(ARCH),64)
+CFLAGS = -Wall -Wextra -nostdlib -ffreestanding -m64 -fno-pie -mcmodel=large
+ASFLAGS = -f elf64
+LDFLAGS = -m elf_x86_64 -nostdlib
+LINKER_SCRIPT = linker64.ld
+else
 CFLAGS = -Wall -Wextra -nostdlib -ffreestanding -m32 -fno-pie
 ASFLAGS = -f elf32
 LDFLAGS = -m elf_i386 -nostdlib
+LINKER_SCRIPT = linker.ld
+endif
 
 # Add plugin flags
 ifeq ($(ENABLE_ML_PLUGIN),1)
@@ -95,7 +106,7 @@ $(BUILD_DIR)/%.o: %.s
 
 $(KERNEL_BIN): $(ALL_OBJECTS)
 	@echo "Linking kernel"
-	@$(LD) $(LDFLAGS) -T linker.ld -o $@ $^
+	@$(LD) $(LDFLAGS) -T $(LINKER_SCRIPT) -o $@ $^
 
 clean:
 	@echo "Cleaning build artifacts"
