@@ -181,7 +181,7 @@ Based on comprehensive integration testing, the following high-priority issues m
 #### Desktop Environment Enhancements
 - [x] Login/guest screen with user authentication
 - [x] User session management system
-- [ ] Password hashing and secure credential storage
+- [x] Password hashing and secure credential storage
 - [ ] Multiple user profiles and account management
 - [ ] Multiple workspace/virtual desktop support
 - [ ] Window snapping and tiling features
@@ -191,7 +191,7 @@ Based on comprehensive integration testing, the following high-priority issues m
 - [ ] Terminal emulator
 - [ ] Text editor
 - [ ] Web browser (based on WebKit or Chromium)
-- [ ] Media player (audio/video)
+- [x] Media player (audio/video)
 
 #### Application Ecosystem
 - [ ] Application store/marketplace
