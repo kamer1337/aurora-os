@@ -8,33 +8,10 @@
 #include "gui.h"
 #include "framebuffer.h"
 #include "../memory/memory.h"
+#include "../core/math_lib.h"
 #include <stddef.h>
 
-// Math utilities (simplified implementations)
-static double calc_sqrt(double x) {
-    // Newton's method for square root
-    if (x < 0) return 0.0;
-    if (x == 0) return 0.0;
-    
-    double guess = x / 2.0;
-    for (int i = 0; i < 10; i++) {
-        guess = (guess + x / guess) / 2.0;
-    }
-    return guess;
-}
-
-static double calc_power(double base, double exp) {
-    // Simple power function (integer exponents only)
-    if (exp == 0.0) return 1.0;
-    if (exp < 0.0) return 1.0 / calc_power(base, -exp);
-    
-    double result = 1.0;
-    int int_exp = (int)exp;
-    for (int i = 0; i < int_exp; i++) {
-        result *= base;
-    }
-    return result;
-}
+// Math utilities now use the scientific computing library
 
 // String utilities
 static size_t calc_strlen(const char* str) {
@@ -206,6 +183,29 @@ void calculator_process_input(char button) {
         calculator_calculate();
     } else if (button == 'C' || button == 'c') {
         calculator_clear();
+    } else if (button == 's') {
+        // Apply sine function to current value
+        double value = 0.0;
+        int decimal_places = 0;
+        uint8_t after_decimal = 0;
+        
+        for (size_t i = 0; i < calc_strlen(calc_state.display); i++) {
+            char c = calc_state.display[i];
+            if (c >= '0' && c <= '9') {
+                if (after_decimal) {
+                    decimal_places++;
+                    value = value + (double)(c - '0') / math_pow(10.0, (double)decimal_places);
+                } else {
+                    value = value * 10.0 + (double)(c - '0');
+                }
+            } else if (c == '.') {
+                after_decimal = 1;
+            }
+        }
+        
+        double result = math_sin(value);
+        double_to_string(result, calc_state.display, 32);
+        calc_state.clear_on_next = 1;
     }
     
     calculator_update_display();
@@ -262,7 +262,7 @@ void calculator_set_operation(calc_operation_t op) {
         if (c >= '0' && c <= '9') {
             if (after_decimal) {
                 decimal_places++;
-                value = value + (double)(c - '0') / calc_power(10.0, (double)decimal_places);
+                value = value + (double)(c - '0') / math_pow(10.0, (double)decimal_places);
             } else {
                 value = value * 10.0 + (double)(c - '0');
             }
@@ -295,7 +295,7 @@ void calculator_calculate(void) {
         if (c >= '0' && c <= '9') {
             if (after_decimal) {
                 decimal_places++;
-                value = value + (double)(c - '0') / calc_power(10.0, (double)decimal_places);
+                value = value + (double)(c - '0') / math_pow(10.0, (double)decimal_places);
             } else {
                 value = value * 10.0 + (double)(c - '0');
             }
@@ -327,7 +327,16 @@ void calculator_calculate(void) {
             }
             break;
         case CALC_OP_SQRT:
-            result = calc_sqrt(calc_state.current_value);
+            result = math_sqrt(calc_state.current_value);
+            break;
+        case CALC_OP_SIN:
+            result = math_sin(calc_state.current_value);
+            break;
+        case CALC_OP_COS:
+            result = math_cos(calc_state.current_value);
+            break;
+        case CALC_OP_TAN:
+            result = math_tan(calc_state.current_value);
             break;
         default:
             result = calc_state.current_value;
