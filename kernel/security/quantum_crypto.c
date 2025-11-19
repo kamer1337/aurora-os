@@ -388,3 +388,135 @@ int quantum_verify_integrity(const uint8_t* data, size_t length, const uint8_t* 
     
     return QCRYPTO_SUCCESS;
 }
+
+/**
+ * Hash a password using quantum cryptography
+ * Uses quantum hashing with salt for password storage
+ */
+int quantum_hash_password(const char* password, uint8_t* hash_out, size_t hash_size) {
+    if (!qcrypto_initialized) {
+        return QCRYPTO_NOT_INITIALIZED;
+    }
+    
+    if (password == NULL || hash_out == NULL || hash_size < 32) {
+        return QCRYPTO_INVALID_PARAM;
+    }
+    
+    /* Calculate password length */
+    size_t pwd_len = 0;
+    while (password[pwd_len] != '\0') {
+        pwd_len++;
+    }
+    
+    if (pwd_len == 0) {
+        return QCRYPTO_INVALID_PARAM;
+    }
+    
+    /* Generate a quantum salt for this password */
+    uint8_t salt[16];
+    int result = quantum_random_bytes(salt, sizeof(salt));
+    if (result != QCRYPTO_SUCCESS) {
+        return result;
+    }
+    
+    /* Create salted password buffer */
+    uint8_t salted[256];  /* Max password + salt */
+    size_t salted_len = 0;
+    
+    /* Add salt prefix */
+    for (size_t i = 0; i < sizeof(salt) && salted_len < sizeof(salted); i++) {
+        salted[salted_len++] = salt[i];
+    }
+    
+    /* Add password */
+    for (size_t i = 0; i < pwd_len && salted_len < sizeof(salted); i++) {
+        salted[salted_len++] = (uint8_t)password[i];
+    }
+    
+    /* Add salt suffix */
+    for (size_t i = 0; i < sizeof(salt) && salted_len < sizeof(salted); i++) {
+        salted[salted_len++] = salt[i];
+    }
+    
+    /* Hash the salted password using quantum hash */
+    uint8_t temp_hash[32];
+    result = quantum_hash(salted, salted_len, temp_hash, sizeof(temp_hash));
+    if (result != QCRYPTO_SUCCESS) {
+        return result;
+    }
+    
+    /* Store salt (first 16 bytes) and hash (remaining bytes) */
+    for (size_t i = 0; i < 16 && i < hash_size; i++) {
+        hash_out[i] = salt[i];
+    }
+    for (size_t i = 0; i < 16 && (i + 16) < hash_size; i++) {
+        hash_out[i + 16] = temp_hash[i];
+    }
+    
+    return QCRYPTO_SUCCESS;
+}
+
+/**
+ * Verify a password against a stored quantum hash
+ * Extracts salt from stored hash and verifies
+ */
+int quantum_verify_password(const char* password, const uint8_t* stored_hash, size_t hash_size) {
+    if (!qcrypto_initialized) {
+        return QCRYPTO_NOT_INITIALIZED;
+    }
+    
+    if (password == NULL || stored_hash == NULL || hash_size < 32) {
+        return QCRYPTO_INVALID_PARAM;
+    }
+    
+    /* Calculate password length */
+    size_t pwd_len = 0;
+    while (password[pwd_len] != '\0') {
+        pwd_len++;
+    }
+    
+    if (pwd_len == 0) {
+        return QCRYPTO_INVALID_PARAM;
+    }
+    
+    /* Extract salt from stored hash (first 16 bytes) */
+    uint8_t salt[16];
+    for (size_t i = 0; i < 16; i++) {
+        salt[i] = stored_hash[i];
+    }
+    
+    /* Create salted password buffer */
+    uint8_t salted[256];
+    size_t salted_len = 0;
+    
+    /* Add salt prefix */
+    for (size_t i = 0; i < sizeof(salt) && salted_len < sizeof(salted); i++) {
+        salted[salted_len++] = salt[i];
+    }
+    
+    /* Add password */
+    for (size_t i = 0; i < pwd_len && salted_len < sizeof(salted); i++) {
+        salted[salted_len++] = (uint8_t)password[i];
+    }
+    
+    /* Add salt suffix */
+    for (size_t i = 0; i < sizeof(salt) && salted_len < sizeof(salted); i++) {
+        salted[salted_len++] = salt[i];
+    }
+    
+    /* Hash the salted password */
+    uint8_t computed_hash[32];
+    int result = quantum_hash(salted, salted_len, computed_hash, sizeof(computed_hash));
+    if (result != QCRYPTO_SUCCESS) {
+        return result;
+    }
+    
+    /* Compare with stored hash (skip first 16 bytes which are salt) */
+    for (size_t i = 0; i < 16; i++) {
+        if (computed_hash[i] != stored_hash[i + 16]) {
+            return QCRYPTO_ERROR;
+        }
+    }
+    
+    return QCRYPTO_SUCCESS;
+}

@@ -75,4 +75,8 @@ void quantum_crypto_ctx_destroy(quantum_crypto_ctx_t* ctx);
 int quantum_hash(const uint8_t* data, size_t length, uint8_t* hash, size_t hash_size);
 int quantum_verify_integrity(const uint8_t* data, size_t length, const uint8_t* expected_hash);
 
+/* Password Hashing Functions */
+int quantum_hash_password(const char* password, uint8_t* hash_out, size_t hash_size);
+int quantum_verify_password(const char* password, const uint8_t* stored_hash, size_t hash_size);
+
 #endif /* AURORA_QUANTUM_CRYPTO_H */

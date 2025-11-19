@@ -47,6 +47,9 @@ static int launch_control_panel(void);
 static int launch_help(void);
 static int launch_web_browser(void);
 static int launch_file_explorer(void);
+static int launch_clock(void);
+static int launch_music_player(void);
+static int launch_video_player(void);
 
 void app_init(void) {
     if (app_framework_initialized) return;
@@ -196,6 +199,30 @@ void app_init(void) {
         .running = 0
     };
     
+    applications[APP_CLOCK] = (application_t){
+        .type = APP_CLOCK,
+        .name = "Clock & Calendar",
+        .description = "View time, date, and calendar",
+        .window = NULL,
+        .running = 0
+    };
+    
+    applications[APP_MUSIC_PLAYER] = (application_t){
+        .type = APP_MUSIC_PLAYER,
+        .name = "Music Player",
+        .description = "Play and manage music files",
+        .window = NULL,
+        .running = 0
+    };
+    
+    applications[APP_VIDEO_PLAYER] = (application_t){
+        .type = APP_VIDEO_PLAYER,
+        .name = "Video Player",
+        .description = "Play video files",
+        .window = NULL,
+        .running = 0
+    };
+    
     app_framework_initialized = 1;
 }
 
@@ -267,6 +294,15 @@ int app_launch(app_type_t type) {
             break;
         case APP_FILE_EXPLORER:
             result = launch_file_explorer();
+            break;
+        case APP_CLOCK:
+            result = launch_clock();
+            break;
+        case APP_MUSIC_PLAYER:
+            result = launch_music_player();
+            break;
+        case APP_VIDEO_PLAYER:
+            result = launch_video_player();
             break;
         default:
             return -1;
@@ -1236,6 +1272,125 @@ static int launch_file_explorer(void) {
     if (!window) return -1;
     
     applications[APP_FILE_EXPLORER].window = window;
+    
+    return 0;
+}
+
+static int launch_clock(void) {
+    // Create clock and calendar window
+    window_t* window = gui_create_window("Clock & Calendar", 200, 150, 500, 350);
+    if (!window) return -1;
+    
+    applications[APP_CLOCK].window = window;
+    
+    // Add clock display
+    gui_create_label(window, "Clock & Calendar", 20, 20);
+    
+    // Current time display (placeholder - would use real time in full implementation)
+    gui_create_label(window, "Time: 12:34:56", 20, 60);
+    gui_create_label(window, "Date: 2025-11-19", 20, 90);
+    
+    // Calendar view (simplified)
+    gui_create_label(window, "November 2025", 20, 130);
+    gui_create_label(window, "Sun Mon Tue Wed Thu Fri Sat", 20, 160);
+    gui_create_label(window, "                 1   2   3", 20, 185);
+    gui_create_label(window, " 4   5   6   7   8   9  10", 20, 210);
+    gui_create_label(window, "11  12  13  14  15  16  17", 20, 235);
+    gui_create_label(window, "18 [19] 20  21  22  23  24", 20, 260);
+    gui_create_label(window, "25  26  27  28  29  30", 20, 285);
+    
+    // Navigation buttons
+    gui_create_button(window, "< Prev", 350, 130, 60, 30);
+    gui_create_button(window, "Next >", 415, 130, 65, 30);
+    
+    return 0;
+}
+
+static int launch_music_player(void) {
+    // Create music player window
+    window_t* window = gui_create_window("Music Player", 220, 180, 550, 400);
+    if (!window) return -1;
+    
+    applications[APP_MUSIC_PLAYER].window = window;
+    
+    // Add music player interface
+    gui_create_label(window, "Aurora Music Player", 20, 20);
+    
+    // Playlist area
+    gui_create_label(window, "Playlist:", 20, 60);
+    gui_create_label(window, "1. Example Song - Artist Name", 40, 90);
+    gui_create_label(window, "2. Another Track - Band Name", 40, 115);
+    gui_create_label(window, "3. Third Song - Composer", 40, 140);
+    
+    // Now playing
+    gui_create_label(window, "Now Playing:", 20, 200);
+    gui_create_label(window, "Example Song - Artist Name", 40, 230);
+    gui_create_label(window, "00:00 / 03:45", 40, 260);
+    
+    // Progress bar (simulated)
+    color_t progress_color = {100, 150, 250, 255};
+    widget_t* progress = gui_create_panel(window, 40, 285, 400, 15);
+    if (progress) {
+        progress->bg_color = progress_color;
+    }
+    
+    // Playback controls
+    gui_create_button(window, "<<", 150, 320, 50, 35);
+    gui_create_button(window, "Play", 210, 320, 60, 35);
+    gui_create_button(window, "||", 280, 320, 50, 35);
+    gui_create_button(window, ">>", 340, 320, 50, 35);
+    
+    // Volume control
+    gui_create_label(window, "Volume:", 20, 330);
+    gui_create_button(window, "-", 420, 320, 30, 35);
+    gui_create_button(window, "+", 460, 320, 30, 35);
+    
+    return 0;
+}
+
+static int launch_video_player(void) {
+    // Create video player window
+    window_t* window = gui_create_window("Video Player", 240, 200, 640, 480);
+    if (!window) return -1;
+    
+    applications[APP_VIDEO_PLAYER].window = window;
+    
+    // Add video player interface
+    gui_create_label(window, "Aurora Video Player", 20, 20);
+    
+    // Video display area (black panel)
+    color_t video_area_color = {20, 20, 20, 255};
+    widget_t* video_panel = gui_create_panel(window, 20, 50, 600, 340);
+    if (video_panel) {
+        video_panel->bg_color = video_area_color;
+    }
+    
+    // Add placeholder text in video area
+    gui_create_label(window, "[ No video loaded ]", 250, 200);
+    
+    // Video info
+    gui_create_label(window, "Ready to play video...", 20, 400);
+    
+    // Progress bar
+    color_t progress_color = {100, 150, 250, 255};
+    widget_t* progress = gui_create_panel(window, 20, 425, 600, 10);
+    if (progress) {
+        progress->bg_color = progress_color;
+    }
+    
+    // Playback controls
+    gui_create_button(window, "Open", 20, 445, 70, 30);
+    gui_create_button(window, "<<", 100, 445, 50, 30);
+    gui_create_button(window, "Play", 160, 445, 60, 30);
+    gui_create_button(window, "||", 230, 445, 50, 30);
+    gui_create_button(window, ">>", 290, 445, 50, 30);
+    gui_create_button(window, "Stop", 350, 445, 60, 30);
+    
+    // Volume and fullscreen
+    gui_create_label(window, "Vol:", 420, 450);
+    gui_create_button(window, "-", 460, 445, 35, 30);
+    gui_create_button(window, "+", 505, 445, 35, 30);
+    gui_create_button(window, "Fullscreen", 550, 445, 90, 30);
     
     return 0;
 }
