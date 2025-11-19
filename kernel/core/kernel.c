@@ -37,6 +37,7 @@
 extern void register_boot_diagnostic_plugin(void);
 extern void register_hw_setup_plugin(void);
 extern void register_ml_optimization_plugin(void);
+extern void register_gfx_ml_optimization_plugin(void);
 extern void register_quantum_compute_plugin(void);
 extern void register_system_optimization_plugin(void);
 
@@ -181,6 +182,7 @@ void kernel_init(void) {
     /* Register optional optimization plugins */
     vga_write("Registering optional optimization plugins...\n");
     register_ml_optimization_plugin();
+    register_gfx_ml_optimization_plugin();
     register_quantum_compute_plugin();
     register_system_optimization_plugin();
     
