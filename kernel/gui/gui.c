@@ -650,6 +650,11 @@ void gui_destroy_window(window_t* window) {
     kfree(window);
 }
 
+void gui_close_window(window_t* window) {
+    // gui_close_window is an alias for gui_destroy_window
+    gui_destroy_window(window);
+}
+
 void gui_show_window(window_t* window) {
     if (window) {
         window->visible = 1;
