@@ -345,6 +345,42 @@ static void desktop_icons_module_init(void) {
         icon->next = desktop_icons;
         desktop_icons = icon;
     }
+    
+    /* Clock & Calendar icon - second column, varied depths */
+    icon = (desktop_icon_t*)kmalloc(sizeof(desktop_icon_t));
+    if (icon) {
+        icon->label = "Clock";
+        icon->x = 200;
+        icon->y = 100;
+        icon->depth = 0.3f;
+        icon->app = APP_CLOCK;
+        icon->next = desktop_icons;
+        desktop_icons = icon;
+    }
+    
+    /* Music Player icon */
+    icon = (desktop_icon_t*)kmalloc(sizeof(desktop_icon_t));
+    if (icon) {
+        icon->label = "Music";
+        icon->x = 200;
+        icon->y = 200;
+        icon->depth = 0.5f;
+        icon->app = APP_MUSIC_PLAYER;
+        icon->next = desktop_icons;
+        desktop_icons = icon;
+    }
+    
+    /* Video Player icon */
+    icon = (desktop_icon_t*)kmalloc(sizeof(desktop_icon_t));
+    if (icon) {
+        icon->label = "Video";
+        icon->x = 200;
+        icon->y = 300;
+        icon->depth = 0.7f;
+        icon->app = APP_VIDEO_PLAYER;
+        icon->next = desktop_icons;
+        desktop_icons = icon;
+    }
 }
 
 static void desktop_icons_module_update(void) {

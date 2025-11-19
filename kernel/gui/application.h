@@ -30,6 +30,9 @@ typedef enum {
     APP_HELP,
     APP_WEB_BROWSER,
     APP_FILE_EXPLORER,
+    APP_CLOCK,          // New: Clock and Calendar
+    APP_MUSIC_PLAYER,   // New: Music Player
+    APP_VIDEO_PLAYER,   // New: Video Player
     APP_MAX
 } app_type_t;
 
