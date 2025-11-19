@@ -8,6 +8,7 @@
 #include "gui.h"
 #include "framebuffer.h"
 #include "../memory/memory.h"
+#include "../security/quantum_crypto.h"
 #include <stddef.h>
 
 // Current user session
@@ -49,19 +50,38 @@ static int login_strcmp(const char* s1, const char* s2) {
 // Default users (in production, this would be from a secure database)
 typedef struct {
     char username[64];
-    char password[64];
+    uint8_t password_hash[32];  // Quantum hash (16 bytes salt + 16 bytes hash)
     uint8_t is_admin;
 } user_account_t;
 
-static user_account_t default_users[] = {
-    {"admin", "admin123", 1},
-    {"user", "user123", 0},
-    {"", "", 0}  // Sentinel
-};
+// Pre-computed quantum hashes for default passwords
+// In production, these would be generated during user setup
+static user_account_t default_users[3];
+static uint8_t users_initialized = 0;
 
 int login_screen_init(void) {
     // Initialize login system
     current_session = NULL;
+    
+    // Initialize default users with hashed passwords (only once)
+    if (!users_initialized) {
+        // User 0: admin with password "admin123"
+        login_strcpy(default_users[0].username, "admin", 64);
+        default_users[0].is_admin = 1;
+        quantum_hash_password("admin123", default_users[0].password_hash, 32);
+        
+        // User 1: user with password "user123"
+        login_strcpy(default_users[1].username, "user", 64);
+        default_users[1].is_admin = 0;
+        quantum_hash_password("user123", default_users[1].password_hash, 32);
+        
+        // User 2: sentinel (empty username)
+        default_users[2].username[0] = '\0';
+        default_users[2].is_admin = 0;
+        
+        users_initialized = 1;
+    }
+    
     return 0;
 }
 
@@ -70,27 +90,36 @@ int login_screen_authenticate(const char* username, const char* password) {
         return LOGIN_FAILED;
     }
 
-    // Check against default users
-    for (int i = 0; default_users[i].username[0] != '\0'; i++) {
-        if (login_strcmp(username, default_users[i].username) == 0 &&
-            login_strcmp(password, default_users[i].password) == 0) {
+    // Check against default users using quantum password verification
+    for (int i = 0; i < 2; i++) {  // Only check actual users, not sentinel
+        if (default_users[i].username[0] == '\0') {
+            break;
+        }
+        
+        if (login_strcmp(username, default_users[i].username) == 0) {
+            // Verify password using quantum cryptography
+            int verify_result = quantum_verify_password(password, 
+                                                       default_users[i].password_hash, 
+                                                       32);
             
-            // Create session
-            if (current_session) {
-                kfree(current_session);
+            if (verify_result == QCRYPTO_SUCCESS) {
+                // Create session
+                if (current_session) {
+                    kfree(current_session);
+                }
+                
+                current_session = (user_session_t*)kmalloc(sizeof(user_session_t));
+                if (!current_session) {
+                    return LOGIN_FAILED;
+                }
+                
+                login_strcpy(current_session->username, username, 64);
+                current_session->is_guest = 0;
+                current_session->is_admin = default_users[i].is_admin;
+                current_session->session_id = next_session_id++;
+                
+                return LOGIN_SUCCESS;
             }
-            
-            current_session = (user_session_t*)kmalloc(sizeof(user_session_t));
-            if (!current_session) {
-                return LOGIN_FAILED;
-            }
-            
-            login_strcpy(current_session->username, username, 64);
-            current_session->is_guest = 0;
-            current_session->is_admin = default_users[i].is_admin;
-            current_session->session_id = next_session_id++;
-            
-            return LOGIN_SUCCESS;
         }
     }
     
