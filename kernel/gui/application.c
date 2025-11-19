@@ -11,6 +11,8 @@
 #include "terminal.h"
 #include "webview.h"
 #include "file_explorer.h"
+#include "text_editor.h"
+#include "calculator.h"
 #include "../memory/memory.h"
 #include "../drivers/storage.h"
 #include <stddef.h>
@@ -564,98 +566,27 @@ static int launch_system_info(void) {
 }
 
 static int launch_text_editor(void) {
-    window_t* window = gui_create_window("Text Editor", 120, 80, 700, 500);
+    // Initialize text editor system
+    text_editor_init();
+    
+    // Create text editor window
+    window_t* window = text_editor_create();
     if (!window) return -1;
     
     applications[APP_TEXT_EDITOR].window = window;
-    
-    /* Add text editor interface */
-    gui_create_label(window, "Text Editor - Untitled", 20, 20);
-    
-    /* Menu bar simulation */
-    gui_create_button(window, "File", 20, 50, 60, 25);
-    gui_create_button(window, "Edit", 90, 50, 60, 25);
-    gui_create_button(window, "View", 160, 50, 60, 25);
-    gui_create_button(window, "Help", 230, 50, 60, 25);
-    
-    /* Editor area */
-    gui_create_label(window, "1 |", 10, 90);
-    gui_create_label(window, "2 |", 10, 110);
-    gui_create_label(window, "3 |", 10, 130);
-    gui_create_label(window, "4 |", 10, 150);
-    gui_create_label(window, "5 |", 10, 170);
-    
-    /* Placeholder text */
-    gui_create_label(window, "Welcome to Aurora OS Text Editor!", 40, 90);
-    gui_create_label(window, "A simple text editing application", 40, 110);
-    gui_create_label(window, "", 40, 130);
-    gui_create_label(window, "Features:", 40, 150);
-    gui_create_label(window, "- Line numbering", 40, 170);
-    gui_create_label(window, "- Syntax highlighting (planned)", 40, 190);
-    gui_create_label(window, "- Find and replace (planned)", 40, 210);
-    gui_create_label(window, "- Multiple file tabs (planned)", 40, 230);
-    
-    /* Status bar */
-    gui_create_label(window, "Line: 1  Col: 1  |  UTF-8  |  Ready", 20, 460);
-    
-    /* Action buttons */
-    gui_create_button(window, "Save", 20, 420, 70, 30);
-    gui_create_button(window, "Save As", 100, 420, 80, 30);
-    gui_create_button(window, "Close", 600, 420, 70, 30);
-    
-    gui_show_window(window);
-    gui_focus_window(window);
     
     return 0;
 }
 
 static int launch_calculator(void) {
-    window_t* window = gui_create_window("Calculator", 250, 200, 320, 420);
+    // Initialize calculator system
+    calculator_init();
+    
+    // Create calculator window
+    window_t* window = calculator_create();
     if (!window) return -1;
     
     applications[APP_CALCULATOR].window = window;
-    
-    /* Add calculator interface */
-    gui_create_label(window, "Calculator", 20, 20);
-    
-    /* Display area */
-    gui_create_label(window, "0", 240, 60);
-    
-    /* Button grid - Row 1 */
-    gui_create_button(window, "7", 20, 100, 60, 45);
-    gui_create_button(window, "8", 90, 100, 60, 45);
-    gui_create_button(window, "9", 160, 100, 60, 45);
-    gui_create_button(window, "/", 230, 100, 60, 45);
-    
-    /* Button grid - Row 2 */
-    gui_create_button(window, "4", 20, 155, 60, 45);
-    gui_create_button(window, "5", 90, 155, 60, 45);
-    gui_create_button(window, "6", 160, 155, 60, 45);
-    gui_create_button(window, "*", 230, 155, 60, 45);
-    
-    /* Button grid - Row 3 */
-    gui_create_button(window, "1", 20, 210, 60, 45);
-    gui_create_button(window, "2", 90, 210, 60, 45);
-    gui_create_button(window, "3", 160, 210, 60, 45);
-    gui_create_button(window, "-", 230, 210, 60, 45);
-    
-    /* Button grid - Row 4 */
-    gui_create_button(window, "0", 20, 265, 60, 45);
-    gui_create_button(window, ".", 90, 265, 60, 45);
-    gui_create_button(window, "=", 160, 265, 60, 45);
-    gui_create_button(window, "+", 230, 265, 60, 45);
-    
-    /* Function buttons - Row 5 */
-    gui_create_button(window, "C", 20, 320, 60, 45);
-    gui_create_button(window, "CE", 90, 320, 60, 45);
-    gui_create_button(window, "<-", 160, 320, 60, 45);
-    gui_create_button(window, "+/-", 230, 320, 60, 45);
-    
-    /* Status */
-    gui_create_label(window, "Standard Calculator", 20, 380);
-    
-    gui_show_window(window);
-    gui_focus_window(window);
     
     return 0;
 }
