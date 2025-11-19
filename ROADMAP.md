@@ -221,15 +221,15 @@ With all critical bugs resolved and documentation complete, the focus shifts to:
 ### Advanced Features and Ecosystem Development
 
 #### Floating-Point and SIMD Support
-- [ ] Complete floating-point operation implementation (FADD, FSUB, FMUL, FDIV)
-- [ ] Implement SIMD vector operations (VADD, VSUB, VMUL, VDOT)
-- [ ] Add SSE/AVX instruction support
-- [ ] Optimize mathematical computations
+- [x] Complete floating-point operation implementation (FADD, FSUB, FMUL, FDIV, FCMP, FCVT, ICVT, FMOV)
+- [x] Implement SIMD vector operations (VADD, VSUB, VMUL, VDOT)
+- [ ] Add SSE/AVX instruction support (native x86 instructions)
+- [ ] Optimize mathematical computations with SIMD
 - [ ] Scientific computing library
 
 #### JIT Compilation System
-- [ ] Complete JIT code generation backend
-- [ ] Optimize JIT cache management (256KB cache)
+- [x] JIT infrastructure and cache management (256KB cache)
+- [ ] Complete JIT code generation backend (native code generation)
 - [ ] Add JIT profiling and adaptive optimization
 - [ ] Support for dynamic code generation
 - [ ] Scripting language JIT (Python, JavaScript runtime)
