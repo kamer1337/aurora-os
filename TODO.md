@@ -1,5 +1,14 @@
 # Aurora OS - TODO List
 
+## Recent Enhancements (November 2025) ✅
+- [x] Documentation cleanup - consolidated 16 redundant summary documents into docs/archive
+- [x] Created comprehensive FEATURES.md document
+- [x] Implemented missing gui_close_window function (previously undefined stub)
+- [x] Added login/guest screen with user authentication framework
+- [x] Added user session management system
+- [x] Fixed build issues with test files
+- [x] Updated README.md, ROADMAP.md, and TODO.md with latest features
+
 ## Immediate Priorities (Current Sprint)
 
 ### Project Setup ✅
@@ -107,6 +116,8 @@
 - [x] Context menus (right-click on window titlebar)
 - [x] Minimize/maximize buttons (functional)
 - [x] Window list in taskbar (interactive)
+- [x] Login/guest screen with authentication
+- [x] User session management
 - [x] **Phase 4 Limitations Resolved**:
   - [x] Start menu items wired to launch applications
   - [x] Desktop icons implemented and functional

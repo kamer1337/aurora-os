@@ -179,6 +179,10 @@ Based on comprehensive integration testing, the following high-priority issues m
 - [ ] Network file system (NFS/CIFS) client
 
 #### Desktop Environment Enhancements
+- [x] Login/guest screen with user authentication
+- [x] User session management system
+- [ ] Password hashing and secure credential storage
+- [ ] Multiple user profiles and account management
 - [ ] Multiple workspace/virtual desktop support
 - [ ] Window snapping and tiling features
 - [ ] Desktop widgets and gadgets

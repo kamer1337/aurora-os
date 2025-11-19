@@ -129,6 +129,12 @@ window_t* gui_create_window(const char* title, int32_t x, int32_t y, uint32_t wi
 void gui_destroy_window(window_t* window);
 
 /**
+ * Close a window (alias for gui_destroy_window)
+ * @param window Window to close
+ */
+void gui_close_window(window_t* window);
+
+/**
  * Show a window
  * @param window Window to show
  */

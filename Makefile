@@ -51,7 +51,7 @@ VFS_SOURCES = $(wildcard $(FS_DIR)/vfs/*.c) \
               $(wildcard $(FS_DIR)/journal/*.c) \
               $(wildcard $(FS_DIR)/cache/*.c)
 
-TEST_SOURCES = $(filter-out $(TEST_DIR)/aurora_os_vm_integration_test.c $(TEST_DIR)/test_fp_simd.c $(TEST_DIR)/roadmap_priority_tests.c, $(wildcard $(TEST_DIR)/*.c))
+TEST_SOURCES = $(filter-out $(TEST_DIR)/aurora_os_vm_integration_test.c $(TEST_DIR)/test_fp_simd.c $(TEST_DIR)/roadmap_priority_tests.c $(TEST_DIR)/test_math_lib.c, $(wildcard $(TEST_DIR)/*.c))
 
 # Object files
 KERNEL_OBJECTS = $(patsubst %.c,$(BUILD_DIR)/%.o,$(KERNEL_SOURCES))

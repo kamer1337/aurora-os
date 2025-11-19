@@ -24,6 +24,7 @@ Aurora OS features a modern desktop environment with advanced visual effects:
 
 **Key GUI Features:**
 - **Framebuffer Graphics**: Full HD 1920x1080x32 resolution with full RGBA color support
+- **Login/Guest Screen**: User authentication system with guest mode support
 - **Window Management**: Draggable windows with title bars, borders, and close buttons
 - **Widget System**: Buttons, labels, panels, and interactive elements
 - **3D Visual Effects**: Enhanced shadows, vivid gradients, prominent rounded corners (12px radius), and alpha blending
