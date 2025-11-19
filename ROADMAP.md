@@ -254,11 +254,12 @@ With all critical bugs resolved and documentation complete, the focus shifts to:
 - [ ] Window snapping and tiling features
 - [ ] Desktop widgets and gadgets
 - [ ] System settings application
-- [ ] File manager application
-- [ ] Terminal emulator
-- [ ] Text editor
+- [x] File manager application (file_explorer)
+- [x] Terminal emulator
+- [x] Text editor
 - [ ] Web browser (based on WebKit or Chromium)
 - [x] Media player (audio/video)
+- [x] Calculator application
 
 #### Application Ecosystem
 - [ ] Application store/marketplace
