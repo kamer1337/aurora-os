@@ -9,6 +9,7 @@
 #include "system_tray.h"
 #include "window_switcher.h"
 #include "application.h"
+#include "framebuffer.h"
 #include "../memory/memory.h"
 
 // Module registry
@@ -195,6 +196,71 @@ desktop_module_t* desktop_module_get(desktop_module_type_t type) {
     return modules[type];
 }
 
+/* Desktop icons data structure */
+typedef struct desktop_icon {
+    char* label;
+    int x;
+    int y;
+    float depth;  // Depth coordinate (0.0 = foreground, 1.0 = background)
+    app_type_t app;
+    struct desktop_icon* next;
+} desktop_icon_t;
+
+static desktop_icon_t* desktop_icons = NULL;
+static float depth_offset = 0.0f;  // User-controlled depth navigation
+static desktop_icon_t* selected_icon = NULL;  // Currently selected icon for depth manipulation
+
+/* Depth navigation functions for 3D desktop icons */
+
+/**
+ * Navigate depth forward (bring closer)
+ */
+void desktop_icons_depth_forward(void) {
+    depth_offset -= 0.1f;  // Move closer
+    if (depth_offset < -1.0f) {
+        depth_offset = -1.0f;  // Clamp
+    }
+}
+
+/**
+ * Navigate depth backward (push away)
+ */
+void desktop_icons_depth_backward(void) {
+    depth_offset += 0.1f;  // Move away
+    if (depth_offset > 1.0f) {
+        depth_offset = 1.0f;  // Clamp
+    }
+}
+
+/**
+ * Reset depth navigation
+ */
+void desktop_icons_depth_reset(void) {
+    depth_offset = 0.0f;
+}
+
+/**
+ * Get current depth offset
+ */
+float desktop_icons_get_depth_offset(void) {
+    return depth_offset;
+}
+
+/**
+ * Adjust selected icon depth
+ */
+void desktop_icons_adjust_selected_depth(float delta) {
+    if (selected_icon) {
+        selected_icon->depth += delta;
+        if (selected_icon->depth < 0.0f) {
+            selected_icon->depth = 0.0f;
+        }
+        if (selected_icon->depth > 1.0f) {
+            selected_icon->depth = 1.0f;
+        }
+    }
+}
+
 // Placeholder implementations for module-specific functions
 static void taskbar_module_init(void) {
     // Taskbar initialization
@@ -216,71 +282,65 @@ static void taskbar_module_shutdown(void) {
     // Free any taskbar-specific resources
 }
 
-/* Desktop icons data structure */
-typedef struct desktop_icon {
-    char* label;
-    int x;
-    int y;
-    app_type_t app;
-    struct desktop_icon* next;
-} desktop_icon_t;
-
-static desktop_icon_t* desktop_icons = NULL;
-
 static void desktop_icons_module_init(void) {
-    /* Create default desktop icons for common applications */
+    /* Create default desktop icons for common applications with depth */
     desktop_icon_t* icon;
     
-    /* File Manager icon */
+    /* File Manager icon - closest depth */
     icon = (desktop_icon_t*)kmalloc(sizeof(desktop_icon_t));
     if (icon) {
         icon->label = "File Manager";
         icon->x = 50;
         icon->y = 100;
+        icon->depth = 0.0f;  // Foreground
         icon->app = APP_FILE_MANAGER;
         icon->next = desktop_icons;
         desktop_icons = icon;
     }
     
-    /* System Info icon */
+    /* System Info icon - slightly back */
     icon = (desktop_icon_t*)kmalloc(sizeof(desktop_icon_t));
     if (icon) {
         icon->label = "System Info";
         icon->x = 50;
         icon->y = 200;
+        icon->depth = 0.2f;  // Slightly behind
         icon->app = APP_SYSTEM_INFO;
         icon->next = desktop_icons;
         desktop_icons = icon;
     }
     
-    /* Disk Manager icon */
+    /* Disk Manager icon - medium depth */
     icon = (desktop_icon_t*)kmalloc(sizeof(desktop_icon_t));
     if (icon) {
         icon->label = "Disk Manager";
         icon->x = 50;
         icon->y = 300;
+        icon->depth = 0.4f;  // Medium depth
         icon->app = APP_DISK_MANAGER;
         icon->next = desktop_icons;
         desktop_icons = icon;
     }
     
-    /* My PC icon */
+    /* My PC icon - further back */
     icon = (desktop_icon_t*)kmalloc(sizeof(desktop_icon_t));
     if (icon) {
         icon->label = "My PC";
         icon->x = 50;
         icon->y = 400;
+        icon->depth = 0.6f;  // Further back
         icon->app = APP_MY_PC;
         icon->next = desktop_icons;
         desktop_icons = icon;
     }
     
-    /* Recycle Bin icon */
+    /* Recycle Bin icon - background */
     icon = (desktop_icon_t*)kmalloc(sizeof(desktop_icon_t));
     if (icon) {
         icon->label = "Recycle Bin";
         icon->x = 50;
         icon->y = 500;
+        icon->depth = 0.8f;  // Background
         icon->app = APP_RECYCLE_BIN;
         icon->next = desktop_icons;
         desktop_icons = icon;
@@ -289,18 +349,96 @@ static void desktop_icons_module_init(void) {
 
 static void desktop_icons_module_update(void) {
     // Desktop icons update logic
-    // Handle icon selection, drag and drop, etc.
+    // Handle icon selection, drag and drop, depth navigation
     // This would be called on each frame to process icon interactions
+    
+    // Note: In a full implementation, keyboard/mouse input would be processed here
+    // For now, depth navigation could be controlled via keyboard shortcuts
+}
+
+/* Helper function to calculate perspective scale based on depth */
+static float calculate_perspective_scale(float depth, float depth_offset) {
+    // Apply depth offset (user navigation)
+    float effective_depth = depth + depth_offset;
+    
+    // Clamp depth to valid range [0.0, 1.0]
+    if (effective_depth < 0.0f) effective_depth = 0.0f;
+    if (effective_depth > 1.0f) effective_depth = 1.0f;
+    
+    // Calculate scale: closer objects (depth=0) are larger (scale=1.0)
+    // farther objects (depth=1) are smaller (scale=0.3)
+    float scale = 1.0f - (effective_depth * 0.7f);
+    
+    return scale;
+}
+
+/* Helper function to calculate depth-based alpha (transparency) */
+static uint8_t calculate_depth_alpha(float depth, float depth_offset) {
+    // Apply depth offset
+    float effective_depth = depth + depth_offset;
+    
+    // Clamp depth to valid range
+    if (effective_depth < 0.0f) effective_depth = 0.0f;
+    if (effective_depth > 1.0f) effective_depth = 1.0f;
+    
+    // Calculate alpha: closer objects are fully opaque (255)
+    // farther objects fade (minimum 100)
+    uint8_t alpha = (uint8_t)(255 - (effective_depth * 155));
+    
+    return alpha;
 }
 
 static void desktop_icons_module_draw(void) {
-    // Desktop icons drawing
-    // Draw each icon with its label and graphical representation
+    // Desktop icons drawing with 3D depth perspective
+    // Icons farther away appear smaller and more transparent
+    
     desktop_icon_t* icon = desktop_icons;
+    
+    // Sort icons by depth for proper rendering order (back to front)
+    // For simplicity, we'll just iterate in reverse depth order
+    
+    // First pass: render background icons (depth > 0.5)
+    icon = desktop_icons;
     while (icon) {
-        // In a full implementation, we would draw the icon here
-        // This includes the icon graphic and label
-        // For now, this is handled by the main GUI system in gui.c
+        if (icon->depth > 0.5f) {
+            float scale = calculate_perspective_scale(icon->depth, depth_offset);
+            uint8_t alpha = calculate_depth_alpha(icon->depth, depth_offset);
+            
+            // Calculate scaled icon size (base size 48x48)
+            int icon_size = (int)(48.0f * scale);
+            int label_size = (int)(12.0f * scale);
+            
+            // Draw icon rectangle (simplified - in full implementation would draw actual icon)
+            color_t icon_color = {80, 120, 200, alpha};
+            framebuffer_draw_rect(icon->x, icon->y, icon_size, icon_size, icon_color);
+            
+            // Draw label below icon (simplified)
+            // In full implementation, would use font rendering with proper scaling
+        }
+        icon = icon->next;
+    }
+    
+    // Second pass: render foreground icons (depth <= 0.5)
+    icon = desktop_icons;
+    while (icon) {
+        if (icon->depth <= 0.5f) {
+            float scale = calculate_perspective_scale(icon->depth, depth_offset);
+            uint8_t alpha = calculate_depth_alpha(icon->depth, depth_offset);
+            
+            // Calculate scaled icon size
+            int icon_size = (int)(48.0f * scale);
+            
+            // Draw icon rectangle with depth perspective
+            color_t icon_color = {80, 120, 200, alpha};
+            framebuffer_draw_rect(icon->x, icon->y, icon_size, icon_size, icon_color);
+            
+            // Highlight selected icon
+            if (icon == selected_icon) {
+                color_t highlight_color = {255, 200, 0, 200};
+                framebuffer_draw_rect_outline(icon->x - 2, icon->y - 2, 
+                                             icon_size + 4, icon_size + 4, highlight_color);
+            }
+        }
         icon = icon->next;
     }
 }

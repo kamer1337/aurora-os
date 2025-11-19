@@ -86,4 +86,35 @@ int desktop_module_is_enabled(desktop_module_type_t type);
  */
 desktop_module_t* desktop_module_get(desktop_module_type_t type);
 
+/**
+ * 3D Depth Navigation Functions for Desktop Icons
+ */
+
+/**
+ * Navigate depth forward (bring icons closer)
+ */
+void desktop_icons_depth_forward(void);
+
+/**
+ * Navigate depth backward (push icons away)
+ */
+void desktop_icons_depth_backward(void);
+
+/**
+ * Reset depth navigation to default
+ */
+void desktop_icons_depth_reset(void);
+
+/**
+ * Get current depth offset
+ * @return Current depth navigation offset
+ */
+float desktop_icons_get_depth_offset(void);
+
+/**
+ * Adjust depth of currently selected icon
+ * @param delta Change in depth (-1.0 to 1.0)
+ */
+void desktop_icons_adjust_selected_depth(float delta);
+
 #endif // DESKTOP_MODULES_H
