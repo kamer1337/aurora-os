@@ -33,6 +33,7 @@ typedef enum {
     APP_CLOCK,          // New: Clock and Calendar
     APP_MUSIC_PLAYER,   // New: Music Player
     APP_VIDEO_PLAYER,   // New: Video Player
+    APP_GOALS_MANAGER,  // New: Long-Term Goals Manager
     APP_MAX
 } app_type_t;
 

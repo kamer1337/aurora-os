@@ -381,6 +381,18 @@ static void desktop_icons_module_init(void) {
         icon->next = desktop_icons;
         desktop_icons = icon;
     }
+    
+    /* Goals Manager icon */
+    icon = (desktop_icon_t*)kmalloc(sizeof(desktop_icon_t));
+    if (icon) {
+        icon->label = "Goals";
+        icon->x = 200;
+        icon->y = 400;
+        icon->depth = 0.4f;
+        icon->app = APP_GOALS_MANAGER;
+        icon->next = desktop_icons;
+        desktop_icons = icon;
+    }
 }
 
 static void desktop_icons_module_update(void) {

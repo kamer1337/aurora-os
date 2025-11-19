@@ -13,6 +13,7 @@
 #include "file_explorer.h"
 #include "text_editor.h"
 #include "calculator.h"
+#include "goals_manager.h"
 #include "../memory/memory.h"
 #include "../drivers/storage.h"
 #include <stddef.h>
@@ -50,6 +51,7 @@ static int launch_file_explorer(void);
 static int launch_clock(void);
 static int launch_music_player(void);
 static int launch_video_player(void);
+static int launch_goals_manager(void);
 
 void app_init(void) {
     if (app_framework_initialized) return;
@@ -223,6 +225,14 @@ void app_init(void) {
         .running = 0
     };
     
+    applications[APP_GOALS_MANAGER] = (application_t){
+        .type = APP_GOALS_MANAGER,
+        .name = "Goals Manager",
+        .description = "Track and manage long-term development goals",
+        .window = NULL,
+        .running = 0
+    };
+    
     app_framework_initialized = 1;
 }
 
@@ -303,6 +313,9 @@ int app_launch(app_type_t type) {
             break;
         case APP_VIDEO_PLAYER:
             result = launch_video_player();
+            break;
+        case APP_GOALS_MANAGER:
+            result = launch_goals_manager();
             break;
         default:
             return -1;
@@ -1393,4 +1406,9 @@ static int launch_video_player(void) {
     gui_create_button(window, "Fullscreen", 550, 445, 90, 30);
     
     return 0;
+}
+
+static int launch_goals_manager(void) {
+    applications[APP_GOALS_MANAGER].window = goals_manager_create();
+    return applications[APP_GOALS_MANAGER].window ? 0 : -1;
 }

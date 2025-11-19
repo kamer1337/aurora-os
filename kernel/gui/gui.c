@@ -65,7 +65,7 @@ static uint8_t start_menu_animating = 0;
 
 // Start menu keyboard navigation state
 static int32_t start_menu_selected_item = 0;
-static const int32_t start_menu_item_count = 14;  // Updated for new items
+static const int32_t start_menu_item_count = 15;  // Updated for Goals Manager
 
 // Desktop icons
 typedef struct desktop_icon {
@@ -546,10 +546,13 @@ void gui_process_event(event_t* event) {
                             case 10: // Calculator
                                 app_launch(APP_CALCULATOR);
                                 break;
-                            case 11: // Help & Support
+                            case 11: // Goals Manager
+                                app_launch(APP_GOALS_MANAGER);
+                                break;
+                            case 12: // Help & Support
                                 app_launch(APP_HELP);
                                 break;
-                            case 12: // Toggle Wallpaper
+                            case 13: // Toggle Wallpaper
                                 {
                                     desktop_config_t* cfg = desktop_config_get();
                                     if (cfg) {
@@ -562,7 +565,7 @@ void gui_process_event(event_t* event) {
                                     }
                                 }
                                 break;
-                            case 13: // Power Options (placeholder)
+                            case 14: // Power Options (placeholder)
                                 break;
                         }
                         start_menu_visible = 0;
@@ -1237,6 +1240,7 @@ static void gui_draw_start_menu(void) {
         "System Settings",
         "System Information",
         "Calculator",
+        "Goals Manager",
         "Help & Support",
         "Toggle Wallpaper",
         "Power Options"
@@ -1245,7 +1249,7 @@ static void gui_draw_start_menu(void) {
     uint32_t item_height = 40;
     uint32_t item_y = menu_y + 70;
     
-    for (int i = 0; i < 14; i++) {
+    for (int i = 0; i < 15; i++) {
         // Draw item background (highlight selected item)
         color_t item_bg;
         if (i == start_menu_selected_item) {
