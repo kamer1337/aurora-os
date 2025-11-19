@@ -41,6 +41,10 @@ extern void timer_init(void);
 extern void pci_init(void);
 extern void storage_init(void);
 extern void network_init(void);
+extern int gpu_driver_init(void);
+extern int gpu_intel_hd_init(void);
+extern int gpu_nvidia_init(void);
+extern int gpu_amd_init(void);
 
 /* Wrapper functions for drivers without return values */
 static int keyboard_init_wrapper(void) {
@@ -133,6 +137,43 @@ void driver_manager_init(void) {
         .cleanup = NULL
     };
     driver_register(&network_driver);
+    
+    /* Register graphics drivers */
+    static driver_info_t gpu_driver = {
+        .name = "gpu",
+        .type = DRIVER_TYPE_GRAPHICS,
+        .status = DRIVER_STATUS_UNINITIALIZED,
+        .init = gpu_driver_init,
+        .cleanup = NULL
+    };
+    driver_register(&gpu_driver);
+    
+    static driver_info_t intel_gpu_driver = {
+        .name = "intel_hd",
+        .type = DRIVER_TYPE_GRAPHICS,
+        .status = DRIVER_STATUS_UNINITIALIZED,
+        .init = gpu_intel_hd_init,
+        .cleanup = NULL
+    };
+    driver_register(&intel_gpu_driver);
+    
+    static driver_info_t nvidia_gpu_driver = {
+        .name = "nvidia",
+        .type = DRIVER_TYPE_GRAPHICS,
+        .status = DRIVER_STATUS_UNINITIALIZED,
+        .init = gpu_nvidia_init,
+        .cleanup = NULL
+    };
+    driver_register(&nvidia_gpu_driver);
+    
+    static driver_info_t amd_gpu_driver = {
+        .name = "amd",
+        .type = DRIVER_TYPE_GRAPHICS,
+        .status = DRIVER_STATUS_UNINITIALIZED,
+        .init = gpu_amd_init,
+        .cleanup = NULL
+    };
+    driver_register(&amd_gpu_driver);
 }
 
 /**

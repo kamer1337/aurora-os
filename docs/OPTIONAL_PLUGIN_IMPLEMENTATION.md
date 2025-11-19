@@ -47,7 +47,31 @@ Operations:
 - **2: Predict** - Get performance predictions
 - **3: Get Suggestions** - Retrieve optimization suggestions
 
-### 3. Quantum Computing Plugin
+### 3. Graphics Machine Learning Optimization Plugin
+
+**File: `kernel/core/plugin_gfx_ml_optimization.c` (400+ lines)**
+
+Features:
+- GPU performance metrics collection
+- Frame time tracking and prediction
+- Adaptive rendering quality adjustment
+- ML-based performance prediction for GPU workloads
+- Support for multiple GPU vendors (Intel HD, NVIDIA, AMD)
+- Automatic quality scaling based on performance
+- Target FPS management
+
+Operations:
+- **0: Add Sample** - Collect GPU performance and frame time data
+- **1: Train** - Train ML models on collected GPU data
+- **2: Predict** - Get GPU load and frame time predictions
+- **3: Get Quality** - Retrieve suggested rendering quality
+- **4: Set Target FPS** - Configure target frame rate
+
+Configuration:
+- `learning_enabled` - Enable/disable ML learning (default: enabled)
+- `adaptive_quality` - Enable/disable adaptive quality adjustment (default: enabled)
+
+### 4. Quantum Computing Plugin
 
 **File: `kernel/core/plugin_quantum_compute.c` (370 lines)**
 
@@ -71,7 +95,7 @@ Operations:
 - **3: Hash** - Quantum-accelerated hash
 - **4: Entangle** - Create entangled qubit pairs
 
-### 4. System Optimization Plugin
+### 5. System Optimization Plugin
 
 **File: `kernel/core/plugin_system_optimization.c` (485 lines)**
 
@@ -91,7 +115,7 @@ Operations:
 - **3: Collect Behavior** - Track user patterns
 - **4: Get Score** - Get optimization score and recommendations
 
-### 5. Build System Updates
+### 6. Build System Updates
 
 **File: `Makefile`**
 - Added optional plugin compilation flags:
@@ -105,28 +129,34 @@ Operations:
   - `plugins-disable-sysopt` - Build without System Opt plugin
   - `plugins-disable-all` - Build without any optional plugins
 
+**Graphics Driver Integration:**
+- GPU drivers (Intel HD, NVIDIA, AMD) integrated with driver_manager
+- Graphics drivers automatically initialized during boot
+- Support for hardware-accelerated rendering when GPU is available
+
 **File: `CMakeLists.txt` (NEW - 110 lines)**
 - Complete CMake build system support
 - CMake options for each plugin
 - Plugin information target
 - Integration with existing build targets
 
-### 6. Example Code
+### 7. Example Code
 
 **File: `kernel/core/plugin_usage_example.c` (220 lines)**
 
 Comprehensive examples demonstrating:
 - ML Optimization plugin usage
+- GFX ML Optimization plugin usage
 - Quantum Computing plugin usage
 - System Optimization plugin usage
 - Plugin configuration
 - Plugin enable/disable
 - Runtime management
 
-### 7. Documentation
+### 8. Documentation
 
 **File: `docs/OPTIONAL_PLUGIN_SYSTEM.md` (410 lines)**
-- Complete documentation for all three plugins
+- Complete documentation for all plugins
 - API reference for each plugin
 - Configuration guide
 - Build system integration
@@ -141,37 +171,49 @@ Comprehensive examples demonstrating:
 - Configuration examples
 - Code snippets
 
-### 8. Kernel Integration
+### 9. Kernel Integration
 
 **File: `kernel/core/kernel.c`**
 - Added external declarations for new plugin registration functions
 - Added plugin registration calls during kernel initialization:
   ```c
   register_ml_optimization_plugin();
+  register_gfx_ml_optimization_plugin();
   register_quantum_compute_plugin();
   register_system_optimization_plugin();
   ```
+
+**File: `kernel/drivers/driver_manager.c`**
+- Integrated GPU drivers (Intel HD, NVIDIA, AMD)
+- Added GPU driver initialization to driver manager
+- GPU drivers registered as DRIVER_TYPE_GRAPHICS
+- Automatic detection and initialization during boot
 
 ## Statistics
 
 ### Lines of Code
 - Plugin Infrastructure: ~160 lines (enhancements)
 - ML Optimization Plugin: ~320 lines
+- GFX ML Optimization Plugin: ~400 lines
 - Quantum Computing Plugin: ~370 lines
 - System Optimization Plugin: ~485 lines
 - Example Code: ~220 lines
 - Documentation: ~570 lines
 - Build System: ~110 lines (CMake) + ~30 lines (Makefile additions)
-- **Total: ~2,265 lines of new code**
+- GPU Driver Integration: ~50 lines
+- **Total: ~2,715 lines of new code**
 
 ### Files Modified
 - `kernel/core/plugin.h` - Extended with new types and APIs
 - `kernel/core/plugin.c` - Added configuration and enable/disable functions
 - `kernel/core/kernel.c` - Integrated new plugins
+- `kernel/drivers/driver_manager.c` - Integrated GPU drivers
 - `Makefile` - Added plugin build options
+- `docs/OPTIONAL_PLUGIN_IMPLEMENTATION.md` - Updated documentation
 
 ### Files Created
 - `kernel/core/plugin_ml_optimization.c`
+- `kernel/core/plugin_gfx_ml_optimization.c`
 - `kernel/core/plugin_quantum_compute.c`
 - `kernel/core/plugin_system_optimization.c`
 - `kernel/core/plugin_usage_example.c`
@@ -193,10 +235,15 @@ Build Status: ✅ **SUCCESS**
 ✅ Plugin registration and lifecycle management  
 ✅ Plugin configuration system
 ✅ Plugin loading/unloading mechanism
-✅ Machine learning optimization plugin
+✅ Machine learning optimization plugin (processor)
   - ML-based performance prediction
   - User behavior learning and analysis
   - Adaptive optimization suggestions
+✅ Graphics machine learning optimization plugin (GFX)
+  - GPU performance monitoring and prediction
+  - Adaptive rendering quality adjustment
+  - Frame rate optimization
+  - Support for Intel HD, NVIDIA, and AMD GPUs
 ✅ Quantum computing plugin
   - Quantum algorithm simulation
   - Integration with existing quantum_crypto
@@ -210,6 +257,11 @@ Build Status: ✅ **SUCCESS**
 ✅ Build system updates (Makefile and CMakeLists.txt)
   - Optional plugin compilation flags
   - Plugin-related build targets
+✅ GPU driver integration
+  - Intel HD Graphics driver
+  - NVIDIA GPU driver
+  - AMD GPU driver
+  - Driver manager integration
 ✅ Example demonstrating plugin usage
 ✅ Documentation for plugin system
 
@@ -218,9 +270,10 @@ Build Status: ✅ **SUCCESS**
 ```c
 // Configure plugins
 plugin_set_config("ML Optimization", "learning_enabled", "1");
+plugin_set_config("GFX ML Optimization", "adaptive_quality", "1");
 plugin_set_config("Quantum Computing", "qubit_count", "32");
 
-// Use ML plugin
+// Use processor ML plugin
 uint32_t params[2];
 params[0] = 0;  // Add sample
 params[1] = 0x0050003C;  // CPU: 60%, Memory: 80%
@@ -231,6 +284,17 @@ plugin_call("ML Optimization", NULL, params);
 
 params[0] = 2;  // Get predictions
 plugin_call("ML Optimization", NULL, params);
+
+// Use GFX ML plugin
+params[0] = 0;  // Add GPU sample
+params[1] = 0x1F400050;  // GPU: 80%, Frame time: 8000us
+plugin_call("GFX ML Optimization", NULL, params);
+
+params[0] = 1;  // Train GPU models
+plugin_call("GFX ML Optimization", NULL, params);
+
+params[0] = 3;  // Get quality suggestion
+plugin_call("GFX ML Optimization", NULL, params);
 
 // Use Quantum plugin
 params[0] = 0;  // Grover's search
