@@ -7,50 +7,7 @@
 #include "../../include/platform/dalvik_art.h"
 #include "../../include/platform/binder_ipc.h"
 #include "../../include/platform/surfaceflinger.h"
-
-/* Simple memory functions for freestanding environment */
-static void* simple_malloc(uint32_t size) {
-    /* This is a stub - in real implementation would use kernel allocator */
-    (void)size;
-    return 0;
-}
-
-static void simple_free(void* ptr) {
-    /* This is a stub - in real implementation would use kernel allocator */
-    (void)ptr;
-}
-
-static void simple_memset(void* ptr, int value, uint32_t num) {
-    uint8_t* p = (uint8_t*)ptr;
-    for (uint32_t i = 0; i < num; i++) {
-        p[i] = (uint8_t)value;
-    }
-}
-
-static void simple_memcpy(void* dest, const void* src, uint32_t num) {
-    uint8_t* d = (uint8_t*)dest;
-    const uint8_t* s = (const uint8_t*)src;
-    for (uint32_t i = 0; i < num; i++) {
-        d[i] = s[i];
-    }
-}
-
-static void simple_strncpy(char* dest, const char* src, uint32_t n) {
-    uint32_t i = 0;
-    while (i < n - 1 && src[i]) {
-        dest[i] = src[i];
-        i++;
-    }
-    dest[i] = '\0';
-}
-
-static int simple_strcmp(const char* s1, const char* s2) {
-    while (*s1 && (*s1 == *s2)) {
-        s1++;
-        s2++;
-    }
-    return *(const uint8_t*)s1 - *(const uint8_t*)s2;
-}
+#include "../../include/platform/platform_util.h"
 
 /* Global Android VM state */
 static bool g_android_vm_initialized = false;
@@ -77,7 +34,7 @@ int android_vm_init(void) {
     /* Initialize Android VM subsystem */
     g_android_vm_count = 0;
     g_property_count = 0;
-    simple_memset(g_android_properties, 0, sizeof(g_android_properties));
+    platform_memset(g_android_properties, 0, sizeof(g_android_properties));
     g_android_vm_initialized = true;
     
     return 0;
@@ -89,18 +46,18 @@ AndroidVM* android_vm_create(android_arch_t arch) {
     }
     
     /* Allocate Android VM structure */
-    AndroidVM* vm = (AndroidVM*)simple_malloc(sizeof(AndroidVM));
+    AndroidVM* vm = (AndroidVM*)platform_malloc(sizeof(AndroidVM));
     if (!vm) {
         return NULL;
     }
     
     /* Initialize fields */
-    simple_memset(vm, 0, sizeof(AndroidVM));
+    platform_memset(vm, 0, sizeof(AndroidVM));
     
     /* Create underlying Aurora VM */
     vm->aurora_vm = aurora_vm_create();
     if (!vm->aurora_vm) {
-        simple_free(vm);
+        platform_free(vm);
         return NULL;
     }
     
@@ -123,7 +80,7 @@ AndroidVM* android_vm_create(android_arch_t arch) {
     vm->surfaceflinger = NULL;
     
     /* Set default kernel command line */
-    simple_strncpy(vm->kernel_cmdline, 
+    platform_strncpy(vm->kernel_cmdline, 
                    "console=ttyAMA0 androidboot.hardware=aurora androidboot.selinux=permissive", 
                    sizeof(vm->kernel_cmdline));
     
@@ -145,28 +102,28 @@ void android_vm_destroy(AndroidVM* vm) {
     /* Destroy Dalvik/ART VM */
     if (vm->dalvik_vm) {
         /* Note: dalvik_destroy would be called here */
-        simple_free(vm->dalvik_vm);
+        platform_free(vm->dalvik_vm);
     }
     
     /* Destroy Binder process */
     if (vm->binder_process) {
         /* Note: binder_destroy_process would be called here */
-        simple_free(vm->binder_process);
+        platform_free(vm->binder_process);
     }
     
     /* Free kernel image */
     if (vm->kernel_image) {
-        simple_free(vm->kernel_image);
+        platform_free(vm->kernel_image);
     }
     
     /* Free system image */
     if (vm->system_image) {
-        simple_free(vm->system_image);
+        platform_free(vm->system_image);
     }
     
     /* Free data image */
     if (vm->data_image) {
-        simple_free(vm->data_image);
+        platform_free(vm->data_image);
     }
     
     /* Destroy Aurora VM */
@@ -174,7 +131,7 @@ void android_vm_destroy(AndroidVM* vm) {
         aurora_vm_destroy(vm->aurora_vm);
     }
     
-    simple_free(vm);
+    platform_free(vm);
     
     if (g_android_vm_count > 0) {
         g_android_vm_count--;
@@ -188,17 +145,17 @@ int android_vm_load_kernel(AndroidVM* vm, const uint8_t* kernel_data, uint32_t s
     
     /* Free existing kernel image if any */
     if (vm->kernel_image) {
-        simple_free(vm->kernel_image);
+        platform_free(vm->kernel_image);
     }
     
     /* Allocate memory for kernel image */
-    vm->kernel_image = (uint8_t*)simple_malloc(size);
+    vm->kernel_image = (uint8_t*)platform_malloc(size);
     if (!vm->kernel_image) {
         return -1;
     }
     
     /* Copy kernel data */
-    simple_memcpy(vm->kernel_image, kernel_data, size);
+    platform_memcpy(vm->kernel_image, kernel_data, size);
     vm->kernel_size = size;
     
     /* TODO: Parse Android boot image header to find kernel entry point */
@@ -230,17 +187,17 @@ int android_vm_load_system(AndroidVM* vm, const uint8_t* system_data, uint32_t s
     
     /* Free existing system image if any */
     if (vm->system_image) {
-        simple_free(vm->system_image);
+        platform_free(vm->system_image);
     }
     
     /* Allocate memory for system image */
-    vm->system_image = (uint8_t*)simple_malloc(size);
+    vm->system_image = (uint8_t*)platform_malloc(size);
     if (!vm->system_image) {
         return -1;
     }
     
     /* Copy system data */
-    simple_memcpy(vm->system_image, system_data, size);
+    platform_memcpy(vm->system_image, system_data, size);
     vm->system_size = size;
     
     return 0;
@@ -253,17 +210,17 @@ int android_vm_load_data(AndroidVM* vm, const uint8_t* data_data, uint32_t size)
     
     /* Free existing data image if any */
     if (vm->data_image) {
-        simple_free(vm->data_image);
+        platform_free(vm->data_image);
     }
     
     /* Allocate memory for data image */
-    vm->data_image = (uint8_t*)simple_malloc(size);
+    vm->data_image = (uint8_t*)platform_malloc(size);
     if (!vm->data_image) {
         return -1;
     }
     
     /* Copy data */
-    simple_memcpy(vm->data_image, data_data, size);
+    platform_memcpy(vm->data_image, data_data, size);
     vm->data_size = size;
     
     return 0;
@@ -274,7 +231,7 @@ int android_vm_set_cmdline(AndroidVM* vm, const char* cmdline) {
         return -1;
     }
     
-    simple_strncpy(vm->kernel_cmdline, cmdline, sizeof(vm->kernel_cmdline));
+    platform_strncpy(vm->kernel_cmdline, cmdline, sizeof(vm->kernel_cmdline));
     
     return 0;
 }
@@ -481,9 +438,9 @@ int android_vm_set_property(AndroidVM* vm, const char* name, const char* value) 
     
     /* Check if property already exists */
     for (uint32_t i = 0; i < g_property_count; i++) {
-        if (simple_strcmp(g_android_properties[i].name, name) == 0) {
+        if (platform_strcmp(g_android_properties[i].name, name) == 0) {
             /* Update existing property */
-            simple_strncpy(g_android_properties[i].value, value, sizeof(g_android_properties[i].value));
+            platform_strncpy(g_android_properties[i].value, value, sizeof(g_android_properties[i].value));
             return 0;
         }
     }
@@ -493,8 +450,8 @@ int android_vm_set_property(AndroidVM* vm, const char* name, const char* value) 
         return -1; /* Property table full */
     }
     
-    simple_strncpy(g_android_properties[g_property_count].name, name, sizeof(g_android_properties[g_property_count].name));
-    simple_strncpy(g_android_properties[g_property_count].value, value, sizeof(g_android_properties[g_property_count].value));
+    platform_strncpy(g_android_properties[g_property_count].name, name, sizeof(g_android_properties[g_property_count].name));
+    platform_strncpy(g_android_properties[g_property_count].value, value, sizeof(g_android_properties[g_property_count].value));
     g_property_count++;
     
     return 0;
@@ -507,8 +464,8 @@ int android_vm_get_property(AndroidVM* vm, const char* name, char* value, uint32
     
     /* Search for property */
     for (uint32_t i = 0; i < g_property_count; i++) {
-        if (simple_strcmp(g_android_properties[i].name, name) == 0) {
-            simple_strncpy(value, g_android_properties[i].value, size);
+        if (platform_strcmp(g_android_properties[i].name, name) == 0) {
+            platform_strncpy(value, g_android_properties[i].value, size);
             return 0;
         }
     }

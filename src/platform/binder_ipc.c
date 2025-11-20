@@ -4,60 +4,7 @@
  */
 
 #include "../../include/platform/binder_ipc.h"
-
-/* Simple memory functions for freestanding environment */
-static void* simple_malloc(uint32_t size) {
-    /* Stub - in real implementation would use kernel allocator */
-    (void)size;
-    return (void*)0;
-}
-
-static void simple_free(void* ptr) {
-    /* Stub - in real implementation would use kernel allocator */
-    (void)ptr;
-}
-
-static void simple_memset(void* ptr, int value, uint32_t num) {
-    uint8_t* p = (uint8_t*)ptr;
-    for (uint32_t i = 0; i < num; i++) {
-        p[i] = (uint8_t)value;
-    }
-}
-
-static void simple_memcpy(void* dest, const void* src, uint32_t num) {
-    uint8_t* d = (uint8_t*)dest;
-    const uint8_t* s = (const uint8_t*)src;
-    for (uint32_t i = 0; i < num; i++) {
-        d[i] = s[i];
-    }
-}
-
-static uint32_t simple_strlen(const char* str) {
-    uint32_t len = 0;
-    while (str[len]) {
-        len++;
-    }
-    return len;
-}
-
-static int simple_strcmp(const char* s1, const char* s2) {
-    while (*s1 && (*s1 == *s2)) {
-        s1++;
-        s2++;
-    }
-    return *(const uint8_t*)s1 - *(const uint8_t*)s2;
-}
-
-static void simple_strncpy(char* dest, const char* src, uint32_t n) {
-    uint32_t i = 0;
-    while (i < n - 1 && src[i]) {
-        dest[i] = src[i];
-        i++;
-    }
-    if (i < n) {
-        dest[i] = '\0';
-    }
-}
+#include "../../include/platform/platform_util.h"
 
 /* Global Binder state */
 static binder_driver_t g_binder_driver;
@@ -72,13 +19,13 @@ int binder_init(void) {
     }
     
     /* Initialize driver */
-    simple_memset(&g_binder_driver, 0, sizeof(binder_driver_t));
+    platform_memset(&g_binder_driver, 0, sizeof(binder_driver_t));
     g_binder_driver.process_count = 0;
     g_binder_driver.context_mgr = (binder_process_t*)0;
     g_binder_driver.initialized = true;
     
     /* Initialize service manager */
-    simple_memset(&g_service_manager, 0, sizeof(service_manager_t));
+    platform_memset(&g_service_manager, 0, sizeof(service_manager_t));
     g_service_manager.service_count = 0;
     
     g_binder_initialized = true;
@@ -96,13 +43,13 @@ binder_process_t* binder_create_process(uint32_t pid) {
     }
     
     /* Allocate process state */
-    binder_process_t* process = (binder_process_t*)simple_malloc(sizeof(binder_process_t));
+    binder_process_t* process = (binder_process_t*)platform_malloc(sizeof(binder_process_t));
     if (!process) {
         return (binder_process_t*)0;
     }
     
     /* Initialize process */
-    simple_memset(process, 0, sizeof(binder_process_t));
+    platform_memset(process, 0, sizeof(binder_process_t));
     process->pid = pid;
     process->nodes = (binder_node_t*)0;
     process->next_handle = 1; /* Handle 0 is reserved for context manager */
@@ -124,14 +71,14 @@ void binder_destroy_process(binder_process_t* process) {
     binder_node_t* node = process->nodes;
     while (node) {
         binder_node_t* next = node->next;
-        simple_free(node);
+        platform_free(node);
         node = next;
     }
     
     /* Free all threads */
     for (uint32_t i = 0; i < process->thread_count; i++) {
         if (process->threads[i]) {
-            simple_free(process->threads[i]);
+            platform_free(process->threads[i]);
         }
     }
     
@@ -147,7 +94,7 @@ void binder_destroy_process(binder_process_t* process) {
         }
     }
     
-    simple_free(process);
+    platform_free(process);
 }
 
 binder_thread_t* binder_create_thread(binder_process_t* process, uint32_t tid) {
@@ -156,13 +103,13 @@ binder_thread_t* binder_create_thread(binder_process_t* process, uint32_t tid) {
     }
     
     /* Allocate thread state */
-    binder_thread_t* thread = (binder_thread_t*)simple_malloc(sizeof(binder_thread_t));
+    binder_thread_t* thread = (binder_thread_t*)platform_malloc(sizeof(binder_thread_t));
     if (!thread) {
         return (binder_thread_t*)0;
     }
     
     /* Initialize thread */
-    simple_memset(thread, 0, sizeof(binder_thread_t));
+    platform_memset(thread, 0, sizeof(binder_thread_t));
     thread->pid = process->pid;
     thread->tid = tid;
     thread->looper_registered = false;
@@ -181,13 +128,13 @@ uint32_t binder_new_node(binder_process_t* process, void* ptr, void* cookie) {
     }
     
     /* Allocate node */
-    binder_node_t* node = (binder_node_t*)simple_malloc(sizeof(binder_node_t));
+    binder_node_t* node = (binder_node_t*)platform_malloc(sizeof(binder_node_t));
     if (!node) {
         return 0;
     }
     
     /* Initialize node */
-    simple_memset(node, 0, sizeof(binder_node_t));
+    platform_memset(node, 0, sizeof(binder_node_t));
     node->handle = process->next_handle++;
     node->ptr = ptr;
     node->cookie = cookie;
@@ -305,7 +252,7 @@ void parcel_init(parcel_t* parcel) {
         return;
     }
     
-    simple_memset(parcel, 0, sizeof(parcel_t));
+    platform_memset(parcel, 0, sizeof(parcel_t));
     parcel->data_pos = 0;
     parcel->data_size = 0;
     parcel->objects_count = 0;
@@ -320,7 +267,7 @@ int parcel_write_data(parcel_t* parcel, const void* data, uint32_t size) {
         return -1; /* Not enough space */
     }
     
-    simple_memcpy(parcel->data + parcel->data_size, data, size);
+    platform_memcpy(parcel->data + parcel->data_size, data, size);
     parcel->data_size += size;
     
     return 0;
@@ -335,7 +282,7 @@ int parcel_read_data(parcel_t* parcel, void* data, uint32_t size) {
         return -1; /* Not enough data */
     }
     
-    simple_memcpy(data, parcel->data + parcel->data_pos, size);
+    platform_memcpy(data, parcel->data + parcel->data_pos, size);
     parcel->data_pos += size;
     
     return 0;
@@ -354,7 +301,7 @@ int parcel_write_string(parcel_t* parcel, const char* str) {
         return -1;
     }
     
-    uint32_t len = simple_strlen(str);
+    uint32_t len = platform_strlen(str);
     
     /* Write length */
     if (parcel_write_int32(parcel, (int32_t)len) != 0) {
@@ -435,7 +382,7 @@ int service_manager_add_service(const char* name, uint32_t handle) {
     
     /* Check if service already exists */
     for (uint32_t i = 0; i < g_service_manager.service_count; i++) {
-        if (simple_strcmp(g_service_manager.services[i].name, name) == 0) {
+        if (platform_strcmp(g_service_manager.services[i].name, name) == 0) {
             /* Update existing service */
             g_service_manager.services[i].handle = handle;
             return 0;
@@ -444,7 +391,7 @@ int service_manager_add_service(const char* name, uint32_t handle) {
     
     /* Add new service */
     service_entry_t* entry = &g_service_manager.services[g_service_manager.service_count++];
-    simple_strncpy(entry->name, name, sizeof(entry->name));
+    platform_strncpy(entry->name, name, sizeof(entry->name));
     entry->handle = handle;
     entry->allow_isolated = false;
     
@@ -458,7 +405,7 @@ uint32_t service_manager_get_service(const char* name) {
     
     /* Search for service */
     for (uint32_t i = 0; i < g_service_manager.service_count; i++) {
-        if (simple_strcmp(g_service_manager.services[i].name, name) == 0) {
+        if (platform_strcmp(g_service_manager.services[i].name, name) == 0) {
             return g_service_manager.services[i].handle;
         }
     }
@@ -477,7 +424,7 @@ uint32_t service_manager_list_services(char names[][128], uint32_t max_count) {
     
     uint32_t count = 0;
     for (uint32_t i = 0; i < g_service_manager.service_count && count < max_count; i++) {
-        simple_strncpy(names[count], g_service_manager.services[i].name, 128);
+        platform_strncpy(names[count], g_service_manager.services[i].name, 128);
         count++;
     }
     
