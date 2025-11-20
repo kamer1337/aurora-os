@@ -1,7 +1,7 @@
 # Aurora OS - Features
 
 **Version**: 1.0-RC1  
-**Last Updated**: November 19, 2025
+**Last Updated**: November 20, 2025
 
 ## Core Features
 
@@ -11,6 +11,18 @@
 - **Multiboot Support**: GRUB bootloader compatible
 - **Interrupt Handling**: Complete IDT with hardware and software interrupts
 - **System Calls**: Full syscall interface for user/kernel communication
+- **Aurora Linux Kernel**: Linux kernel v6.6 compatibility layer with Aurora enhancements
+
+### Aurora Linux Kernel Enhancement ⭐ NEW
+- **Linux Compatibility**: Full Linux kernel v6.6-Aurora compatibility layer
+- **Crystal-Kyber Encryption**: Post-quantum encryption (Kyber-512, Kyber-768, Kyber-1024)
+- **Performance Optimizations**: 5 optimization levels (None to Maximum)
+- **Module System**: Load and unload Linux kernel modules dynamically
+- **Quantum RNG**: Hardware quantum random number generation
+- **Memory Encryption**: Encrypt/decrypt memory regions at runtime
+- **Disk Encryption**: Full disk and partition encryption with Crystal-Kyber
+- **Security Hardening**: Kernel hardening, secure boot, exploit mitigation
+- **Syscall Mapping**: Linux syscall to Aurora OS syscall compatibility
 
 ### Memory Management
 - **Virtual Memory**: Paging with 4KB pages
