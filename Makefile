@@ -45,6 +45,7 @@ endif
 
 # Source files
 KERNEL_SOURCES = $(wildcard $(KERNEL_DIR)/core/*.c) \
+                 $(wildcard $(KERNEL_DIR)/core/winapi/*.c) \
                  $(wildcard $(KERNEL_DIR)/memory/*.c) \
                  $(wildcard $(KERNEL_DIR)/process/*.c) \
                  $(wildcard $(KERNEL_DIR)/drivers/*.c) \
@@ -81,6 +82,7 @@ all: directories $(KERNEL_BIN)
 
 directories:
 	@mkdir -p $(BUILD_DIR)/$(KERNEL_DIR)/core
+	@mkdir -p $(BUILD_DIR)/$(KERNEL_DIR)/core/winapi
 	@mkdir -p $(BUILD_DIR)/$(KERNEL_DIR)/memory
 	@mkdir -p $(BUILD_DIR)/$(KERNEL_DIR)/process
 	@mkdir -p $(BUILD_DIR)/$(KERNEL_DIR)/interrupt

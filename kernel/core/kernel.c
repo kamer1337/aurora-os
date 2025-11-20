@@ -7,6 +7,10 @@
 #include "kernel.h"
 #include "plugin.h"
 #include "nfr.h"
+#include "pe_loader.h"
+#include "dll_loader.h"
+#include "winapi/winapi.h"
+#include "winapi/kernel32.h"
 #include "../memory/memory.h"
 #include "../memory/paging.h"
 #include "../process/process.h"
@@ -30,6 +34,7 @@
 #include "../../tests/advanced_tests.h"
 #include "../../tests/plugin_tests.h"
 #include "../../tests/phase5_tests.h"
+#include "../../tests/pe_loader_tests.h"
 #include "../../tests/font_tests.h"
 #include "../../tests/nfr_tests.h"
 
@@ -167,6 +172,13 @@ void kernel_init(void) {
     usb_init();
     vga_write("USB subsystem initialized\n");
     
+    /* Initialize Windows binary support */
+    pe_loader_init();
+    dll_loader_init();
+    winapi_init();
+    kernel32_init();
+    vga_write("Windows binary support initialized\n");
+    
     /* Initialize Non-Functional Requirements monitoring */
     nfr_init();
     vga_write("NFR monitoring initialized\n");
@@ -240,6 +252,12 @@ void kernel_main(uint32_t magic, uint32_t multiboot_addr) {
     /* Run Phase 5 comprehensive tests */
     vga_write("\n=== Phase 5: Testing & Debugging ===\n");
     phase5_run_all_tests();
+    
+    /* Run Windows library support tests */
+    vga_write("\n=== Testing Windows Library Support ===\n");
+    run_pe_loader_tests();
+    run_dll_loader_tests();
+    run_winapi_tests();
     
     /* Run font tests */
     run_font_tests();
