@@ -53,6 +53,11 @@ const video_mode_t VIDEO_MODE_3840x2160_60 = {
     .bits_per_pixel = 32, .pitch = 3840 * 4, .interlaced = 0, .pixel_clock = 533280
 };
 
+const video_mode_t VIDEO_MODE_7680x4320_60 = {
+    .width = 7680, .height = 4320, .refresh_rate = 60,
+    .bits_per_pixel = 32, .pitch = 7680 * 4, .interlaced = 0, .pixel_clock = 1186560
+};
+
 /* Helper function to copy memory */
 static void memcpy_internal(void* dest, const void* src, size_t n) {
     uint8_t* d = (uint8_t*)dest;
@@ -380,6 +385,15 @@ int display_get_supported_modes(uint8_t display_id, video_mode_t* modes,
         }
         if (*count < max_modes) {
             memcpy_internal(&modes[(*count)++], &VIDEO_MODE_1920x1080_60, sizeof(video_mode_t));
+        }
+        if (*count < max_modes) {
+            memcpy_internal(&modes[(*count)++], &VIDEO_MODE_2560x1440_60, sizeof(video_mode_t));
+        }
+        if (*count < max_modes) {
+            memcpy_internal(&modes[(*count)++], &VIDEO_MODE_3840x2160_60, sizeof(video_mode_t));
+        }
+        if (*count < max_modes) {
+            memcpy_internal(&modes[(*count)++], &VIDEO_MODE_7680x4320_60, sizeof(video_mode_t));
         }
     }
     

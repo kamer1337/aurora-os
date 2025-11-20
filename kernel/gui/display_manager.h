@@ -404,5 +404,6 @@ extern const video_mode_t VIDEO_MODE_1280x1024_60;
 extern const video_mode_t VIDEO_MODE_1920x1080_60;
 extern const video_mode_t VIDEO_MODE_2560x1440_60;
 extern const video_mode_t VIDEO_MODE_3840x2160_60;
+extern const video_mode_t VIDEO_MODE_7680x4320_60;
 
 #endif // DISPLAY_MANAGER_H
