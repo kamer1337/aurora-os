@@ -29,9 +29,10 @@ Aurora OS features a modern desktop environment with advanced visual effects:
 - **Widget System**: Buttons, labels, panels, and interactive elements
 - **3D Visual Effects**: Enhanced shadows, vivid gradients, prominent rounded corners (12px radius), and alpha blending
 - **4D Animation System**: Smooth animations with 7 easing functions (linear, ease-in, ease-out, ease-in-out, bounce, elastic, back)
-- **5D Interactive Effects**: Particle systems, glow effects, and glass/blur effects
+- **5D Interactive Effects**: Particle systems, glow effects, and glass/blur effects with real-time icon interactions
+- **5D Icon System**: Interactive icons with hover glow effects, depth-based perspective scaling, alpha blending transitions, and particle emission on interaction
 - **Live Wallpaper System**: Optional 4D/5D spatial depth wallpaper with interactive parallax and animated nature scenes (trees, mountains, clouds, flowers)
-- **Desktop Environment**: Modular architecture with wallpaper support, taskbar, start menu, and context menus
+- **Desktop Environment**: Modular architecture with wallpaper support, taskbar, start menu, context menus, and interactive desktop icons
 - **Visual Design**: Modern UI with vivid colors, gradient window titles, and rounded interface elements
 - **Performance**: Software-rendered at ~125 FPS
 
@@ -87,6 +88,26 @@ Comprehensive photorealistic demonstration of all spatial depth and interactive 
 
 ![Aurora OS 4D/5D Showcase](screenshots/aurora-os-4d-5d-showcase.png)
 
+#### 5D Interactive Icon System
+
+Aurora OS features an advanced 5D interactive icon system with real-time visual feedback:
+
+**Icon Interaction Features:**
+- **Hover Glow Effects**: Icons emit photorealistic glow halos when hovered, with customizable color and intensity
+- **Depth-Based Perspective**: Desktop icons scale based on spatial depth (0.0-1.0 range), with foreground icons appearing larger and more prominent
+- **Alpha Blending Transitions**: Smooth transparency changes based on depth and interaction state
+- **Particle Emission**: Interactive icons can emit particle effects on click, creating dynamic visual feedback
+- **Glass Effect Integration**: System tray and quick launch icons utilize frosted glass backgrounds with blur
+- **Real-Time Highlighting**: Rounded rectangle highlights with configurable radius and color on hover state
+- **Shadow Rendering**: Multi-layer shadows with blur for enhanced depth perception
+- **Sprite Support**: Custom icon sprites with alpha channel support for detailed graphics
+
+**Implementation Details:**
+- Quick Launch icons: 5D glow effect with 2-pixel intensity on hover, rounded highlights with 6px radius
+- System Tray icons: 16x16 sprites with glass effect background, 3px rounded highlights
+- Desktop Icons: Perspective scaling (base 48x48), depth-aware alpha blending, multi-pass rendering (background to foreground)
+- All icons support click callbacks and tooltip displays with visual feedback
+
 The desktop environment includes:
 - Interactive start menu for launching applications
 - Taskbar showing running applications and system status
@@ -94,8 +115,11 @@ The desktop environment includes:
 - Customizable wallpaper and themes
 - Photorealistic 4D/5D spatial depth rendering with parallax layers
 - Real-time particle systems with volumetric lighting and interactive effects
+- Interactive desktop icons with 5D glow, perspective depth, and particle feedback
+- System tray icons with glass effects and hover highlighting
+- Quick launch bar with 5D icon interactions and smooth transitions
 
-*Note: The GUI requires proper VGA/VESA BIOS support. The screenshots above demonstrate the fully implemented GUI framework running on compatible hardware.*
+*Note: The GUI requires proper VGA/VESA BIOS support. The screenshots above demonstrate the fully implemented GUI framework running on compatible hardware. The 4D/5D spatial depth and effects screenshots (parallax depth, particle effects, glass blur, live wallpaper depth, and combined showcase) are captured at Full HD resolution (1920x1080) showcasing the advanced visual capabilities. Earlier screenshots (boot, desktop, windows, start menu, effects) are at standard resolutions demonstrating core functionality.*
 
 ---
 
@@ -393,8 +417,9 @@ The project is currently in **Release Candidate** status. We have completed all 
   - ✅ Enhanced 3D depth effects (shadows, vivid gradients, prominent rounded corners, alpha blending)
   - ✅ 4D animation system (7 easing functions, interpolation)
   - ✅ 5D interactive effects (particles, glow, glass effects)
+  - ✅ 5D interactive icon system (hover glow, depth perspective, particle emission, glass integration)
   - ✅ Performance-optimized rendering (~125 FPS software)
-  - ✅ Modular desktop environment (wallpaper, start menu, context menus, desktop modules)
+  - ✅ Modular desktop environment (wallpaper, start menu, context menus, desktop modules, interactive icons)
   - ✅ Modern visual design with vivid colors and gradient window titles
 - ✅ Completed Phase 5: Testing & Debugging
   - ✅ Comprehensive test framework with 25+ test cases
@@ -404,7 +429,7 @@ The project is currently in **Release Candidate** status. We have completed all 
   - ✅ Stress and stability testing (100+ allocations, 50+ file operations)
   - ✅ Error handling validation
 
-**Phase 4 Innovation**: Aurora OS now features a modern GUI with advanced visual effects that rival contemporary operating systems, demonstrating capabilities beyond traditional 2D interfaces with 3D spatial depth, 4D temporal animations, and 5D interactive effects. The desktop environment includes a functional start menu, context menus, and interactive taskbar.
+**Phase 4 Innovation**: Aurora OS now features a modern GUI with advanced visual effects that rival contemporary operating systems, demonstrating capabilities beyond traditional 2D interfaces with 3D spatial depth, 4D temporal animations, and 5D interactive effects. The desktop environment includes a functional start menu, context menus, interactive taskbar, and a comprehensive 5D icon system with real-time glow effects, depth-based perspective scaling, and particle feedback for enhanced user interaction.
 
 **Phase 5 Achievement**: Aurora OS has undergone comprehensive testing and validation, with all major subsystems verified for stability, performance, and reliability. The system is now ready for release candidate status.
 
