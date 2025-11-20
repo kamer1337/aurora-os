@@ -34,6 +34,8 @@ typedef enum {
     APP_MUSIC_PLAYER,   // New: Music Player
     APP_VIDEO_PLAYER,   // New: Video Player
     APP_GOALS_MANAGER,  // New: Long-Term Goals Manager
+    APP_SYSTEM_SETTINGS,// New: System Settings
+    APP_APP_STORE,      // New: Application Store
     APP_MAX
 } app_type_t;
 
