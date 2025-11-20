@@ -32,6 +32,8 @@
 #include "../../tests/phase5_tests.h"
 #include "../../tests/font_tests.h"
 #include "../../tests/nfr_tests.h"
+#include "../../tests/aurora_linux_kernel_tests.h"
+#include "aurora_linux_kernel.h"
 
 /* External plugin registration functions */
 extern void register_boot_diagnostic_plugin(void);
@@ -195,6 +197,32 @@ void kernel_init(void) {
     /* SECURITY: Audit plugin interference with quantum crypto */
     plugin_list_interference_flags();
     
+    /* Initialize Aurora Linux Kernel with enhancements */
+    vga_write("\n=== Initializing Aurora Linux Kernel ===\n");
+    aurora_linux_kernel_config_t linux_config = {
+        .kernel_features = KERNEL_FEATURE_SMP | 
+                          KERNEL_FEATURE_PREEMPT |
+                          KERNEL_FEATURE_MODULES |
+                          KERNEL_FEATURE_NETWORKING |
+                          KERNEL_FEATURE_FILESYSTEM |
+                          KERNEL_FEATURE_CRYPTO,
+        .optimization_level = AURORA_OPT_AGGRESSIVE,
+        .kyber_mode = KYBER_MODE_768,
+        .enable_quantum_rng = 1,
+        .enable_secure_boot = 1,
+        .enable_memory_encryption = 1,
+        .enable_network_encryption = 0,
+        .max_modules = 32,
+        .memory_limit_mb = 2048
+    };
+    
+    if (aurora_linux_kernel_init(&linux_config) == LINUX_COMPAT_SUCCESS) {
+        vga_write("Aurora Linux Kernel initialized successfully!\n");
+        aurora_kernel_print_info();
+    } else {
+        vga_write("WARNING: Aurora Linux Kernel initialization failed\n");
+    }
+    
     vga_write("\nAurora OS initialization complete!\n");
     
 #ifdef QUANTUM_CRYPTO_TESTS
@@ -253,6 +281,17 @@ void kernel_main(uint32_t magic, uint32_t multiboot_addr) {
     vga_write_dec(nfr_passed);
     vga_write(" passed, ");
     vga_write_dec(nfr_failed);
+    vga_write(" failed\n");
+    
+    /* Run Aurora Linux Kernel tests */
+    vga_write("\n=== Testing Aurora Linux Kernel ===\n");
+    run_aurora_linux_kernel_tests();
+    int linux_passed = 0, linux_failed = 0;
+    get_aurora_linux_kernel_test_results(&linux_passed, &linux_failed);
+    vga_write("Aurora Linux Kernel Tests: ");
+    vga_write_dec(linux_passed);
+    vga_write(" passed, ");
+    vga_write_dec(linux_failed);
     vga_write(" failed\n");
     
     /* Display NFR metrics report */
