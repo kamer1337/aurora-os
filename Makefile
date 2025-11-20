@@ -56,6 +56,8 @@ KERNEL_SOURCES = $(wildcard $(KERNEL_DIR)/core/*.c) \
                  $(wildcard $(KERNEL_DIR)/network/*.c) \
                  $(wildcard $(KERNEL_DIR)/usb/*.c)
 
+PLATFORM_SOURCES = $(filter-out src/platform/aurora_vm.c, $(wildcard src/platform/*.c))
+
 ASM_SOURCES = $(KERNEL_DIR)/core/boot.s
 
 VFS_SOURCES = $(wildcard $(FS_DIR)/vfs/*.c) \
@@ -67,11 +69,12 @@ TEST_SOURCES = $(filter-out $(TEST_DIR)/aurora_os_vm_integration_test.c $(TEST_D
 
 # Object files
 KERNEL_OBJECTS = $(patsubst %.c,$(BUILD_DIR)/%.o,$(KERNEL_SOURCES))
+PLATFORM_OBJECTS = $(patsubst %.c,$(BUILD_DIR)/%.o,$(PLATFORM_SOURCES))
 ASM_OBJECTS = $(patsubst %.s,$(BUILD_DIR)/%.o,$(ASM_SOURCES))
 VFS_OBJECTS = $(patsubst %.c,$(BUILD_DIR)/%.o,$(VFS_SOURCES))
 TEST_OBJECTS = $(patsubst %.c,$(BUILD_DIR)/%.o,$(TEST_SOURCES))
 
-ALL_OBJECTS = $(ASM_OBJECTS) $(KERNEL_OBJECTS) $(VFS_OBJECTS) $(TEST_OBJECTS)
+ALL_OBJECTS = $(ASM_OBJECTS) $(KERNEL_OBJECTS) $(PLATFORM_OBJECTS) $(VFS_OBJECTS) $(TEST_OBJECTS)
 
 # Output
 KERNEL_BIN = $(BUILD_DIR)/aurora-kernel.bin
@@ -92,6 +95,7 @@ directories:
 	@mkdir -p $(BUILD_DIR)/$(KERNEL_DIR)/smp
 	@mkdir -p $(BUILD_DIR)/$(KERNEL_DIR)/network
 	@mkdir -p $(BUILD_DIR)/$(KERNEL_DIR)/usb
+	@mkdir -p $(BUILD_DIR)/src/platform
 	@mkdir -p $(BUILD_DIR)/$(FS_DIR)/vfs
 	@mkdir -p $(BUILD_DIR)/$(FS_DIR)/ramdisk
 	@mkdir -p $(BUILD_DIR)/$(FS_DIR)/journal

@@ -4,9 +4,44 @@
  */
 
 #include "../../include/platform/aurora_vm.h"
-#include <stdlib.h>
-#include <string.h>
-#include <stdio.h>
+
+/* Simple memory functions for freestanding environment */
+static void* simple_malloc(uint32_t size) {
+    /* Stub - in real implementation would use kernel allocator */
+    (void)size;
+    return (void*)0;
+}
+
+static void simple_free(void* ptr) {
+    /* Stub - in real implementation would use kernel allocator */
+    (void)ptr;
+}
+
+static void simple_memset(void* ptr, int value, uint32_t num) {
+    uint8_t* p = (uint8_t*)ptr;
+    for (uint32_t i = 0; i < num; i++) {
+        p[i] = (uint8_t)value;
+    }
+}
+
+static void simple_memcpy(void* dest, const void* src, uint32_t num) {
+    uint8_t* d = (uint8_t*)dest;
+    const uint8_t* s = (const uint8_t*)src;
+    for (uint32_t i = 0; i < num; i++) {
+        d[i] = s[i];
+    }
+}
+
+static void simple_strncpy(char* dest, const char* src, uint32_t n) {
+    uint32_t i = 0;
+    while (i < n && src[i]) {
+        dest[i] = src[i];
+        i++;
+    }
+    if (i < n) {
+        dest[i] = '\0';
+    }
+}
 
 /* ===== Internal Helper Functions ===== */
 
@@ -270,7 +305,7 @@ static int handle_syscall(AuroraVM *vm) {
             }
             
             /* Initialize file descriptor */
-            strncpy(file->path, path, AURORA_VM_MAX_FILENAME - 1);
+            simple_strncpy(file->path, path, AURORA_VM_MAX_FILENAME - 1);
             file->path[AURORA_VM_MAX_FILENAME - 1] = '\0';
             file->offset = 0;
             file->mode = (uint8_t)mode;
@@ -317,7 +352,7 @@ static int handle_syscall(AuroraVM *vm) {
             
             /* Copy from storage to VM memory */
             if (available > 0) {
-                memcpy(&vm->memory[buf_addr], 
+                simple_memcpy(&vm->memory[buf_addr], 
                        &vm->storage.data[file->storage_offset + file->offset],
                        available);
                 file->offset += available;
@@ -350,7 +385,7 @@ static int handle_syscall(AuroraVM *vm) {
             
             /* Copy from VM memory to storage */
             if (count > 0) {
-                memcpy(&vm->storage.data[file->storage_offset + file->offset],
+                simple_memcpy(&vm->storage.data[file->storage_offset + file->offset],
                        &vm->memory[buf_addr],
                        count);
                 file->offset += count;
@@ -702,48 +737,48 @@ static int execute_instruction(AuroraVM *vm, uint32_t instruction) {
         case AURORA_OP_FADD: {
             decode_r_type(instruction, &rd, &rs1, &rs2);
             float f1, f2, result;
-            memcpy(&f1, &vm->cpu.registers[rs1], sizeof(float));
-            memcpy(&f2, &vm->cpu.registers[rs2], sizeof(float));
+            simple_memcpy(&f1, &vm->cpu.registers[rs1], sizeof(float));
+            simple_memcpy(&f2, &vm->cpu.registers[rs2], sizeof(float));
             result = f1 + f2;
-            memcpy(&vm->cpu.registers[rd], &result, sizeof(float));
+            simple_memcpy(&vm->cpu.registers[rd], &result, sizeof(float));
             break;
         }
         
         case AURORA_OP_FSUB: {
             decode_r_type(instruction, &rd, &rs1, &rs2);
             float f1, f2, result;
-            memcpy(&f1, &vm->cpu.registers[rs1], sizeof(float));
-            memcpy(&f2, &vm->cpu.registers[rs2], sizeof(float));
+            simple_memcpy(&f1, &vm->cpu.registers[rs1], sizeof(float));
+            simple_memcpy(&f2, &vm->cpu.registers[rs2], sizeof(float));
             result = f1 - f2;
-            memcpy(&vm->cpu.registers[rd], &result, sizeof(float));
+            simple_memcpy(&vm->cpu.registers[rd], &result, sizeof(float));
             break;
         }
         
         case AURORA_OP_FMUL: {
             decode_r_type(instruction, &rd, &rs1, &rs2);
             float f1, f2, result;
-            memcpy(&f1, &vm->cpu.registers[rs1], sizeof(float));
-            memcpy(&f2, &vm->cpu.registers[rs2], sizeof(float));
+            simple_memcpy(&f1, &vm->cpu.registers[rs1], sizeof(float));
+            simple_memcpy(&f2, &vm->cpu.registers[rs2], sizeof(float));
             result = f1 * f2;
-            memcpy(&vm->cpu.registers[rd], &result, sizeof(float));
+            simple_memcpy(&vm->cpu.registers[rd], &result, sizeof(float));
             break;
         }
         
         case AURORA_OP_FDIV: {
             decode_r_type(instruction, &rd, &rs1, &rs2);
             float f1, f2, result;
-            memcpy(&f1, &vm->cpu.registers[rs1], sizeof(float));
-            memcpy(&f2, &vm->cpu.registers[rs2], sizeof(float));
+            simple_memcpy(&f1, &vm->cpu.registers[rs1], sizeof(float));
+            simple_memcpy(&f2, &vm->cpu.registers[rs2], sizeof(float));
             result = f1 / f2;
-            memcpy(&vm->cpu.registers[rd], &result, sizeof(float));
+            simple_memcpy(&vm->cpu.registers[rd], &result, sizeof(float));
             break;
         }
         
         case AURORA_OP_FCMP: {
             decode_r_type(instruction, &rd, &rs1, &rs2);
             float f1, f2;
-            memcpy(&f1, &vm->cpu.registers[rs1], sizeof(float));
-            memcpy(&f2, &vm->cpu.registers[rs2], sizeof(float));
+            simple_memcpy(&f1, &vm->cpu.registers[rs1], sizeof(float));
+            simple_memcpy(&f2, &vm->cpu.registers[rs2], sizeof(float));
             /* Set flags based on comparison */
             vm->cpu.flags = 0;
             if (f1 == f2) vm->cpu.flags |= AURORA_FLAG_ZERO;
@@ -755,7 +790,7 @@ static int execute_instruction(AuroraVM *vm, uint32_t instruction) {
             decode_r_type(instruction, &rd, &rs1, &rs2);
             (void)rs2;  /* Unused for this operation */
             float result = (float)(int32_t)vm->cpu.registers[rs1];
-            memcpy(&vm->cpu.registers[rd], &result, sizeof(float));
+            simple_memcpy(&vm->cpu.registers[rd], &result, sizeof(float));
             break;
         }
         
@@ -763,7 +798,7 @@ static int execute_instruction(AuroraVM *vm, uint32_t instruction) {
             decode_r_type(instruction, &rd, &rs1, &rs2);
             (void)rs2;  /* Unused for this operation */
             float f;
-            memcpy(&f, &vm->cpu.registers[rs1], sizeof(float));
+            simple_memcpy(&f, &vm->cpu.registers[rs1], sizeof(float));
             vm->cpu.registers[rd] = (uint32_t)(int32_t)f;
             break;
         }
@@ -845,9 +880,9 @@ static int execute_instruction(AuroraVM *vm, uint32_t instruction) {
             addr = vm->cpu.registers[rs1];
             if (check_memory_access(vm, addr, 4, AURORA_PAGE_READ | AURORA_PAGE_WRITE)) {
                 uint32_t temp;
-                memcpy(&temp, &vm->memory[addr], 4);
+                simple_memcpy(&temp, &vm->memory[addr], 4);
                 vm->cpu.registers[rd] = temp;
-                memcpy(&vm->memory[addr], &vm->cpu.registers[rs2], 4);
+                simple_memcpy(&vm->memory[addr], &vm->cpu.registers[rs2], 4);
             } else {
                 return -1;
             }
@@ -858,9 +893,9 @@ static int execute_instruction(AuroraVM *vm, uint32_t instruction) {
             addr = vm->cpu.registers[rs1];
             if (check_memory_access(vm, addr, 4, AURORA_PAGE_READ | AURORA_PAGE_WRITE)) {
                 uint32_t current;
-                memcpy(&current, &vm->memory[addr], 4);
+                simple_memcpy(&current, &vm->memory[addr], 4);
                 if (current == vm->cpu.registers[rd]) {
-                    memcpy(&vm->memory[addr], &vm->cpu.registers[rs2], 4);
+                    simple_memcpy(&vm->memory[addr], &vm->cpu.registers[rs2], 4);
                     vm->cpu.registers[rd] = 1;  /* Success */
                 } else {
                     vm->cpu.registers[rd] = 0;  /* Failed */
@@ -875,10 +910,10 @@ static int execute_instruction(AuroraVM *vm, uint32_t instruction) {
             addr = vm->cpu.registers[rs1];
             if (check_memory_access(vm, addr, 4, AURORA_PAGE_READ | AURORA_PAGE_WRITE)) {
                 uint32_t old_value;
-                memcpy(&old_value, &vm->memory[addr], 4);
+                simple_memcpy(&old_value, &vm->memory[addr], 4);
                 vm->cpu.registers[rd] = old_value;
                 uint32_t new_value = old_value + vm->cpu.registers[rs2];
-                memcpy(&vm->memory[addr], &new_value, 4);
+                simple_memcpy(&vm->memory[addr], &new_value, 4);
             } else {
                 return -1;
             }
@@ -899,13 +934,13 @@ static int execute_instruction(AuroraVM *vm, uint32_t instruction) {
 /* ===== VM API Implementation ===== */
 
 AuroraVM *aurora_vm_create(void) {
-    AuroraVM *vm = (AuroraVM *)calloc(1, sizeof(AuroraVM));
+    AuroraVM *vm = (AuroraVM *)simple_malloc(1, sizeof(AuroraVM));
     if (!vm) return NULL;
     
     /* Allocate storage */
-    vm->storage.data = (uint8_t *)calloc(1, AURORA_VM_STORAGE_SIZE);
+    vm->storage.data = (uint8_t *)simple_malloc(1, AURORA_VM_STORAGE_SIZE);
     if (!vm->storage.data) {
-        free(vm);
+        simple_free(vm);
         return NULL;
     }
     vm->storage.size = AURORA_VM_STORAGE_SIZE;
@@ -917,15 +952,15 @@ int aurora_vm_init(AuroraVM *vm) {
     if (!vm) return -1;
     
     /* Initialize CPU */
-    memset(&vm->cpu, 0, sizeof(aurora_cpu_t));
+    simple_memset(&vm->cpu, 0, sizeof(aurora_cpu_t));
     vm->cpu.pc = 0;
     vm->cpu.sp = AURORA_VM_MEMORY_SIZE - 4;  /* Stack grows downward */
     vm->cpu.fp = vm->cpu.sp;
     vm->cpu.halted = false;
     
     /* Initialize memory - all pages invalid by default */
-    memset(vm->memory, 0, AURORA_VM_MEMORY_SIZE);
-    memset(vm->pages, 0, sizeof(vm->pages));
+    simple_memset(vm->memory, 0, AURORA_VM_MEMORY_SIZE);
+    simple_memset(vm->pages, 0, sizeof(vm->pages));
     
     /* Set up code section (first 16KB - read/execute) */
     for (uint32_t i = 0; i < 64; i++) {
@@ -946,32 +981,32 @@ int aurora_vm_init(AuroraVM *vm) {
     }
     
     /* Initialize devices */
-    memset(&vm->display, 0, sizeof(aurora_display_t));
-    memset(&vm->keyboard, 0, sizeof(aurora_keyboard_t));
-    memset(&vm->mouse, 0, sizeof(aurora_mouse_t));
+    simple_memset(&vm->display, 0, sizeof(aurora_display_t));
+    simple_memset(&vm->keyboard, 0, sizeof(aurora_keyboard_t));
+    simple_memset(&vm->mouse, 0, sizeof(aurora_mouse_t));
     
     vm->timer.ticks = 0;
     vm->timer.frequency = AURORA_VM_TIMER_FREQ;
     
-    memset(vm->storage.data, 0, vm->storage.size);
+    simple_memset(vm->storage.data, 0, vm->storage.size);
     
     /* Initialize network device */
-    memset(&vm->network, 0, sizeof(aurora_network_t));
+    simple_memset(&vm->network, 0, sizeof(aurora_network_t));
     vm->network.connected = false;
     
     /* Initialize file system */
-    memset(&vm->filesystem, 0, sizeof(aurora_filesystem_t));
+    simple_memset(&vm->filesystem, 0, sizeof(aurora_filesystem_t));
     vm->filesystem.storage_used = 0;
     for (uint32_t i = 0; i < AURORA_VM_MAX_FILES; i++) {
         vm->filesystem.files[i].open = false;
     }
     
     /* Initialize interrupt controller */
-    memset(&vm->irq_ctrl, 0, sizeof(aurora_irq_ctrl_t));
+    simple_memset(&vm->irq_ctrl, 0, sizeof(aurora_irq_ctrl_t));
     vm->irq_ctrl.enabled = false;
     
     /* Initialize scheduler */
-    memset(&vm->scheduler, 0, sizeof(aurora_scheduler_t));
+    simple_memset(&vm->scheduler, 0, sizeof(aurora_scheduler_t));
     vm->scheduler.current = 0;
     vm->scheduler.count = 1;  /* Main thread */
     vm->scheduler.threads[0].id = 0;
@@ -979,7 +1014,7 @@ int aurora_vm_init(AuroraVM *vm) {
     vm->scheduler.threads[0].waiting = false;
     
     /* Initialize JIT compiler */
-    memset(&vm->jit, 0, sizeof(aurora_jit_t));
+    simple_memset(&vm->jit, 0, sizeof(aurora_jit_t));
     vm->jit.enabled = AURORA_VM_JIT_ENABLED;
     vm->jit.cache_size = AURORA_VM_JIT_CACHE_SIZE;
     vm->jit.cache_used = 0;
@@ -987,16 +1022,16 @@ int aurora_vm_init(AuroraVM *vm) {
     
     /* Allocate JIT cache if JIT is enabled */
     if (vm->jit.enabled) {
-        vm->jit.cache = (uint8_t *)malloc(vm->jit.cache_size);
+        vm->jit.cache = (uint8_t *)simple_malloc(vm->jit.cache_size);
         if (vm->jit.cache) {
-            memset(vm->jit.cache, 0, vm->jit.cache_size);
+            simple_memset(vm->jit.cache, 0, vm->jit.cache_size);
         }
     } else {
         vm->jit.cache = NULL;
     }
     
     /* Initialize GDB server */
-    memset(&vm->gdb, 0, sizeof(aurora_gdb_server_t));
+    simple_memset(&vm->gdb, 0, sizeof(aurora_gdb_server_t));
     vm->gdb.enabled = false;
     vm->gdb.connected = false;
     vm->gdb.socket_fd = -1;
@@ -1019,14 +1054,14 @@ void aurora_vm_destroy(AuroraVM *vm) {
     if (!vm) return;
     
     if (vm->storage.data) {
-        free(vm->storage.data);
+        simple_free(vm->storage.data);
     }
     
     if (vm->jit.cache) {
-        free(vm->jit.cache);
+        simple_free(vm->jit.cache);
     }
     
-    free(vm);
+    simple_free(vm);
 }
 
 int aurora_vm_load_program(AuroraVM *vm, const uint8_t *program, size_t size, uint32_t addr) {
@@ -1041,7 +1076,7 @@ int aurora_vm_load_program(AuroraVM *vm, const uint8_t *program, size_t size, ui
         if (!(vm->pages[page].protection & AURORA_PAGE_PRESENT)) return -1;
     }
     
-    memcpy(&vm->memory[addr], program, size);
+    simple_memcpy(&vm->memory[addr], program, size);
     return 0;
 }
 
@@ -1118,7 +1153,7 @@ int aurora_vm_step(AuroraVM *vm) {
                 /* Dispatch interrupt - save state and jump to handler */
                 vm->cpu.sp -= 4;
                 if (check_memory_access(vm, vm->cpu.sp, 4, AURORA_PAGE_WRITE)) {
-                    memcpy(&vm->memory[vm->cpu.sp], &vm->cpu.pc, 4);
+                    simple_memcpy(&vm->memory[vm->cpu.sp], &vm->cpu.pc, 4);
                     vm->cpu.pc = vm->irq_ctrl.interrupts[i].handler;
                     vm->irq_ctrl.interrupts[i].pending = false;
                     vm->irq_ctrl.active &= ~(1 << i);
@@ -1159,13 +1194,13 @@ int aurora_vm_read_memory(const AuroraVM *vm, uint32_t addr, size_t size, void *
         /* MMIO read - dispatch to device handlers */
         /* For now, we return zeros for MMIO reads */
         /* Devices are typically accessed via syscalls */
-        memset(buffer, 0, size);
+        simple_memset(buffer, 0, size);
         return (int)size;
     }
     
     if (!check_memory_access(vm, addr, size, AURORA_PAGE_READ)) return -1;
     
-    memcpy(buffer, &vm->memory[addr], size);
+    simple_memcpy(buffer, &vm->memory[addr], size);
     return (int)size;
 }
 
@@ -1182,7 +1217,7 @@ int aurora_vm_write_memory(AuroraVM *vm, uint32_t addr, size_t size, const void 
     
     if (!check_memory_access(vm, addr, size, AURORA_PAGE_WRITE)) return -1;
     
-    memcpy(&vm->memory[addr], buffer, size);
+    simple_memcpy(&vm->memory[addr], buffer, size);
     return (int)size;
 }
 
@@ -1478,7 +1513,7 @@ int aurora_vm_storage_read(const AuroraVM *vm, uint32_t offset, void *buffer, si
     if (!vm || !buffer) return -1;
     if (offset + size > vm->storage.size) return -1;
     
-    memcpy(buffer, &vm->storage.data[offset], size);
+    simple_memcpy(buffer, &vm->storage.data[offset], size);
     return (int)size;
 }
 
@@ -1486,7 +1521,7 @@ int aurora_vm_storage_write(AuroraVM *vm, uint32_t offset, const void *buffer, s
     if (!vm || !buffer) return -1;
     if (offset + size > vm->storage.size) return -1;
     
-    memcpy(&vm->storage.data[offset], buffer, size);
+    simple_memcpy(&vm->storage.data[offset], buffer, size);
     return (int)size;
 }
 
@@ -1524,7 +1559,7 @@ int aurora_vm_net_send(AuroraVM *vm, const uint8_t *data, uint32_t length) {
     uint32_t next = (vm->network.tx_head + 1) % AURORA_VM_NET_QUEUE_SIZE;
     if (next == vm->network.tx_tail) return -1;  /* Queue full */
     
-    memcpy(vm->network.tx_queue[vm->network.tx_head].data, data, length);
+    simple_memcpy(vm->network.tx_queue[vm->network.tx_head].data, data, length);
     vm->network.tx_queue[vm->network.tx_head].length = length;
     vm->network.tx_head = next;
     
@@ -1541,7 +1576,7 @@ int aurora_vm_net_recv(AuroraVM *vm, uint8_t *buffer, uint32_t max_length) {
     uint32_t length = vm->network.rx_queue[vm->network.rx_tail].length;
     if (length > max_length) length = max_length;
     
-    memcpy(buffer, vm->network.rx_queue[vm->network.rx_tail].data, length);
+    simple_memcpy(buffer, vm->network.rx_queue[vm->network.rx_tail].data, length);
     vm->network.rx_tail = (vm->network.rx_tail + 1) % AURORA_VM_NET_QUEUE_SIZE;
     
     return (int)length;
@@ -1560,7 +1595,7 @@ int aurora_vm_thread_create(AuroraVM *vm, uint32_t entry_point, uint32_t arg) {
     uint32_t tid = vm->scheduler.count++;
     aurora_thread_t *thread = &vm->scheduler.threads[tid];
     
-    memset(thread, 0, sizeof(aurora_thread_t));
+    simple_memset(thread, 0, sizeof(aurora_thread_t));
     thread->id = tid;
     thread->active = true;
     thread->waiting = false;
@@ -1585,7 +1620,7 @@ void aurora_vm_thread_yield(AuroraVM *vm) {
     aurora_thread_t *curr_thread = &vm->scheduler.threads[current];
     
     if (curr_thread->active) {
-        memcpy(curr_thread->registers, vm->cpu.registers, sizeof(vm->cpu.registers));
+        simple_memcpy(curr_thread->registers, vm->cpu.registers, sizeof(vm->cpu.registers));
         curr_thread->pc = vm->cpu.pc;
         curr_thread->sp = vm->cpu.sp;
         curr_thread->fp = vm->cpu.fp;
@@ -1605,7 +1640,7 @@ void aurora_vm_thread_yield(AuroraVM *vm) {
     vm->scheduler.current = next;
     aurora_thread_t *next_thread = &vm->scheduler.threads[next];
     
-    memcpy(vm->cpu.registers, next_thread->registers, sizeof(vm->cpu.registers));
+    simple_memcpy(vm->cpu.registers, next_thread->registers, sizeof(vm->cpu.registers));
     vm->cpu.pc = next_thread->pc;
     vm->cpu.sp = next_thread->sp;
     vm->cpu.fp = next_thread->fp;
@@ -1620,9 +1655,9 @@ void aurora_vm_jit_enable(AuroraVM *vm, bool enabled) {
     
     if (enabled && !vm->jit.cache) {
         /* Lazy allocate JIT cache */
-        vm->jit.cache = (uint8_t *)malloc(vm->jit.cache_size);
+        vm->jit.cache = (uint8_t *)simple_malloc(vm->jit.cache_size);
         if (vm->jit.cache) {
-            memset(vm->jit.cache, 0, vm->jit.cache_size);
+            simple_memset(vm->jit.cache, 0, vm->jit.cache_size);
         }
     }
 }
@@ -1648,11 +1683,11 @@ void aurora_vm_jit_clear_cache(AuroraVM *vm) {
     if (!vm) return;
     
     if (vm->jit.cache) {
-        memset(vm->jit.cache, 0, vm->jit.cache_size);
+        simple_memset(vm->jit.cache, 0, vm->jit.cache_size);
     }
     vm->jit.cache_used = 0;
     vm->jit.num_blocks = 0;
-    memset(vm->jit.blocks, 0, sizeof(vm->jit.blocks));
+    simple_memset(vm->jit.blocks, 0, sizeof(vm->jit.blocks));
 }
 
 /* ===== GDB Server API Implementation ===== */
