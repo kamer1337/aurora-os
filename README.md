@@ -202,16 +202,55 @@ The desktop environment includes:
   - **Start Menu**: Central hub for launching apps, settings, and search.
   - **Taskbar**: Shows running applications, system tray, and quick access tools.
   - **Window Management**: Snap layouts, virtual desktops, and smooth animations.
+  - **Virtual Workspaces**: 4 configurable workspaces with OS type selection (Aurora OS or Linux VM)
+  - **Linux VM Support**: Run Linux workloads in dedicated workspaces with syscall emulation
 
 ---
 
-## **6. Development Roadmap**
+## **6. New Features: Linux VM and Workspace Selection**
+
+Aurora OS now includes advanced workspace and virtualization features:
+
+### **Workspace OS Selection**
+- Each virtual workspace can run either native Aurora OS or Linux VM
+- Visual indicators show OS type (blue for Aurora OS, orange for Linux VM)
+- Easy switching between workspace types via UI selector
+- Automatic workspace naming based on OS type
+
+### **Linux Kernel Virtual Machine**
+- Built on Aurora VM infrastructure
+- Linux kernel image loading and execution
+- Basic Linux syscall emulation (exit, read, write, open, close, getpid, brk, mmap)
+- Initial ramdisk (initrd) support
+- Configurable kernel command line
+- VM state management (start, pause, resume, stop)
+
+### **Linux Installer**
+- User-friendly GUI for Linux distribution installation
+- Pre-configured distributions:
+  - Tiny Linux 1.0 (50 MB) - Available
+  - Aurora Linux 1.0 (100 MB) - Available
+  - Debian Minimal, Alpine Linux - Coming Soon
+- Progress tracking and status reporting
+
+### **Enhanced Boot Menu**
+- Multiple boot options via GRUB
+- Aurora OS standard and safe mode
+- Aurora OS with Linux VM support enabled
+- Direct Linux kernel boot via Aurora VM
+- Linux installer access (coming soon)
+
+For detailed documentation, see **[Linux VM Features Guide](docs/LINUX_VM_FEATURES.md)**.
+
+---
+
+## **7. Development Roadmap**
 
 > **📋 For detailed next steps and long-term vision, see [ROADMAP.md](ROADMAP.md)**
 
 This section shows the historical development phases (completed). For future plans, prioritized tasks, and strategic direction, refer to the comprehensive **[Next Steps Roadmap](ROADMAP.md)**.
 
-### **6.1 High-Level Timeline (Completed Phases)**
+### **7.1 High-Level Timeline (Completed Phases)**
 
 | **Phase** | **Timeline** | **Key Tasks** | **Milestones** |
 |---------|--------------|----------------|----------------|
@@ -221,7 +260,7 @@ This section shows the historical development phases (completed). For future pla
 | **Phase 4: User Interface** | Q3–Q4 2025 | • Build GUI framework<br>• Implement Start Menu & Taskbar | • Q3 2025: Functional desktop UI<br>• Q4 2025: Polished UX with core shell features |
 | **Phase 5: Testing & Debugging** | Q1 2026 | • End-to-end system testing<br>• Bug fixes, performance tuning, stability validation | • Q1 2026: Release candidate ready |
 
-### **6.2 Immediate Action Items (Current Sprint)**
+### **7.2 Immediate Action Items (Current Sprint)**
 
 #### **Project Foundation Setup**
 - [x] Create project documentation (README.md)
@@ -256,7 +295,7 @@ This section shows the historical development phases (completed). For future pla
 - [x] Add journaling support
 - [x] Develop file system integrity checks
 
-### **6.3 Current Status**
+### **7.3 Current Status**
 
 **Completed:**
 - ✅ Project planning and documentation
@@ -280,6 +319,7 @@ This section shows the historical development phases (completed). For future pla
   - ✅ 5D interactive effects (particles, glow, glass)
   - ✅ Advanced visual effects demo
   - ✅ Desktop environment integration (wallpaper, start menu, context menus)
+  - ✅ Virtual workspaces with OS type selection
 - ✅ Phase 5: Testing & Debugging
   - ✅ Comprehensive test framework
   - ✅ End-to-end system testing
@@ -289,6 +329,26 @@ This section shows the historical development phases (completed). For future pla
   - ✅ Error handling validation
 
 **Latest Features:**
+- ✅ Workspace OS Selection System
+  - ✅ Configurable workspace types (Aurora OS vs Linux VM)
+  - ✅ Visual OS type indicators in workspace switcher
+  - ✅ OS selector UI with interactive buttons
+  - ✅ Automatic workspace naming based on OS type
+- ✅ Linux Kernel Virtual Machine Support
+  - ✅ Linux VM infrastructure and API
+  - ✅ Kernel image loading and management
+  - ✅ Basic Linux syscall emulation layer
+  - ✅ VM state management (start, pause, resume, stop)
+  - ✅ Initrd support and kernel command line configuration
+- ✅ Linux Installer System
+  - ✅ GUI installer with distribution selection
+  - ✅ Multiple pre-configured Linux distributions
+  - ✅ Installation progress tracking
+  - ✅ Status reporting and error handling
+- ✅ Enhanced GRUB Boot Menu
+  - ✅ Multiple boot options including Linux VM modes
+  - ✅ Graphics mode selection (1920x1080, 800x600, text mode)
+  - ✅ Extended timeout for option selection
 - ✅ Aurora VM v2.0 - Enhanced 32-bit RISC virtual machine
   - ✅ 49 opcodes (33 original + 16 extensions)
   - ✅ Instruction set extensions: Floating-point (8), SIMD (4), Atomic (4)
@@ -316,6 +376,11 @@ This section shows the historical development phases (completed). For future pla
   - ✅ GitHub issue templates prepared in AURORA_VM_GITHUB_ISSUES.md
 
 **Next Up:**
+- ⏭️ Complete Linux boot protocol implementation
+- ⏭️ Expand Linux syscall table for broader compatibility
+- ⏭️ Implement file system persistence for Linux workspaces
+- ⏭️ Add network bridge between Linux VM and Aurora OS
+- ⏭️ Integrate X11/Wayland display server support
 - ⏭️ Complete JIT code generation backend (infrastructure in place, native code generation pending)
 - ⏭️ Complete GDB server socket implementation (infrastructure in place, network support pending)
 - ⏭️ Implement file system operations (currently documented as known limitation)
@@ -323,13 +388,21 @@ This section shows the historical development phases (completed). For future pla
 
 ---
 
-## **7. Summary**
+## **8. Summary**
 
-**Aurora OS** is an ambitious project to build a next-generation operating system that combines the familiarity of Windows with the efficiency, security, and modularity of modern OS design principles. By leveraging a microkernel architecture, journaling file system, and a user-centric interface, Aurora OS aims to set a new standard for desktop and embedded computing environments.
+**Aurora OS** is an ambitious project to build a next-generation operating system that combines the familiarity of Windows with the efficiency, security, and modularity of modern OS design principles. By leveraging a microkernel architecture, journaling file system, user-centric interface, and now **Linux VM integration**, Aurora OS aims to set a new standard for desktop and embedded computing environments.
+
+**Key Innovations:**
+- Advanced 3D/4D/5D visual effects and animations
+- Quantum cryptography integration for security
+- Virtual workspace management with OS selection
+- Linux kernel virtual machine support
+- Comprehensive plugin system for extensibility
+- Aurora VM for application virtualization
 
 ---
 
-## **8. Getting Started**
+## **9. Getting Started**
 
 ### **Documentation**
 
@@ -337,6 +410,7 @@ For comprehensive documentation, see **[DOCUMENTATION_INDEX.md](DOCUMENTATION_IN
 
 **Quick Links:**
 - **[Next Steps Roadmap](ROADMAP.md)** - Future plans and development priorities ⭐
+- **[Linux VM Features](docs/LINUX_VM_FEATURES.md)** - Workspace OS selection and Linux VM guide ⭐ NEW
 - **[Getting Started Guide](docs/GETTING_STARTED.md)** - Setup development environment and build instructions
 - **[TODO List](TODO.md)** - Current tasks and priorities
 - **[Implementation Summary](IMPLEMENTATION_SUMMARY.md)** - Overall project statistics
