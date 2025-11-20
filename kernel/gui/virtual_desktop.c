@@ -219,9 +219,18 @@ void vdesktop_show_switcher(void) {
         framebuffer_draw_string(btn_x + 10, btn_y + 20, g_workspaces[i].name, title_color, (color_t){0, 0, 0, 0});
         
         // OS type indicator
-        const char* os_label = (g_workspaces[i].os_type == WORKSPACE_OS_LINUX) ? "Linux VM" : "Aurora OS";
-        color_t os_color = (g_workspaces[i].os_type == WORKSPACE_OS_LINUX) ? 
-            (color_t){255, 200, 100, 255} : (color_t){100, 200, 255, 255};
+        const char* os_label;
+        color_t os_color;
+        if (g_workspaces[i].os_type == WORKSPACE_OS_LINUX) {
+            os_label = "Linux VM";
+            os_color = (color_t){255, 200, 100, 255}; // Orange for Linux
+        } else if (g_workspaces[i].os_type == WORKSPACE_OS_ANDROID) {
+            os_label = "Android VM";
+            os_color = (color_t){150, 255, 150, 255}; // Green for Android
+        } else {
+            os_label = "Aurora OS";
+            os_color = (color_t){100, 200, 255, 255}; // Blue for Aurora
+        }
         framebuffer_draw_string(btn_x + 10, btn_y + 40, os_label, os_color, (color_t){0, 0, 0, 0});
         
         // Window count
@@ -282,6 +291,14 @@ int vdesktop_set_os_type(uint8_t workspace_id, workspace_os_type_t os_type) {
         }
         g_workspaces[workspace_id].name[6] = '1' + workspace_id;
         g_workspaces[workspace_id].name[7] = '\0';
+    } else if (os_type == WORKSPACE_OS_ANDROID) {
+        // Update name to indicate Android workspace
+        const char* android_prefix = "Android ";
+        for (int i = 0; i < 8; i++) {
+            g_workspaces[workspace_id].name[i] = android_prefix[i];
+        }
+        g_workspaces[workspace_id].name[8] = '1' + workspace_id;
+        g_workspaces[workspace_id].name[9] = '\0';
     } else {
         // Reset to default Aurora OS name
         const char* aurora_prefix = "Workspace ";
@@ -320,8 +337,8 @@ void vdesktop_show_os_selector(uint8_t workspace_id) {
     int screen_w = framebuffer_get_info()->width;
     int screen_h = framebuffer_get_info()->height;
     
-    int selector_w = 500;
-    int selector_h = 300;
+    int selector_w = 700;
+    int selector_h = 350;
     int selector_x = (screen_w - selector_w) / 2;
     int selector_y = (screen_h - selector_h) / 2;
     
@@ -349,31 +366,40 @@ void vdesktop_show_os_selector(uint8_t workspace_id) {
     framebuffer_draw_string(selector_x + 20, selector_y + 50, ws_info, info_color, (color_t){0, 0, 0, 0});
     
     // Aurora OS option button
-    int btn_w = 200;
+    int btn_w = 180;
     int btn_h = 60;
     int btn_y = selector_y + 100;
-    int aurora_btn_x = selector_x + 50;
+    int aurora_btn_x = selector_x + 30;
     
     color_t aurora_btn_color = (g_workspaces[workspace_id].os_type == WORKSPACE_OS_AURORA) ?
         (color_t){80, 150, 220, 255} : (color_t){50, 50, 70, 255};
     framebuffer_draw_rect(aurora_btn_x, btn_y, btn_w, btn_h, aurora_btn_color);
     framebuffer_draw_rect_outline(aurora_btn_x, btn_y, btn_w, btn_h, border);
-    framebuffer_draw_string(aurora_btn_x + 40, btn_y + 20, "Aurora OS", title_color, (color_t){0, 0, 0, 0});
+    framebuffer_draw_string(aurora_btn_x + 30, btn_y + 20, "Aurora OS", title_color, (color_t){0, 0, 0, 0});
     
     // Linux VM option button
-    int linux_btn_x = selector_x + 250;
+    int linux_btn_x = selector_x + 230;
     
     color_t linux_btn_color = (g_workspaces[workspace_id].os_type == WORKSPACE_OS_LINUX) ?
         (color_t){220, 150, 80, 255} : (color_t){50, 50, 70, 255};
     framebuffer_draw_rect(linux_btn_x, btn_y, btn_w, btn_h, linux_btn_color);
     framebuffer_draw_rect_outline(linux_btn_x, btn_y, btn_w, btn_h, border);
-    framebuffer_draw_string(linux_btn_x + 40, btn_y + 20, "Linux VM", title_color, (color_t){0, 0, 0, 0});
+    framebuffer_draw_string(linux_btn_x + 30, btn_y + 20, "Linux VM", title_color, (color_t){0, 0, 0, 0});
+    
+    // Android VM option button
+    int android_btn_x = selector_x + 430;
+    
+    color_t android_btn_color = (g_workspaces[workspace_id].os_type == WORKSPACE_OS_ANDROID) ?
+        (color_t){120, 220, 120, 255} : (color_t){50, 50, 70, 255};
+    framebuffer_draw_rect(android_btn_x, btn_y, btn_w, btn_h, android_btn_color);
+    framebuffer_draw_rect_outline(android_btn_x, btn_y, btn_w, btn_h, border);
+    framebuffer_draw_string(android_btn_x + 20, btn_y + 20, "Android VM", title_color, (color_t){0, 0, 0, 0});
     
     // Description text
     const char* desc = "Choose the operating system type for this workspace";
     framebuffer_draw_string(selector_x + 30, selector_y + 200, desc, info_color, (color_t){0, 0, 0, 0});
     
     // Instructions
-    const char* instr = "Press 1 for Aurora OS, 2 for Linux VM, ESC to cancel";
-    framebuffer_draw_string(selector_x + 20, selector_y + 250, instr, (color_t){150, 150, 150, 255}, (color_t){0, 0, 0, 0});
+    const char* instr = "Press 1 for Aurora, 2 for Linux, 3 for Android, ESC to cancel";
+    framebuffer_draw_string(selector_x + 20, selector_y + 270, instr, (color_t){150, 150, 150, 255}, (color_t){0, 0, 0, 0});
 }
