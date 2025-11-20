@@ -24,6 +24,7 @@ int vdesktop_init(void) {
     for (int i = 0; i < MAX_WORKSPACES; i++) {
         g_workspaces[i].id = i;
         g_workspaces[i].active = 0;
+        g_workspaces[i].os_type = WORKSPACE_OS_AURORA;  // Default to Aurora OS
         g_workspaces[i].window_count = 0;
         
         // Default names
@@ -177,7 +178,7 @@ void vdesktop_show_switcher(void) {
     int screen_h = framebuffer_get_info()->height;
     
     int switcher_w = 600;
-    int switcher_h = 200;
+    int switcher_h = 250;
     int switcher_x = (screen_w - switcher_w) / 2;
     int switcher_y = (screen_h - switcher_h) / 2;
     
@@ -195,7 +196,7 @@ void vdesktop_show_switcher(void) {
     
     // Draw workspace buttons
     int btn_w = 120;
-    int btn_h = 80;
+    int btn_h = 100;
     int spacing = 20;
     int start_x = switcher_x + 40;
     int btn_y = switcher_y + 70;
@@ -215,7 +216,13 @@ void vdesktop_show_switcher(void) {
         framebuffer_draw_rect_outline(btn_x, btn_y, btn_w, btn_h, border);
         
         // Workspace name
-        framebuffer_draw_string(btn_x + 10, btn_y + 30, g_workspaces[i].name, title_color, (color_t){0, 0, 0, 0});
+        framebuffer_draw_string(btn_x + 10, btn_y + 20, g_workspaces[i].name, title_color, (color_t){0, 0, 0, 0});
+        
+        // OS type indicator
+        const char* os_label = (g_workspaces[i].os_type == WORKSPACE_OS_LINUX) ? "Linux VM" : "Aurora OS";
+        color_t os_color = (g_workspaces[i].os_type == WORKSPACE_OS_LINUX) ? 
+            (color_t){255, 200, 100, 255} : (color_t){100, 200, 255, 255};
+        framebuffer_draw_string(btn_x + 10, btn_y + 40, os_label, os_color, (color_t){0, 0, 0, 0});
         
         // Window count
         char count_text[16];
@@ -229,7 +236,7 @@ void vdesktop_show_switcher(void) {
         count_text[7] = '\0';
         
         color_t count_color = {180, 180, 180, 255};
-        framebuffer_draw_string(btn_x + 10, btn_y + 50, count_text, count_color, (color_t){0, 0, 0, 0});
+        framebuffer_draw_string(btn_x + 10, btn_y + 70, count_text, count_color, (color_t){0, 0, 0, 0});
     }
 }
 
@@ -253,4 +260,120 @@ int vdesktop_handle_shortcut(uint32_t key) {
         default:
             return 0;
     }
+}
+
+int vdesktop_set_os_type(uint8_t workspace_id, workspace_os_type_t os_type) {
+    if (!g_initialized) {
+        vdesktop_init();
+    }
+    
+    if (workspace_id >= MAX_WORKSPACES) {
+        return -1;
+    }
+    
+    g_workspaces[workspace_id].os_type = os_type;
+    
+    // Update workspace name to reflect OS type
+    if (os_type == WORKSPACE_OS_LINUX) {
+        // Update name to indicate Linux workspace
+        const char* linux_prefix = "Linux ";
+        for (int i = 0; i < 6; i++) {
+            g_workspaces[workspace_id].name[i] = linux_prefix[i];
+        }
+        g_workspaces[workspace_id].name[6] = '1' + workspace_id;
+        g_workspaces[workspace_id].name[7] = '\0';
+    } else {
+        // Reset to default Aurora OS name
+        const char* aurora_prefix = "Workspace ";
+        for (int i = 0; i < 10; i++) {
+            g_workspaces[workspace_id].name[i] = aurora_prefix[i];
+        }
+        g_workspaces[workspace_id].name[10] = '1' + workspace_id;
+        g_workspaces[workspace_id].name[11] = '\0';
+    }
+    
+    return 0;
+}
+
+int vdesktop_get_os_type(uint8_t workspace_id) {
+    if (!g_initialized) {
+        vdesktop_init();
+    }
+    
+    if (workspace_id >= MAX_WORKSPACES) {
+        return -1;
+    }
+    
+    return (int)g_workspaces[workspace_id].os_type;
+}
+
+void vdesktop_show_os_selector(uint8_t workspace_id) {
+    if (!g_initialized) {
+        vdesktop_init();
+    }
+    
+    if (workspace_id >= MAX_WORKSPACES) {
+        return;
+    }
+    
+    // Draw OS selector overlay
+    int screen_w = framebuffer_get_info()->width;
+    int screen_h = framebuffer_get_info()->height;
+    
+    int selector_w = 500;
+    int selector_h = 300;
+    int selector_x = (screen_w - selector_w) / 2;
+    int selector_y = (screen_h - selector_h) / 2;
+    
+    // Semi-transparent background
+    color_t bg = {20, 20, 30, 230};
+    framebuffer_draw_rect(selector_x, selector_y, selector_w, selector_h, bg);
+    
+    // Draw border
+    color_t border = {100, 150, 255, 255};
+    framebuffer_draw_rect_outline(selector_x, selector_y, selector_w, selector_h, border);
+    
+    // Title
+    color_t title_color = {255, 255, 255, 255};
+    framebuffer_draw_string(selector_x + 20, selector_y + 20, "Select Workspace OS Type", title_color, (color_t){0, 0, 0, 0});
+    
+    // Workspace info
+    char ws_info[64];
+    ws_info[0] = 'W'; ws_info[1] = 'o'; ws_info[2] = 'r'; ws_info[3] = 'k'; 
+    ws_info[4] = 's'; ws_info[5] = 'p'; ws_info[6] = 'a'; ws_info[7] = 'c'; 
+    ws_info[8] = 'e'; ws_info[9] = ' ';
+    ws_info[10] = '1' + workspace_id;
+    ws_info[11] = '\0';
+    
+    color_t info_color = {200, 200, 200, 255};
+    framebuffer_draw_string(selector_x + 20, selector_y + 50, ws_info, info_color, (color_t){0, 0, 0, 0});
+    
+    // Aurora OS option button
+    int btn_w = 200;
+    int btn_h = 60;
+    int btn_y = selector_y + 100;
+    int aurora_btn_x = selector_x + 50;
+    
+    color_t aurora_btn_color = (g_workspaces[workspace_id].os_type == WORKSPACE_OS_AURORA) ?
+        (color_t){80, 150, 220, 255} : (color_t){50, 50, 70, 255};
+    framebuffer_draw_rect(aurora_btn_x, btn_y, btn_w, btn_h, aurora_btn_color);
+    framebuffer_draw_rect_outline(aurora_btn_x, btn_y, btn_w, btn_h, border);
+    framebuffer_draw_string(aurora_btn_x + 40, btn_y + 20, "Aurora OS", title_color, (color_t){0, 0, 0, 0});
+    
+    // Linux VM option button
+    int linux_btn_x = selector_x + 250;
+    
+    color_t linux_btn_color = (g_workspaces[workspace_id].os_type == WORKSPACE_OS_LINUX) ?
+        (color_t){220, 150, 80, 255} : (color_t){50, 50, 70, 255};
+    framebuffer_draw_rect(linux_btn_x, btn_y, btn_w, btn_h, linux_btn_color);
+    framebuffer_draw_rect_outline(linux_btn_x, btn_y, btn_w, btn_h, border);
+    framebuffer_draw_string(linux_btn_x + 40, btn_y + 20, "Linux VM", title_color, (color_t){0, 0, 0, 0});
+    
+    // Description text
+    const char* desc = "Choose the operating system type for this workspace";
+    framebuffer_draw_string(selector_x + 30, selector_y + 200, desc, info_color, (color_t){0, 0, 0, 0});
+    
+    // Instructions
+    const char* instr = "Press 1 for Aurora OS, 2 for Linux VM, ESC to cancel";
+    framebuffer_draw_string(selector_x + 20, selector_y + 250, instr, (color_t){150, 150, 150, 255}, (color_t){0, 0, 0, 0});
 }

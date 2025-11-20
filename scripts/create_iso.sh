@@ -57,7 +57,7 @@ cp "$KERNEL_BIN" "$ISO_DIR/boot/aurora-kernel.bin"
 # Create GRUB configuration
 echo "Creating GRUB configuration..."
 cat > "$GRUB_DIR/grub.cfg" << 'EOF'
-set timeout=5
+set timeout=10
 set default=0
 
 # Set graphics mode for VESA/VBE support
@@ -65,6 +65,7 @@ set gfxmode=1920x1080x32
 set gfxpayload=keep
 terminal_output gfxterm
 
+# Aurora OS Boot Options
 menuentry "Aurora OS" {
     multiboot /boot/aurora-kernel.bin
     boot
@@ -81,6 +82,25 @@ menuentry "Aurora OS (800x600)" {
     set gfxpayload=keep
     multiboot /boot/aurora-kernel.bin
     boot
+}
+
+# Linux Workspace Options
+menuentry "Aurora OS with Linux VM Support" {
+    multiboot /boot/aurora-kernel.bin linux_vm=enabled
+    boot
+}
+
+menuentry "Linux Kernel (via Aurora VM)" {
+    echo "Loading Linux kernel in Aurora VM..."
+    multiboot /boot/aurora-kernel.bin boot_mode=linux_vm
+    boot
+}
+
+# Placeholder for future Linux installation
+menuentry "Install Linux (Coming Soon)" {
+    echo "Linux installer integration coming soon..."
+    echo "Press any key to return to menu..."
+    read
 }
 EOF
 
