@@ -70,6 +70,20 @@ static void test_video_modes(void) {
     TEST_ASSERT(result == 0, "Supported modes retrieval");
     TEST_ASSERT(mode_count > 0, "At least one mode available");
     
+    // Verify 4K and 8K modes are in the list
+    int found_4k = 0;
+    int found_8k = 0;
+    for (uint8_t i = 0; i < mode_count; i++) {
+        if (modes[i].width == 3840 && modes[i].height == 2160) {
+            found_4k = 1;
+        }
+        if (modes[i].width == 7680 && modes[i].height == 4320) {
+            found_8k = 1;
+        }
+    }
+    TEST_ASSERT(found_4k == 1, "4K (3840x2160) mode available");
+    TEST_ASSERT(found_8k == 1, "8K (7680x4320) mode available");
+    
     // Get current mode
     video_mode_t current_mode;
     result = display_get_current_mode(0, &current_mode);
@@ -84,6 +98,26 @@ static void test_video_modes(void) {
     TEST_ASSERT(result == 0, "Mode retrieval after switch");
     TEST_ASSERT(current_mode.width == 1280, "Mode width is 1280");
     TEST_ASSERT(current_mode.height == 720, "Mode height is 720");
+    
+    // Test mode switching to 4K
+    result = display_set_mode(0, &VIDEO_MODE_3840x2160_60);
+    TEST_ASSERT(result == 0, "Mode switching to 3840x2160@60 (4K)");
+    
+    // Verify 4K mode was set
+    result = display_get_current_mode(0, &current_mode);
+    TEST_ASSERT(result == 0, "Mode retrieval after 4K switch");
+    TEST_ASSERT(current_mode.width == 3840, "4K mode width is 3840");
+    TEST_ASSERT(current_mode.height == 2160, "4K mode height is 2160");
+    
+    // Test mode switching to 8K
+    result = display_set_mode(0, &VIDEO_MODE_7680x4320_60);
+    TEST_ASSERT(result == 0, "Mode switching to 7680x4320@60 (8K)");
+    
+    // Verify 8K mode was set
+    result = display_get_current_mode(0, &current_mode);
+    TEST_ASSERT(result == 0, "Mode retrieval after 8K switch");
+    TEST_ASSERT(current_mode.width == 7680, "8K mode width is 7680");
+    TEST_ASSERT(current_mode.height == 4320, "8K mode height is 4320");
     
     // Switch back to 1920x1080
     result = display_set_mode(0, &VIDEO_MODE_1920x1080_60);
