@@ -96,6 +96,24 @@ menuentry "Linux Kernel (via Aurora VM)" {
     boot
 }
 
+# Android Workspace Options
+menuentry "Aurora OS with Android VM Support" {
+    multiboot /boot/aurora-kernel.bin android_vm=enabled
+    boot
+}
+
+menuentry "Android (via Aurora VM)" {
+    echo "Loading Android in Aurora VM..."
+    multiboot /boot/aurora-kernel.bin boot_mode=android_vm
+    boot
+}
+
+menuentry "Install Android" {
+    echo "Starting Android installer..."
+    multiboot /boot/aurora-kernel.bin boot_mode=android_installer
+    boot
+}
+
 # Placeholder for future Linux installation
 menuentry "Install Linux (Coming Soon)" {
     echo "Linux installer integration coming soon..."

@@ -17,6 +17,7 @@
 typedef enum {
     WORKSPACE_OS_AURORA = 0,    // Native Aurora OS workspace
     WORKSPACE_OS_LINUX = 1,     // Linux VM workspace
+    WORKSPACE_OS_ANDROID = 2,   // Android VM workspace
 } workspace_os_type_t;
 
 // Workspace structure
