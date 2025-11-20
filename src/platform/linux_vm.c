@@ -4,9 +4,42 @@
  */
 
 #include "../../include/platform/linux_vm.h"
-#include <stdlib.h>
-#include <string.h>
-#include <stdio.h>
+
+/* Simple memory functions for freestanding environment */
+static void* simple_malloc(uint32_t size) {
+    /* This is a stub - in real implementation would use kernel allocator */
+    (void)size;
+    return 0;
+}
+
+static void simple_free(void* ptr) {
+    /* This is a stub - in real implementation would use kernel allocator */
+    (void)ptr;
+}
+
+static void simple_memset(void* ptr, int value, uint32_t num) {
+    uint8_t* p = (uint8_t*)ptr;
+    for (uint32_t i = 0; i < num; i++) {
+        p[i] = (uint8_t)value;
+    }
+}
+
+static void simple_memcpy(void* dest, const void* src, uint32_t num) {
+    uint8_t* d = (uint8_t*)dest;
+    const uint8_t* s = (const uint8_t*)src;
+    for (uint32_t i = 0; i < num; i++) {
+        d[i] = s[i];
+    }
+}
+
+static void simple_strncpy(char* dest, const char* src, uint32_t n) {
+    uint32_t i = 0;
+    while (i < n - 1 && src[i]) {
+        dest[i] = src[i];
+        i++;
+    }
+    dest[i] = '\0';
+}
 
 /* Global Linux VM state */
 static bool g_linux_vm_initialized = false;
@@ -33,18 +66,18 @@ LinuxVM* linux_vm_create(void) {
     }
     
     /* Allocate Linux VM structure */
-    LinuxVM* vm = (LinuxVM*)malloc(sizeof(LinuxVM));
+    LinuxVM* vm = (LinuxVM*)simple_malloc(sizeof(LinuxVM));
     if (!vm) {
         return NULL;
     }
     
     /* Initialize fields */
-    memset(vm, 0, sizeof(LinuxVM));
+    simple_memset(vm, 0, sizeof(LinuxVM));
     
     /* Create underlying Aurora VM */
     vm->aurora_vm = aurora_vm_create();
     if (!vm->aurora_vm) {
-        free(vm);
+        simple_free(vm);
         return NULL;
     }
     
@@ -57,7 +90,7 @@ LinuxVM* linux_vm_create(void) {
     vm->initrd_size = 0;
     
     /* Set default kernel command line */
-    strncpy(vm->kernel_cmdline, "console=ttyS0 root=/dev/ram0", sizeof(vm->kernel_cmdline) - 1);
+    simple_strncpy(vm->kernel_cmdline, "console=ttyS0 root=/dev/ram0", sizeof(vm->kernel_cmdline));
     
     g_linux_vm_count++;
     
@@ -76,7 +109,7 @@ void linux_vm_destroy(LinuxVM* vm) {
     
     /* Free kernel image */
     if (vm->kernel_image) {
-        free(vm->kernel_image);
+        simple_free(vm->kernel_image);
     }
     
     /* Destroy Aurora VM */
@@ -84,7 +117,7 @@ void linux_vm_destroy(LinuxVM* vm) {
         aurora_vm_destroy(vm->aurora_vm);
     }
     
-    free(vm);
+    simple_free(vm);
     
     if (g_linux_vm_count > 0) {
         g_linux_vm_count--;
@@ -98,17 +131,17 @@ int linux_vm_load_kernel(LinuxVM* vm, const uint8_t* kernel_data, uint32_t size)
     
     /* Free existing kernel image if any */
     if (vm->kernel_image) {
-        free(vm->kernel_image);
+        simple_free(vm->kernel_image);
     }
     
     /* Allocate memory for kernel image */
-    vm->kernel_image = (uint8_t*)malloc(size);
+    vm->kernel_image = (uint8_t*)simple_malloc(size);
     if (!vm->kernel_image) {
         return -1;
     }
     
     /* Copy kernel data */
-    memcpy(vm->kernel_image, kernel_data, size);
+    simple_memcpy(vm->kernel_image, kernel_data, size);
     vm->kernel_size = size;
     
     /* TODO: Parse kernel header to find entry point */
@@ -139,8 +172,7 @@ int linux_vm_set_cmdline(LinuxVM* vm, const char* cmdline) {
         return -1;
     }
     
-    strncpy(vm->kernel_cmdline, cmdline, sizeof(vm->kernel_cmdline) - 1);
-    vm->kernel_cmdline[sizeof(vm->kernel_cmdline) - 1] = '\0';
+    simple_strncpy(vm->kernel_cmdline, cmdline, sizeof(vm->kernel_cmdline));
     
     return 0;
 }

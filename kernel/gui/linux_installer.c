@@ -5,7 +5,49 @@
 
 #include "linux_installer.h"
 #include "framebuffer.h"
-#include <string.h>
+
+/* Simple string functions for freestanding environment */
+static void simple_memset(void* ptr, int value, uint32_t num) {
+    uint8_t* p = (uint8_t*)ptr;
+    for (uint32_t i = 0; i < num; i++) {
+        p[i] = (uint8_t)value;
+    }
+}
+
+static void simple_memcpy(void* dest, const void* src, uint32_t num) {
+    uint8_t* d = (uint8_t*)dest;
+    const uint8_t* s = (const uint8_t*)src;
+    for (uint32_t i = 0; i < num; i++) {
+        d[i] = s[i];
+    }
+}
+
+static void simple_strcpy(char* dest, const char* src) {
+    while (*src) {
+        *dest++ = *src++;
+    }
+    *dest = '\0';
+}
+
+static void simple_strcat(char* dest, const char* src) {
+    while (*dest) dest++;
+    while (*src) {
+        *dest++ = *src++;
+    }
+    *dest = '\0';
+}
+
+static void simple_strncpy(char* dest, const char* src, uint32_t n) {
+    uint32_t i = 0;
+    while (i < n && src[i]) {
+        dest[i] = src[i];
+        i++;
+    }
+    while (i < n) {
+        dest[i] = '\0';
+        i++;
+    }
+}
 
 /* Global installer state */
 static linux_installer_t g_installer;
@@ -52,7 +94,7 @@ int linux_installer_init(void) {
     }
     
     /* Initialize installer state */
-    memset(&g_installer, 0, sizeof(linux_installer_t));
+    simple_memset(&g_installer, 0, sizeof(linux_installer_t));
     g_installer.state = INSTALLER_STATE_IDLE;
     
     g_initialized = true;
@@ -67,7 +109,7 @@ int linux_installer_get_distros(linux_distro_t* distros, uint32_t max_count) {
     uint32_t count = (max_count < NUM_DISTROS) ? max_count : NUM_DISTROS;
     
     for (uint32_t i = 0; i < count; i++) {
-        memcpy(&distros[i], &g_available_distros[i], sizeof(linux_distro_t));
+        simple_memcpy(&distros[i], &g_available_distros[i], sizeof(linux_distro_t));
     }
     
     return count;
@@ -125,8 +167,8 @@ void linux_installer_show_ui(void) {
         
         /* Version */
         char version_text[64];
-        strcpy(version_text, "Version: ");
-        strcat(version_text, g_available_distros[i].version);
+        simple_strcpy(version_text, "Version: ");
+        simple_strcat(version_text, g_available_distros[i].version);
         framebuffer_draw_string(item_x + 10, item_y + 30, 
             version_text, desc_color, (color_t){0, 0, 0, 0});
         
@@ -171,25 +213,25 @@ int linux_installer_start(uint32_t distro_index) {
     }
     
     if (!g_available_distros[distro_index].available) {
-        strcpy(g_installer.error_message, "Distribution not available yet");
+        simple_strcpy(g_installer.error_message, "Distribution not available yet");
         g_installer.error = true;
         g_installer.state = INSTALLER_STATE_ERROR;
         return -1;
     }
     
     /* Copy selected distribution info */
-    memcpy(&g_installer.selected_distro, &g_available_distros[distro_index], 
+    simple_memcpy(&g_installer.selected_distro, &g_available_distros[distro_index], 
            sizeof(linux_distro_t));
     
     g_installer.state = INSTALLER_STATE_INSTALLING;
     g_installer.progress_percent = 0;
-    strcpy(g_installer.status_message, "Installing...");
+    simple_strcpy(g_installer.status_message, "Installing...");
     
     /* TODO: Actual installation logic */
     /* For now, simulate completion */
     g_installer.progress_percent = 100;
     g_installer.state = INSTALLER_STATE_COMPLETED;
-    strcpy(g_installer.status_message, "Installation completed successfully");
+    simple_strcpy(g_installer.status_message, "Installation completed successfully");
     g_linux_installed = true;
     
     return 0;
@@ -204,7 +246,7 @@ int linux_installer_get_status(linux_installer_t* installer) {
         linux_installer_init();
     }
     
-    memcpy(installer, &g_installer, sizeof(linux_installer_t));
+    simple_memcpy(installer, &g_installer, sizeof(linux_installer_t));
     return 0;
 }
 
@@ -215,7 +257,7 @@ int linux_installer_cancel(void) {
     
     if (g_installer.state == INSTALLER_STATE_INSTALLING) {
         g_installer.state = INSTALLER_STATE_IDLE;
-        strcpy(g_installer.status_message, "Installation cancelled");
+        simple_strcpy(g_installer.status_message, "Installation cancelled");
         return 0;
     }
     
