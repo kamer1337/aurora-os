@@ -13,11 +13,18 @@
 #define MAX_WORKSPACES 4
 #define MAX_WINDOWS_PER_WORKSPACE 32
 
+// Workspace OS type
+typedef enum {
+    WORKSPACE_OS_AURORA = 0,    // Native Aurora OS workspace
+    WORKSPACE_OS_LINUX = 1,     // Linux VM workspace
+} workspace_os_type_t;
+
 // Workspace structure
 typedef struct {
     uint8_t id;
     char name[32];
     uint8_t active;
+    workspace_os_type_t os_type;    // OS type for this workspace
     window_t* windows[MAX_WINDOWS_PER_WORKSPACE];
     uint8_t window_count;
 } workspace_t;
@@ -74,5 +81,26 @@ void vdesktop_show_switcher(void);
  * @return 1 if handled, 0 otherwise
  */
 int vdesktop_handle_shortcut(uint32_t key);
+
+/**
+ * Set workspace OS type
+ * @param workspace_id Workspace ID
+ * @param os_type OS type to set
+ * @return 0 on success, -1 on failure
+ */
+int vdesktop_set_os_type(uint8_t workspace_id, workspace_os_type_t os_type);
+
+/**
+ * Get workspace OS type
+ * @param workspace_id Workspace ID
+ * @return OS type or -1 on failure
+ */
+int vdesktop_get_os_type(uint8_t workspace_id);
+
+/**
+ * Show OS type selector for workspace
+ * @param workspace_id Workspace ID
+ */
+void vdesktop_show_os_selector(uint8_t workspace_id);
 
 #endif // VIRTUAL_DESKTOP_H
