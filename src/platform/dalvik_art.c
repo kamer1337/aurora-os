@@ -4,44 +4,7 @@
  */
 
 #include "../../include/platform/dalvik_art.h"
-
-/* Simple memory functions for freestanding environment */
-static void* simple_malloc(uint32_t size) {
-    /* Stub - in real implementation would use kernel allocator */
-    (void)size;
-    return (void*)0;
-}
-
-static void simple_free(void* ptr) {
-    /* Stub - in real implementation would use kernel allocator */
-    (void)ptr;
-}
-
-static void simple_memset(void* ptr, int value, uint32_t num) {
-    uint8_t* p = (uint8_t*)ptr;
-    for (uint32_t i = 0; i < num; i++) {
-        p[i] = (uint8_t)value;
-    }
-}
-
-static void simple_memcpy(void* dest, const void* src, uint32_t num) {
-    uint8_t* d = (uint8_t*)dest;
-    const uint8_t* s = (const uint8_t*)src;
-    for (uint32_t i = 0; i < num; i++) {
-        d[i] = s[i];
-    }
-}
-
-static int simple_memcmp(const void* s1, const void* s2, uint32_t n) {
-    const uint8_t* p1 = (const uint8_t*)s1;
-    const uint8_t* p2 = (const uint8_t*)s2;
-    for (uint32_t i = 0; i < n; i++) {
-        if (p1[i] != p2[i]) {
-            return p1[i] - p2[i];
-        }
-    }
-    return 0;
-}
+#include "../../include/platform/platform_util.h"
 
 /* Global VM state */
 static bool g_dalvik_initialized = false;
@@ -66,13 +29,13 @@ dalvik_vm_t* dalvik_create(vm_mode_t mode, uint32_t heap_size) {
     }
     
     /* Allocate VM structure */
-    dalvik_vm_t* vm = (dalvik_vm_t*)simple_malloc(sizeof(dalvik_vm_t));
+    dalvik_vm_t* vm = (dalvik_vm_t*)platform_malloc(sizeof(dalvik_vm_t));
     if (!vm) {
         return (dalvik_vm_t*)0;
     }
     
     /* Initialize VM */
-    simple_memset(vm, 0, sizeof(dalvik_vm_t));
+    platform_memset(vm, 0, sizeof(dalvik_vm_t));
     vm->mode = mode;
     vm->state = DALVIK_STATE_INITIALIZED;
     vm->heap_size = heap_size;
@@ -82,23 +45,23 @@ dalvik_vm_t* dalvik_create(vm_mode_t mode, uint32_t heap_size) {
     vm->jit_enabled = (mode == VM_MODE_ART); /* ART has JIT by default */
     
     /* Allocate heap */
-    vm->heap_base = simple_malloc(heap_size);
+    vm->heap_base = platform_malloc(heap_size);
     if (!vm->heap_base) {
-        simple_free(vm);
+        platform_free(vm);
         return (dalvik_vm_t*)0;
     }
     
-    simple_memset(vm->heap_base, 0, heap_size);
+    platform_memset(vm->heap_base, 0, heap_size);
     
     /* Allocate class loader */
-    vm->class_loader = (class_loader_t*)simple_malloc(sizeof(class_loader_t));
+    vm->class_loader = (class_loader_t*)platform_malloc(sizeof(class_loader_t));
     if (!vm->class_loader) {
-        simple_free(vm->heap_base);
-        simple_free(vm);
+        platform_free(vm->heap_base);
+        platform_free(vm);
         return (dalvik_vm_t*)0;
     }
     
-    simple_memset(vm->class_loader, 0, sizeof(class_loader_t));
+    platform_memset(vm->class_loader, 0, sizeof(class_loader_t));
     
     return vm;
 }
@@ -116,21 +79,21 @@ void dalvik_destroy(dalvik_vm_t* vm) {
     /* Free class loader */
     if (vm->class_loader) {
         if (vm->class_loader->loaded_classes) {
-            simple_free(vm->class_loader->loaded_classes);
+            platform_free(vm->class_loader->loaded_classes);
         }
         if (vm->class_loader->dex_file) {
-            simple_free(vm->class_loader->dex_file);
+            platform_free(vm->class_loader->dex_file);
         }
-        simple_free(vm->class_loader);
+        platform_free(vm->class_loader);
     }
     
     /* Free heap */
     if (vm->heap_base) {
-        simple_free(vm->heap_base);
+        platform_free(vm->heap_base);
     }
     
     /* Free VM */
-    simple_free(vm);
+    platform_free(vm);
 }
 
 int dalvik_load_dex(dalvik_vm_t* vm, const uint8_t* dex_data, uint32_t size) {
@@ -140,27 +103,27 @@ int dalvik_load_dex(dalvik_vm_t* vm, const uint8_t* dex_data, uint32_t size) {
     
     /* Validate DEX header magic */
     const char* magic = (const char*)dex_data;
-    if (simple_memcmp(magic, DEX_FILE_MAGIC, 4) != 0) {
+    if (platform_memcmp(magic, DEX_FILE_MAGIC, 4) != 0) {
         return -1; /* Invalid DEX file */
     }
     
     /* Allocate and copy DEX file */
-    dex_header_t* dex_file = (dex_header_t*)simple_malloc(size);
+    dex_header_t* dex_file = (dex_header_t*)platform_malloc(size);
     if (!dex_file) {
         return -1;
     }
     
-    simple_memcpy(dex_file, dex_data, size);
+    platform_memcpy(dex_file, dex_data, size);
     
     /* Verify DEX file size */
     if (dex_file->file_size != size) {
-        simple_free(dex_file);
+        platform_free(dex_file);
         return -1; /* Size mismatch */
     }
     
     /* Store DEX file in class loader */
     if (vm->class_loader->dex_file) {
-        simple_free(vm->class_loader->dex_file);
+        platform_free(vm->class_loader->dex_file);
     }
     
     vm->class_loader->dex_file = dex_file;
@@ -168,20 +131,20 @@ int dalvik_load_dex(dalvik_vm_t* vm, const uint8_t* dex_data, uint32_t size) {
     
     /* Allocate class array */
     if (vm->class_loader->loaded_classes) {
-        simple_free(vm->class_loader->loaded_classes);
+        platform_free(vm->class_loader->loaded_classes);
     }
     
-    vm->class_loader->loaded_classes = (void**)simple_malloc(
+    vm->class_loader->loaded_classes = (void**)platform_malloc(
         sizeof(void*) * dex_file->class_defs_size
     );
     
     if (!vm->class_loader->loaded_classes) {
-        simple_free(dex_file);
+        platform_free(dex_file);
         vm->class_loader->dex_file = (dex_header_t*)0;
         return -1;
     }
     
-    simple_memset(vm->class_loader->loaded_classes, 0, 
+    platform_memset(vm->class_loader->loaded_classes, 0, 
                   sizeof(void*) * dex_file->class_defs_size);
     
     return 0;
@@ -380,7 +343,7 @@ int32_t dalvik_execute_method(dalvik_vm_t* vm, void* method, void* args) {
     }
     
     vm_frame_t* frame = &vm->frame_stack[vm->frame_depth++];
-    simple_memset(frame, 0, sizeof(vm_frame_t));
+    platform_memset(frame, 0, sizeof(vm_frame_t));
     
     frame->prev = vm->current_frame;
     frame->method = method;
@@ -510,7 +473,7 @@ void* dalvik_alloc_object(dalvik_vm_t* vm, uint32_t size) {
     vm->heap_used += size;
     
     /* Zero initialize */
-    simple_memset(obj, 0, size);
+    platform_memset(obj, 0, size);
     
     return obj;
 }

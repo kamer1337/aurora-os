@@ -4,6 +4,7 @@
  */
 
 #include "../../include/platform/aurora_vm.h"
+#include "../../include/platform/platform_util.h"
 
 /* Define size_t for freestanding environment */
 #ifndef _SIZE_T_DEFINED
@@ -11,32 +12,13 @@
 typedef unsigned int size_t;
 #endif
 
-/* Simple memory functions for freestanding environment */
-static void* simple_malloc(uint32_t size) {
-    /* Stub - in real implementation would use kernel allocator */
-    (void)size;
-    return (void*)0;
-}
-
-static void simple_free(void* ptr) {
-    /* Stub - in real implementation would use kernel allocator */
-    (void)ptr;
-}
-
-static void simple_memset(void* ptr, int value, uint32_t num) {
-    uint8_t* p = (uint8_t*)ptr;
-    for (uint32_t i = 0; i < num; i++) {
-        p[i] = (uint8_t)value;
-    }
-}
-
 AuroraVM *aurora_vm_create(void) {
-    AuroraVM *vm = (AuroraVM *)simple_malloc(sizeof(AuroraVM));
+    AuroraVM *vm = (AuroraVM *)platform_malloc(sizeof(AuroraVM));
     if (!vm) {
         return (AuroraVM*)0;
     }
     
-    simple_memset(vm, 0, sizeof(AuroraVM));
+    platform_memset(vm, 0, sizeof(AuroraVM));
     return vm;
 }
 
@@ -45,7 +27,7 @@ void aurora_vm_destroy(AuroraVM *vm) {
         return;
     }
     
-    simple_free(vm);
+    platform_free(vm);
 }
 
 int aurora_vm_init(AuroraVM *vm) {

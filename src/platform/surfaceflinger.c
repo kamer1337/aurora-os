@@ -4,44 +4,7 @@
  */
 
 #include "../../include/platform/surfaceflinger.h"
-
-/* Simple memory functions for freestanding environment */
-static void* simple_malloc(uint32_t size) {
-    /* Stub - in real implementation would use kernel allocator */
-    (void)size;
-    return (void*)0;
-}
-
-static void simple_free(void* ptr) {
-    /* Stub - in real implementation would use kernel allocator */
-    (void)ptr;
-}
-
-static void simple_memset(void* ptr, int value, uint32_t num) {
-    uint8_t* p = (uint8_t*)ptr;
-    for (uint32_t i = 0; i < num; i++) {
-        p[i] = (uint8_t)value;
-    }
-}
-
-static void simple_memcpy(void* dest, const void* src, uint32_t num) {
-    uint8_t* d = (uint8_t*)dest;
-    const uint8_t* s = (const uint8_t*)src;
-    for (uint32_t i = 0; i < num; i++) {
-        d[i] = s[i];
-    }
-}
-
-static void simple_strncpy(char* dest, const char* src, uint32_t n) {
-    uint32_t i = 0;
-    while (i < n - 1 && src[i]) {
-        dest[i] = src[i];
-        i++;
-    }
-    if (i < n) {
-        dest[i] = '\0';
-    }
-}
+#include "../../include/platform/platform_util.h"
 
 /* Global SurfaceFlinger state */
 static surfaceflinger_t g_surfaceflinger;
@@ -114,9 +77,9 @@ int surfaceflinger_init(void) {
     }
     
     /* Initialize globals */
-    simple_memset(&g_surfaceflinger, 0, sizeof(surfaceflinger_t));
-    simple_memset(&g_composition, 0, sizeof(composition_t));
-    simple_memset(&g_display, 0, sizeof(display_device_t));
+    platform_memset(&g_surfaceflinger, 0, sizeof(surfaceflinger_t));
+    platform_memset(&g_composition, 0, sizeof(composition_t));
+    platform_memset(&g_display, 0, sizeof(display_device_t));
     
     g_composition.layers = (layer_t*)0;
     g_composition.layer_count = 0;
@@ -150,10 +113,10 @@ void surfaceflinger_shutdown(void) {
                     surfaceflinger_free_buffer(layer->buffer_queue->buffers[i]);
                 }
             }
-            simple_free(layer->buffer_queue);
+            platform_free(layer->buffer_queue);
         }
         
-        simple_free(layer);
+        platform_free(layer);
         layer = next;
     }
     
@@ -185,18 +148,18 @@ uint32_t surfaceflinger_create_layer(const char* name, surface_type_t type) {
     }
     
     /* Allocate layer */
-    layer_t* layer = (layer_t*)simple_malloc(sizeof(layer_t));
+    layer_t* layer = (layer_t*)platform_malloc(sizeof(layer_t));
     if (!layer) {
         return 0;
     }
     
     /* Initialize layer */
-    simple_memset(layer, 0, sizeof(layer_t));
+    platform_memset(layer, 0, sizeof(layer_t));
     layer->id = g_composition.next_layer_id++;
     layer->type = type;
     
     if (name) {
-        simple_strncpy(layer->name, name, sizeof(layer->name));
+        platform_strncpy(layer->name, name, sizeof(layer->name));
     }
     
     /* Initialize layer state */
@@ -211,13 +174,13 @@ uint32_t surfaceflinger_create_layer(const char* name, surface_type_t type) {
     layer->state.visible = true;
     
     /* Allocate buffer queue */
-    layer->buffer_queue = (buffer_queue_t*)simple_malloc(sizeof(buffer_queue_t));
+    layer->buffer_queue = (buffer_queue_t*)platform_malloc(sizeof(buffer_queue_t));
     if (!layer->buffer_queue) {
-        simple_free(layer);
+        platform_free(layer);
         return 0;
     }
     
-    simple_memset(layer->buffer_queue, 0, sizeof(buffer_queue_t));
+    platform_memset(layer->buffer_queue, 0, sizeof(buffer_queue_t));
     layer->buffer_queue->num_buffers = 0;
     layer->buffer_queue->queue_head = -1;
     layer->buffer_queue->queue_tail = -1;
@@ -258,10 +221,10 @@ int surfaceflinger_destroy_layer(uint32_t layer_id) {
                         surfaceflinger_free_buffer(layer->buffer_queue->buffers[i]);
                     }
                 }
-                simple_free(layer->buffer_queue);
+                platform_free(layer->buffer_queue);
             }
             
-            simple_free(layer);
+            platform_free(layer);
             g_composition.layer_count--;
             g_composition.needs_redraw = true;
             
@@ -369,7 +332,7 @@ int surfaceflinger_set_layer_transform(uint32_t layer_id, uint32_t transform) {
 
 graphics_buffer_t* surfaceflinger_alloc_buffer(uint32_t width, uint32_t height,
                                                 pixel_format_t format) {
-    graphics_buffer_t* buffer = (graphics_buffer_t*)simple_malloc(sizeof(graphics_buffer_t));
+    graphics_buffer_t* buffer = (graphics_buffer_t*)platform_malloc(sizeof(graphics_buffer_t));
     if (!buffer) {
         return (graphics_buffer_t*)0;
     }
@@ -386,13 +349,13 @@ graphics_buffer_t* surfaceflinger_alloc_buffer(uint32_t width, uint32_t height,
     buffer->locked = false;
     
     /* Allocate buffer data */
-    buffer->data = simple_malloc(size);
+    buffer->data = platform_malloc(size);
     if (!buffer->data) {
-        simple_free(buffer);
+        platform_free(buffer);
         return (graphics_buffer_t*)0;
     }
     
-    simple_memset(buffer->data, 0, size);
+    platform_memset(buffer->data, 0, size);
     
     return buffer;
 }
@@ -403,10 +366,10 @@ void surfaceflinger_free_buffer(graphics_buffer_t* buffer) {
     }
     
     if (buffer->data) {
-        simple_free(buffer->data);
+        platform_free(buffer->data);
     }
     
-    simple_free(buffer);
+    platform_free(buffer);
 }
 
 int surfaceflinger_lock_buffer(graphics_buffer_t* buffer) {
