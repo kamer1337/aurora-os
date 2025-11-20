@@ -226,18 +226,22 @@ The desktop environment includes:
   - **Start Menu**: Central hub for launching apps, settings, and search.
   - **Taskbar**: Shows running applications, system tray, and quick access tools.
   - **Window Management**: Snap layouts, virtual desktops, and smooth animations.
-  - **Virtual Workspaces**: 4 configurable workspaces with OS type selection (Aurora OS or Linux VM)
+  - **Virtual Workspaces**: 4 configurable workspaces with OS type selection (Aurora OS, Linux VM, or Android VM)
   - **Linux VM Support**: Run Linux workloads in dedicated workspaces with syscall emulation
+  - **Android VM Support**: Run Android applications in dedicated workspaces with AOSP compatibility
 
 ---
 
-## **6. New Features: Linux VM and Workspace Selection**
+## **6. New Features: Multi-OS Workspace Support**
 
-Aurora OS now includes advanced workspace and virtualization features:
+Aurora OS now includes advanced workspace and virtualization features supporting multiple operating systems:
 
 ### **Workspace OS Selection**
-- Each virtual workspace can run either native Aurora OS or Linux VM
-- Visual indicators show OS type (blue for Aurora OS, orange for Linux VM)
+- Each virtual workspace can run native Aurora OS, Linux VM, or Android VM
+- Visual indicators show OS type:
+  - **Blue** for Aurora OS workspaces
+  - **Orange** for Linux VM workspaces
+  - **Green** for Android VM workspaces
 - Easy switching between workspace types via UI selector
 - Automatic workspace naming based on OS type
 
@@ -249,6 +253,16 @@ Aurora OS now includes advanced workspace and virtualization features:
 - Configurable kernel command line
 - VM state management (start, pause, resume, stop)
 
+### **Android Kernel Virtual Machine** ⭐ NEW
+- AOSP (Android Open Source Project) compatibility layer
+- Android kernel image loading (boot.img format)
+- Bionic libc syscall emulation (15+ syscalls)
+- Support for multiple architectures (ARM32, ARM64, x86, x86_64)
+- Android property system support
+- System and data partition management
+- Dalvik/ART VM integration stubs
+- VM state management (boot, run, pause, stop)
+
 ### **Linux Installer**
 - User-friendly GUI for Linux distribution installation
 - Pre-configured distributions:
@@ -257,14 +271,28 @@ Aurora OS now includes advanced workspace and virtualization features:
   - Debian Minimal, Alpine Linux - Coming Soon
 - Progress tracking and status reporting
 
+### **Android Installer** ⭐ NEW
+- Interactive GUI for Android distribution installation
+- Pre-configured distributions:
+  - AOSP Android 13.0 (800 MB) - Available
+  - LineageOS 20 (900 MB) - Available
+  - AOSP Android 14.0, Pixel Experience, BlissOS - Coming Soon
+- Real-time installation progress tracking
+- Status reporting and error handling
+
 ### **Enhanced Boot Menu**
 - Multiple boot options via GRUB
 - Aurora OS standard and safe mode
 - Aurora OS with Linux VM support enabled
+- Aurora OS with Android VM support enabled ⭐ NEW
 - Direct Linux kernel boot via Aurora VM
+- Direct Android boot via Aurora VM ⭐ NEW
 - Linux installer access (coming soon)
+- Android installer access ⭐ NEW
 
-For detailed documentation, see **[Linux VM Features Guide](docs/LINUX_VM_FEATURES.md)**.
+For detailed documentation:
+- **[Linux VM Features Guide](docs/LINUX_VM_FEATURES.md)**
+- **[Android VM Features Guide](docs/ANDROID_VM_FEATURES.md)** ⭐ NEW
 
 ---
 
@@ -364,9 +392,9 @@ This section shows the historical development phases (completed). For future pla
   - ✅ Syscall compatibility mapping
   - ✅ Comprehensive test suite (10 test cases)
 - ✅ Workspace OS Selection System
-  - ✅ Configurable workspace types (Aurora OS vs Linux VM)
-  - ✅ Visual OS type indicators in workspace switcher
-  - ✅ OS selector UI with interactive buttons
+  - ✅ Configurable workspace types (Aurora OS, Linux VM, Android VM) ⭐ UPDATED
+  - ✅ Visual OS type indicators in workspace switcher (blue, orange, green) ⭐ UPDATED
+  - ✅ OS selector UI with interactive buttons (3 OS options) ⭐ UPDATED
   - ✅ Automatic workspace naming based on OS type
 - ✅ Linux Kernel Virtual Machine Support
   - ✅ Linux VM infrastructure and API
@@ -374,13 +402,30 @@ This section shows the historical development phases (completed). For future pla
   - ✅ Basic Linux syscall emulation layer
   - ✅ VM state management (start, pause, resume, stop)
   - ✅ Initrd support and kernel command line configuration
+- ✅ **Android Kernel Virtual Machine Support** ⭐ NEW
+  - ✅ Android VM infrastructure and API
+  - ✅ AOSP (Android Open Source Project) compatibility layer
+  - ✅ Android boot.img format support
+  - ✅ Bionic libc syscall emulation (15+ syscalls)
+  - ✅ Multi-architecture support (ARM32, ARM64, x86, x86_64)
+  - ✅ Android property system
+  - ✅ System and data partition management
+  - ✅ Dalvik/ART VM integration stubs
+  - ✅ VM state management (boot, run, pause, stop)
 - ✅ Linux Installer System
   - ✅ GUI installer with distribution selection
   - ✅ Multiple pre-configured Linux distributions
   - ✅ Installation progress tracking
   - ✅ Status reporting and error handling
+- ✅ **Android Installer System** ⭐ NEW
+  - ✅ Interactive GUI installer with distribution selection
+  - ✅ Multiple pre-configured Android distributions (AOSP, LineageOS)
+  - ✅ Real-time installation progress tracking
+  - ✅ Status reporting and error handling
 - ✅ Enhanced GRUB Boot Menu
   - ✅ Multiple boot options including Linux VM modes
+  - ✅ Android VM boot options ⭐ NEW
+  - ✅ Android installer boot option ⭐ NEW
   - ✅ Graphics mode selection (1920x1080, 800x600, text mode)
   - ✅ Extended timeout for option selection
 - ✅ Aurora VM v2.0 - Enhanced 32-bit RISC virtual machine
@@ -410,27 +455,34 @@ This section shows the historical development phases (completed). For future pla
   - ✅ GitHub issue templates prepared in AURORA_VM_GITHUB_ISSUES.md
 
 **Next Up:**
+- ⏭️ Complete Android boot protocol implementation (boot.img v3/v4)
+- ⏭️ Expand Android syscall table for broader compatibility (200+ syscalls)
+- ⏭️ Implement ext4 filesystem for Android system/data partitions
+- ⏭️ Add Binder IPC mechanism for Android services
+- ⏭️ Integrate SurfaceFlinger for Android graphics
 - ⏭️ Complete Linux boot protocol implementation
 - ⏭️ Expand Linux syscall table for broader compatibility
-- ⏭️ Implement file system persistence for Linux workspaces
-- ⏭️ Add network bridge between Linux VM and Aurora OS
-- ⏭️ Integrate X11/Wayland display server support
+- ⏭️ Implement file system persistence for Linux/Android workspaces
+- ⏭️ Add network bridge between VMs and Aurora OS
+- ⏭️ Integrate X11/Wayland display server support for Linux
+- ⏭️ Hardware acceleration support (GPU passthrough)
 - ⏭️ Complete JIT code generation backend (infrastructure in place, native code generation pending)
 - ⏭️ Complete GDB server socket implementation (infrastructure in place, network support pending)
-- ⏭️ Implement file system operations (currently documented as known limitation)
 - ⏭️ Release candidate preparation
 
 ---
 
 ## **8. Summary**
 
-**Aurora OS** is an ambitious project to build a next-generation operating system that combines the familiarity of Windows with the efficiency, security, and modularity of modern OS design principles. By leveraging a microkernel architecture, journaling file system, user-centric interface, and now **Linux VM integration**, Aurora OS aims to set a new standard for desktop and embedded computing environments.
+**Aurora OS** is an ambitious project to build a next-generation operating system that combines the familiarity of Windows with the efficiency, security, and modularity of modern OS design principles. By leveraging a microkernel architecture, journaling file system, user-centric interface, **Linux VM integration**, and now **Android VM support**, Aurora OS aims to set a new standard for desktop and embedded computing environments.
 
 **Key Innovations:**
 - Advanced 3D/4D/5D visual effects and animations
 - Quantum cryptography integration for security
-- Virtual workspace management with OS selection
+- Virtual workspace management with multi-OS selection (Aurora OS, Linux VM, Android VM)
 - Linux kernel virtual machine support
+- **Android kernel virtual machine support** ⭐ NEW
+- **AOSP compatibility layer** ⭐ NEW
 - Comprehensive plugin system for extensibility
 - Aurora VM for application virtualization
 
@@ -444,7 +496,8 @@ For comprehensive documentation, see **[DOCUMENTATION_INDEX.md](DOCUMENTATION_IN
 
 **Quick Links:**
 - **[Next Steps Roadmap](ROADMAP.md)** - Future plans and development priorities ⭐
-- **[Linux VM Features](docs/LINUX_VM_FEATURES.md)** - Workspace OS selection and Linux VM guide ⭐ NEW
+- **[Linux VM Features](docs/LINUX_VM_FEATURES.md)** - Workspace OS selection and Linux VM guide
+- **[Android VM Features](docs/ANDROID_VM_FEATURES.md)** - Android VM and AOSP support guide ⭐ NEW
 - **[Getting Started Guide](docs/GETTING_STARTED.md)** - Setup development environment and build instructions
 - **[TODO List](TODO.md)** - Current tasks and priorities
 - **[Implementation Summary](IMPLEMENTATION_SUMMARY.md)** - Overall project statistics
@@ -455,7 +508,8 @@ For comprehensive documentation, see **[DOCUMENTATION_INDEX.md](DOCUMENTATION_IN
 - **[GitHub Issues](AURORA_VM_GITHUB_ISSUES.md)** - Ready-to-file issue templates
 
 **Technical Documentation:**
-- **[Aurora Linux Kernel](docs/AURORA_LINUX_KERNEL.md)** - Linux kernel v6.6 with Crystal-Kyber encryption ⭐ NEW
+- **[Aurora Linux Kernel](docs/AURORA_LINUX_KERNEL.md)** - Linux kernel v6.6 with Crystal-Kyber encryption
+- **[Android VM API](include/platform/android_vm.h)** - Android VM header and API reference ⭐ NEW
 - **[Phase 2 & 3 Implementation](docs/PHASE2_PHASE3_IMPLEMENTATION.md)** - Kernel and filesystem
 - **[Phase 4 Summary](docs/PHASE4_SUMMARY.md)** - GUI comprehensive guide
 - **[Phase 5 Completion Report](docs/PHASE5_COMPLETION_REPORT.md)** - Testing and debugging
