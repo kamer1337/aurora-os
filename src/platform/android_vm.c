@@ -4,6 +4,9 @@
  */
 
 #include "../../include/platform/android_vm.h"
+#include "../../include/platform/dalvik_art.h"
+#include "../../include/platform/binder_ipc.h"
+#include "../../include/platform/surfaceflinger.h"
 
 /* Simple memory functions for freestanding environment */
 static void* simple_malloc(uint32_t size) {
@@ -115,6 +118,9 @@ AndroidVM* android_vm_create(android_arch_t arch) {
     vm->data_size = 0;
     vm->android_version = 1300; /* Android 13.0 default */
     vm->dalvik_enabled = true;
+    vm->dalvik_vm = NULL;
+    vm->binder_process = NULL;
+    vm->surfaceflinger = NULL;
     
     /* Set default kernel command line */
     simple_strncpy(vm->kernel_cmdline, 
@@ -134,6 +140,18 @@ void android_vm_destroy(AndroidVM* vm) {
     /* Stop VM if running */
     if (vm->state == ANDROID_VM_STATE_RUNNING || vm->state == ANDROID_VM_STATE_BOOTING) {
         android_vm_stop(vm);
+    }
+    
+    /* Destroy Dalvik/ART VM */
+    if (vm->dalvik_vm) {
+        /* Note: dalvik_destroy would be called here */
+        simple_free(vm->dalvik_vm);
+    }
+    
+    /* Destroy Binder process */
+    if (vm->binder_process) {
+        /* Note: binder_destroy_process would be called here */
+        simple_free(vm->binder_process);
     }
     
     /* Free kernel image */
@@ -287,7 +305,36 @@ int android_vm_start(AndroidVM* vm) {
     
     vm->state = ANDROID_VM_STATE_BOOTING;
     
-    /* TODO: Set up Android boot protocol */
+    /* Initialize Binder IPC subsystem */
+    if (!vm->binder_process) {
+        /* Note: In real implementation would call:
+         * binder_init();
+         * vm->binder_process = binder_create_process(vm->pid);
+         * service_manager_init();
+         */
+    }
+    
+    /* Initialize SurfaceFlinger */
+    if (!vm->surfaceflinger) {
+        /* Note: In real implementation would call:
+         * surfaceflinger_init();
+         * surfaceflinger_set_display(width, height, framebuffer, pitch);
+         */
+    }
+    
+    /* Initialize Dalvik/ART VM if enabled */
+    if (vm->dalvik_enabled && !vm->dalvik_vm) {
+        /* Note: In real implementation would call:
+         * dalvik_init(VM_MODE_ART);
+         * vm->dalvik_vm = dalvik_create(VM_MODE_ART, 64 * 1024 * 1024);
+         * 
+         * If DEX files are available:
+         * dalvik_load_dex(vm->dalvik_vm, dex_data, dex_size);
+         * dalvik_start(vm->dalvik_vm, "Landroid/app/ActivityThread;", "main");
+         */
+    }
+    
+    /* Set up Android boot protocol */
     /* This would involve:
      * 1. Setting up Android boot image format (boot.img)
      * 2. Loading kernel into VM memory at KERNEL_BASE
@@ -298,7 +345,9 @@ int android_vm_start(AndroidVM* vm) {
      * 7. Starting VM execution at kernel entry point
      * 8. Initializing Android init process
      * 9. Mounting system and data partitions
-     * 10. Starting Dalvik/ART VM if enabled
+     * 10. Starting system services via Binder IPC
+     * 11. Starting Zygote process for app spawning
+     * 12. Initializing SurfaceFlinger for graphics
      */
     
     vm->state = ANDROID_VM_STATE_RUNNING;

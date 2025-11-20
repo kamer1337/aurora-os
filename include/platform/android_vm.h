@@ -13,6 +13,11 @@
 #include <stdbool.h>
 #include "aurora_vm.h"
 
+/* Forward declarations */
+typedef struct dalvik_vm dalvik_vm_t;
+typedef struct binder_process binder_process_t;
+typedef struct surfaceflinger surfaceflinger_t;
+
 /* Android VM configuration */
 #define ANDROID_VM_MEMORY_SIZE      (256 * 1024 * 1024)   /* 256MB for Android */
 #define ANDROID_VM_KERNEL_BASE      0x80000               /* ARM kernel load address */
@@ -58,6 +63,9 @@ typedef struct {
     uint32_t data_size;               /* Data partition size */
     uint32_t android_version;         /* Android version (e.g., 1300 for 13.0) */
     bool dalvik_enabled;              /* Dalvik/ART VM enabled */
+    dalvik_vm_t* dalvik_vm;           /* Dalvik/ART VM instance */
+    binder_process_t* binder_process; /* Binder IPC process state */
+    void* surfaceflinger;             /* SurfaceFlinger instance */
 } AndroidVM;
 
 /* Android syscall emulation (Bionic libc compatibility) */
