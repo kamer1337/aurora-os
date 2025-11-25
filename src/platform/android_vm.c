@@ -496,9 +496,18 @@ int32_t android_vm_handle_syscall(AndroidVM* vm, uint32_t syscall_num, uint32_t*
             
             /* Handle stdout and stderr - write to console buffer */
             if (fd == 1 || fd == 2) {
+                /* Write to console buffer with overflow protection */
                 uint32_t bytes_to_write = count;
-                if (g_android_console_pos + count >= ANDROID_CONSOLE_BUFFER_SIZE) {
-                    bytes_to_write = ANDROID_CONSOLE_BUFFER_SIZE - g_android_console_pos - 1;
+                
+                /* Check if buffer is already full */
+                if (g_android_console_pos >= ANDROID_CONSOLE_BUFFER_SIZE - 1) {
+                    bytes_to_write = 0;
+                } else {
+                    /* Calculate available space safely */
+                    uint32_t available = ANDROID_CONSOLE_BUFFER_SIZE - g_android_console_pos - 1;
+                    if (bytes_to_write > available) {
+                        bytes_to_write = available;
+                    }
                 }
                 
                 /* Copy data from VM memory to console buffer */
@@ -580,11 +589,19 @@ int32_t android_vm_handle_syscall(AndroidVM* vm, uint32_t syscall_num, uint32_t*
             
             /* Simple implementation: allocate from current break */
             if (addr == 0) {
-                /* Allocate at current break with page alignment */
-                uint32_t aligned_brk = (g_android_current_brk + 0xFFF) & ~0xFFF;
-                if (aligned_brk + length >= ANDROID_HEAP_MAX) {
+                /* Check for potential overflow in alignment calculation */
+                if (g_android_current_brk > (0xFFFFFFFF - 0xFFF)) {
                     return -12; /* -ENOMEM */
                 }
+                
+                /* Allocate at current break with page alignment */
+                uint32_t aligned_brk = (g_android_current_brk + 0xFFF) & ~0xFFF;
+                
+                /* Check for overflow in size calculation */
+                if (length > ANDROID_HEAP_MAX - aligned_brk) {
+                    return -12; /* -ENOMEM */
+                }
+                
                 g_android_current_brk = aligned_brk + length;
                 return (int32_t)aligned_brk;
             }

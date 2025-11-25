@@ -135,20 +135,16 @@ int desktop_config_save(void) {
     /* Create configuration directory if it doesn't exist */
     inode_t stat;
     if (vfs_stat(CONFIG_DIR_PATH, &stat) < 0) {
-        vfs_mkdir(CONFIG_DIR_PATH);
+        if (vfs_mkdir(CONFIG_DIR_PATH) < 0) {
+            /* Directory creation failed - this is not fatal if it already exists */
+            /* Try to proceed anyway as the directory might exist */
+        }
     }
     
-    /* Open config file for writing */
+    /* Open config file for writing with create and truncate flags */
     int fd = vfs_open(CONFIG_FILE_PATH, O_WRONLY | O_CREAT | O_TRUNC);
     if (fd < 0) {
-        /* Try to create the file first */
-        if (vfs_create(CONFIG_FILE_PATH) < 0) {
-            return -1;
-        }
-        fd = vfs_open(CONFIG_FILE_PATH, O_WRONLY);
-        if (fd < 0) {
-            return -1;
-        }
+        return -1;
     }
     
     /* Prepare header */

@@ -288,10 +288,18 @@ int32_t linux_vm_handle_syscall(LinuxVM* vm, uint32_t syscall_num, uint32_t* arg
             
             /* Handle stdout and stderr - write to console buffer */
             if (fd == 1 || fd == 2) {
-                /* Write to console buffer */
+                /* Write to console buffer with overflow protection */
                 uint32_t bytes_to_write = count;
-                if (g_console_buffer_pos + count >= LINUX_CONSOLE_BUFFER_SIZE) {
-                    bytes_to_write = LINUX_CONSOLE_BUFFER_SIZE - g_console_buffer_pos - 1;
+                
+                /* Check if buffer is already full */
+                if (g_console_buffer_pos >= LINUX_CONSOLE_BUFFER_SIZE - 1) {
+                    bytes_to_write = 0;
+                } else {
+                    /* Calculate available space safely */
+                    uint32_t available = LINUX_CONSOLE_BUFFER_SIZE - g_console_buffer_pos - 1;
+                    if (bytes_to_write > available) {
+                        bytes_to_write = available;
+                    }
                 }
                 
                 /* Copy data from VM memory to console buffer */
@@ -370,11 +378,19 @@ int32_t linux_vm_handle_syscall(LinuxVM* vm, uint32_t syscall_num, uint32_t* arg
             
             /* Simple implementation: allocate from current break */
             if (addr == 0) {
-                /* Allocate at current break */
-                uint32_t aligned_brk = (g_current_brk + 0xFFF) & ~0xFFF; /* Page align */
-                if (aligned_brk + length >= LINUX_HEAP_MAX) {
+                /* Check for potential overflow in alignment calculation */
+                if (g_current_brk > (0xFFFFFFFF - 0xFFF)) {
                     return -12; /* -ENOMEM */
                 }
+                
+                /* Allocate at current break with page alignment */
+                uint32_t aligned_brk = (g_current_brk + 0xFFF) & ~0xFFF;
+                
+                /* Check for overflow in size calculation */
+                if (length > LINUX_HEAP_MAX - aligned_brk) {
+                    return -12; /* -ENOMEM */
+                }
+                
                 g_current_brk = aligned_brk + length;
                 return (int32_t)aligned_brk;
             }
