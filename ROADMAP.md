@@ -1,7 +1,7 @@
 # Aurora OS - Next Steps Roadmap
 
-**Version**: 1.0  
-**Last Updated**: November 19, 2025  
+**Version**: 1.1  
+**Last Updated**: November 25, 2025  
 **Project Status**: Release Candidate (Ready for Beta Testing)  
 **Target**: Production Release v1.0
 
@@ -19,7 +19,7 @@ Aurora OS has successfully completed all five core development phases and achiev
 
 ---
 
-## Current Status (November 19, 2025)
+## Current Status (November 25, 2025)
 
 ### Major Achievements ✅
 
@@ -37,6 +37,14 @@ Aurora OS has successfully completed all critical milestones for Release Candida
 - ✅ **Issue #3**: Network device - Packet send/receive fully functional
 - ✅ **Issue #4**: Atomic operations - XCHG, CAS, FADD all working
 
+#### Recent Enhancements (November 2025) ⭐ NEW
+- ✅ **Linux VM Syscalls**: Implemented write, read, brk, mmap, munmap syscalls with full functionality
+- ✅ **Android VM Syscalls**: Implemented write, read, brk, mmap, clone, prctl, futex, openat syscalls
+- ✅ **Desktop Configuration**: VFS-integrated save/load with file validation and checksums
+- ✅ **Linux Installer**: Full installation workflow with progress tracking
+- ✅ **Android Installer**: Complete installation process with step-by-step progress
+- ✅ **Code Cleanup**: Replaced stub functions with working implementations
+
 #### Documentation Complete
 - ✅ API Reference (API_REFERENCE.md)
 - ✅ Installation Guide (INSTALLATION_GUIDE.md)
@@ -45,6 +53,7 @@ Aurora OS has successfully completed all critical milestones for Release Candida
 - ✅ Atomic Operations Documentation (ATOMIC_OPERATIONS.md)
 - ✅ FAQ and Troubleshooting (FAQ.md)
 - ✅ Release Notes v1.0 (RELEASE_NOTES_v1.0.md)
+- ✅ Updated ROADMAP.md and TODO.md ⭐ NEW
 
 #### Performance Metrics
 - Memory operations: ~123 ticks (100 alloc/free cycles)

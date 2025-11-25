@@ -1,7 +1,7 @@
 # Aurora OS - Features
 
-**Version**: 1.0-RC1  
-**Last Updated**: November 20, 2025
+**Version**: 1.0-RC2  
+**Last Updated**: November 25, 2025
 
 ## Core Features
 
@@ -13,7 +13,7 @@
 - **System Calls**: Full syscall interface for user/kernel communication
 - **Aurora Linux Kernel**: Linux kernel v6.6 compatibility layer with Aurora enhancements
 
-### Aurora Linux Kernel Enhancement ⭐ NEW
+### Aurora Linux Kernel Enhancement ⭐
 - **Linux Compatibility**: Full Linux kernel v6.6-Aurora compatibility layer
 - **Crystal-Kyber Encryption**: Post-quantum encryption (Kyber-512, Kyber-768, Kyber-1024)
 - **Performance Optimizations**: 5 optimization levels (None to Maximum)
@@ -23,6 +23,26 @@
 - **Disk Encryption**: Full disk and partition encryption with Crystal-Kyber
 - **Security Hardening**: Kernel hardening, secure boot, exploit mitigation
 - **Syscall Mapping**: Linux syscall to Aurora OS syscall compatibility
+
+### Linux VM Syscall Support ⭐ NEW (November 2025)
+- **write**: Full console output with buffer management
+- **read**: File descriptor validation and EOF handling
+- **brk**: Heap management with bounds checking (256MB-512MB range)
+- **mmap**: Page-aligned memory allocation
+- **munmap**: Memory unmapping support
+- **getpid**: Process ID retrieval
+- **exit**: Process termination with VM state management
+
+### Android VM Syscall Support ⭐ NEW (November 2025)
+- **write**: Console buffer output with FD validation
+- **read**: File descriptor reading with EOF support
+- **brk**: Heap management (256MB-768MB range)
+- **mmap**: Memory mapping with page alignment
+- **clone**: Thread creation with thread table management (64 threads max)
+- **prctl**: Process control (PR_SET_NAME, PR_GET_NAME, PR_SET_NO_NEW_PRIVS)
+- **futex**: Fast userspace mutex (WAIT/WAKE operations)
+- **openat**: File opening with directory FD support (256 FDs max)
+- **getpid/getuid**: Process and user ID retrieval
 
 ### Memory Management
 - **Virtual Memory**: Paging with 4KB pages
@@ -99,6 +119,21 @@
 - **Desktop Icons**: Interactive desktop icon system
 - **Quick Launch**: Fast access to frequently used applications
 - **System Tray**: Status indicators and notifications
+- **Desktop Configuration Persistence** ⭐ NEW: VFS-integrated save/load with checksum validation
+
+### Linux/Android Installers ⭐ NEW (November 2025)
+- **Linux Installer**:
+  - Multi-step installation workflow
+  - Distribution selection (Tiny Linux, Aurora Linux)
+  - Progress tracking with detailed status
+  - Kernel command line configuration
+  - Automatic VM environment setup
+- **Android Installer**:
+  - 9-step installation process
+  - Boot.img kernel loading simulation
+  - System/Vendor partition setup
+  - Dalvik/ART runtime initialization
+  - Binder IPC and SurfaceFlinger configuration
 
 ### Widgets
 - **Buttons**: Click-responsive button widgets

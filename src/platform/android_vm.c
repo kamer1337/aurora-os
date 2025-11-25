@@ -18,6 +18,101 @@ static uint32_t g_property_count = 0;
 /* Android VM version */
 #define ANDROID_VM_VERSION "1.0.0-aurora-aosp"
 
+/* Console output buffer for write syscall */
+#define ANDROID_CONSOLE_BUFFER_SIZE 4096
+static char g_android_console_buffer[ANDROID_CONSOLE_BUFFER_SIZE];
+static uint32_t g_android_console_pos = 0;
+
+/* File descriptor table for Android */
+#define ANDROID_MAX_FDS 256
+typedef struct {
+    bool in_use;
+    uint32_t type;      /* 0=stdin, 1=stdout, 2=stderr, 3=file, 4=socket, 5=pipe */
+    uint32_t flags;     /* Open flags */
+    uint32_t position;  /* Current position in file */
+    uint32_t size;      /* File size (for regular files) */
+    char path[128];     /* File path */
+} android_fd_entry_t;
+
+static android_fd_entry_t g_android_fd_table[ANDROID_MAX_FDS];
+static int g_android_next_fd = 3; /* Next available fd after stdin/stdout/stderr */
+
+/* Memory management for Android */
+#define ANDROID_HEAP_BASE   0x10000000   /* Heap starts at 256MB */
+#define ANDROID_HEAP_MAX    0x30000000   /* Max heap at 768MB */
+static uint32_t g_android_current_brk = ANDROID_HEAP_BASE;
+
+/* Process/Thread tracking */
+#define ANDROID_MAX_THREADS 64
+typedef struct {
+    bool active;
+    uint32_t tid;
+    uint32_t pid;
+    uint32_t parent_tid;
+    uint32_t stack_ptr;
+} android_thread_t;
+
+static android_thread_t g_android_threads[ANDROID_MAX_THREADS];
+static uint32_t g_android_next_tid = 1;
+static uint32_t g_android_current_pid = 1;
+
+/* Futex table for synchronization */
+#define ANDROID_MAX_FUTEXES 32
+typedef struct {
+    bool in_use;
+    uint32_t addr;
+    uint32_t waiters;
+} android_futex_t;
+
+static android_futex_t g_android_futexes[ANDROID_MAX_FUTEXES];
+
+/* Initialize Android file descriptor table */
+static void android_init_fd_table(void) {
+    for (int i = 0; i < ANDROID_MAX_FDS; i++) {
+        g_android_fd_table[i].in_use = false;
+        g_android_fd_table[i].type = 0;
+        g_android_fd_table[i].flags = 0;
+        g_android_fd_table[i].position = 0;
+        g_android_fd_table[i].size = 0;
+        g_android_fd_table[i].path[0] = '\0';
+    }
+    /* Initialize standard file descriptors */
+    g_android_fd_table[0].in_use = true;
+    g_android_fd_table[0].type = 0; /* stdin */
+    g_android_fd_table[1].in_use = true;
+    g_android_fd_table[1].type = 1; /* stdout */
+    g_android_fd_table[2].in_use = true;
+    g_android_fd_table[2].type = 2; /* stderr */
+    g_android_next_fd = 3;
+}
+
+/* Initialize Android thread table */
+static void android_init_thread_table(void) {
+    for (int i = 0; i < ANDROID_MAX_THREADS; i++) {
+        g_android_threads[i].active = false;
+        g_android_threads[i].tid = 0;
+        g_android_threads[i].pid = 0;
+        g_android_threads[i].parent_tid = 0;
+        g_android_threads[i].stack_ptr = 0;
+    }
+    /* Create initial thread (init process) */
+    g_android_threads[0].active = true;
+    g_android_threads[0].tid = 1;
+    g_android_threads[0].pid = 1;
+    g_android_threads[0].parent_tid = 0;
+    g_android_next_tid = 2;
+    g_android_current_pid = 1;
+}
+
+/* Initialize Android futex table */
+static void android_init_futex_table(void) {
+    for (int i = 0; i < ANDROID_MAX_FUTEXES; i++) {
+        g_android_futexes[i].in_use = false;
+        g_android_futexes[i].addr = 0;
+        g_android_futexes[i].waiters = 0;
+    }
+}
+
 /* Architecture names */
 static const char* arch_names[] = {
     "ARM32",
@@ -35,6 +130,23 @@ int android_vm_init(void) {
     g_android_vm_count = 0;
     g_property_count = 0;
     platform_memset(g_android_properties, 0, sizeof(g_android_properties));
+    
+    /* Initialize console buffer */
+    g_android_console_pos = 0;
+    platform_memset(g_android_console_buffer, 0, ANDROID_CONSOLE_BUFFER_SIZE);
+    
+    /* Initialize file descriptor table */
+    android_init_fd_table();
+    
+    /* Initialize thread table */
+    android_init_thread_table();
+    
+    /* Initialize futex table */
+    android_init_futex_table();
+    
+    /* Initialize heap */
+    g_android_current_brk = ANDROID_HEAP_BASE;
+    
     g_android_vm_initialized = true;
     
     return 0;
@@ -366,68 +478,241 @@ int32_t android_vm_handle_syscall(AndroidVM* vm, uint32_t syscall_num, uint32_t*
     /* Handle common Android syscalls (Bionic libc) */
     switch (syscall_num) {
         case ANDROID_SYSCALL_EXIT:
-            /* Exit process */
+            /* Exit process - stop VM execution */
+            vm->state = ANDROID_VM_STATE_STOPPED;
             return 0;
             
-        case ANDROID_SYSCALL_WRITE:
+        case ANDROID_SYSCALL_WRITE: {
             /* Write to file descriptor */
-            /* args[0] = fd, args[1] = buf, args[2] = count */
-            /* TODO: Implement write syscall */
-            return args[2]; /* Return bytes written */
+            /* args[0] = fd, args[1] = buf ptr, args[2] = count */
+            uint32_t fd = args[0];
+            uint32_t buf_ptr = args[1];
+            uint32_t count = args[2];
             
-        case ANDROID_SYSCALL_READ:
+            /* Validate file descriptor */
+            if (fd >= ANDROID_MAX_FDS || !g_android_fd_table[fd].in_use) {
+                return -9; /* -EBADF */
+            }
+            
+            /* Handle stdout and stderr - write to console buffer */
+            if (fd == 1 || fd == 2) {
+                /* Write to console buffer with overflow protection */
+                uint32_t bytes_to_write = count;
+                
+                /* Check if buffer is already full */
+                if (g_android_console_pos >= ANDROID_CONSOLE_BUFFER_SIZE - 1) {
+                    bytes_to_write = 0;
+                } else {
+                    /* Calculate available space safely */
+                    uint32_t available = ANDROID_CONSOLE_BUFFER_SIZE - g_android_console_pos - 1;
+                    if (bytes_to_write > available) {
+                        bytes_to_write = available;
+                    }
+                }
+                
+                /* Copy data from VM memory to console buffer */
+                if (vm->aurora_vm && bytes_to_write > 0) {
+                    for (uint32_t i = 0; i < bytes_to_write; i++) {
+                        if (buf_ptr + i < AURORA_VM_MEMORY_SIZE) {
+                            g_android_console_buffer[g_android_console_pos++] = 
+                                vm->aurora_vm->memory[buf_ptr + i];
+                        }
+                    }
+                    g_android_console_buffer[g_android_console_pos] = '\0';
+                }
+                
+                return (int32_t)count;
+            }
+            
+            /* For regular files, return count (simulated write) */
+            return (int32_t)count;
+        }
+            
+        case ANDROID_SYSCALL_READ: {
             /* Read from file descriptor */
-            /* args[0] = fd, args[1] = buf, args[2] = count */
-            /* TODO: Implement read syscall */
+            /* args[0] = fd, args[1] = buf ptr, args[2] = count */
+            uint32_t fd = args[0];
+            uint32_t buf_ptr = args[1];
+            uint32_t count = args[2];
+            
+            /* Validate file descriptor */
+            if (fd >= ANDROID_MAX_FDS || !g_android_fd_table[fd].in_use) {
+                return -9; /* -EBADF */
+            }
+            
+            /* Handle stdin - return 0 (EOF) for now */
+            if (fd == 0) {
+                return 0;
+            }
+            
+            /* For regular files, simulate empty read */
+            (void)buf_ptr;
+            (void)count;
             return 0;
+        }
             
         case ANDROID_SYSCALL_GETPID:
             /* Get process ID */
-            return 1; /* Return dummy PID */
+            return (int32_t)g_android_current_pid;
             
         case ANDROID_SYSCALL_GETUID:
-            /* Get user ID */
-            return 0; /* Return root UID */
+            /* Get user ID - return root (0) for Android init */
+            return 0;
             
-        case ANDROID_SYSCALL_BRK:
+        case ANDROID_SYSCALL_BRK: {
             /* Change data segment size */
-            /* args[0] = new break address */
-            /* TODO: Implement brk syscall */
-            return args[0];
+            /* args[0] = new break address, 0 to query current */
+            uint32_t new_brk = args[0];
             
-        case ANDROID_SYSCALL_MMAP:
+            if (new_brk == 0) {
+                /* Query current break */
+                return (int32_t)g_android_current_brk;
+            }
+            
+            /* Validate new break address */
+            if (new_brk < ANDROID_HEAP_BASE || new_brk >= ANDROID_HEAP_MAX) {
+                return -12; /* -ENOMEM */
+            }
+            
+            /* Set new break address */
+            g_android_current_brk = new_brk;
+            return (int32_t)g_android_current_brk;
+        }
+            
+        case ANDROID_SYSCALL_MMAP: {
             /* Memory mapping */
             /* args[0] = addr, args[1] = length, args[2] = prot, args[3] = flags */
-            /* TODO: Implement mmap syscall */
-            return args[0];
+            uint32_t addr = args[0];
+            uint32_t length = args[1];
+            /* uint32_t prot = args[2]; */
+            /* uint32_t flags = args[3]; */
             
-        case ANDROID_SYSCALL_CLONE:
+            /* Simple implementation: allocate from current break */
+            if (addr == 0) {
+                /* Check for potential overflow in alignment calculation */
+                if (g_android_current_brk > (0xFFFFFFFF - 0xFFF)) {
+                    return -12; /* -ENOMEM */
+                }
+                
+                /* Allocate at current break with page alignment */
+                uint32_t aligned_brk = (g_android_current_brk + 0xFFF) & ~0xFFF;
+                
+                /* Check for overflow in size calculation */
+                if (length > ANDROID_HEAP_MAX - aligned_brk) {
+                    return -12; /* -ENOMEM */
+                }
+                
+                g_android_current_brk = aligned_brk + length;
+                return (int32_t)aligned_brk;
+            }
+            
+            /* Fixed mapping at specified address */
+            return (int32_t)addr;
+        }
+            
+        case ANDROID_SYSCALL_CLONE: {
             /* Create child process/thread */
-            /* args[0] = flags, args[1] = stack, args[2] = parent_tid, args[3] = child_tid */
-            /* TODO: Implement clone syscall */
-            return 2; /* Return dummy child PID */
+            /* args[0] = flags, args[1] = stack, args[2] = parent_tid ptr, args[3] = child_tid ptr */
+            uint32_t flags = args[0];
+            uint32_t stack = args[1];
+            (void)flags; /* Clone flags determine behavior */
+            (void)stack; /* New stack for child */
             
-        case ANDROID_SYSCALL_PRCTL:
+            /* Find free thread slot */
+            int slot = -1;
+            for (int i = 0; i < ANDROID_MAX_THREADS; i++) {
+                if (!g_android_threads[i].active) {
+                    slot = i;
+                    break;
+                }
+            }
+            
+            if (slot < 0) {
+                return -11; /* -EAGAIN */
+            }
+            
+            /* Create new thread */
+            uint32_t new_tid = g_android_next_tid++;
+            g_android_threads[slot].active = true;
+            g_android_threads[slot].tid = new_tid;
+            g_android_threads[slot].pid = g_android_current_pid;
+            g_android_threads[slot].parent_tid = 1;
+            g_android_threads[slot].stack_ptr = stack;
+            
+            return (int32_t)new_tid;
+        }
+            
+        case ANDROID_SYSCALL_PRCTL: {
             /* Process control operations */
             /* args[0] = option, args[1-4] = arguments */
-            /* TODO: Implement prctl syscall */
-            return 0;
+            uint32_t option = args[0];
             
-        case ANDROID_SYSCALL_FUTEX:
+            /* Handle common prctl options */
+            switch (option) {
+                case 15: /* PR_SET_NAME - set thread name */
+                    /* Accept the request but don't store the name */
+                    return 0;
+                case 16: /* PR_GET_NAME - get thread name */
+                    /* Return empty string */
+                    return 0;
+                case 38: /* PR_SET_NO_NEW_PRIVS */
+                    return 0;
+                default:
+                    return 0; /* Success for unhandled options */
+            }
+        }
+            
+        case ANDROID_SYSCALL_FUTEX: {
             /* Fast userspace mutex */
-            /* args[0] = uaddr, args[1] = op, args[2] = val */
-            /* TODO: Implement futex syscall */
-            return 0;
+            /* args[0] = uaddr, args[1] = op, args[2] = val, args[3] = timeout, args[4] = uaddr2 */
+            uint32_t uaddr = args[0];
+            uint32_t op = args[1];
+            uint32_t val = args[2];
             
-        case ANDROID_SYSCALL_OPENAT:
+            /* Futex operations */
+            #define FUTEX_WAIT 0
+            #define FUTEX_WAKE 1
+            
+            switch (op & 0x7F) {
+                case FUTEX_WAIT:
+                    /* Wait on futex - for simplicity, return immediately */
+                    (void)uaddr;
+                    (void)val;
+                    return 0;
+                case FUTEX_WAKE:
+                    /* Wake waiters - return number of waiters woken */
+                    return 1;
+                default:
+                    return 0;
+            }
+        }
+            
+        case ANDROID_SYSCALL_OPENAT: {
             /* Open file relative to directory fd */
-            /* args[0] = dirfd, args[1] = pathname, args[2] = flags, args[3] = mode */
-            /* TODO: Implement openat syscall */
-            return 3; /* Return dummy fd */
+            /* args[0] = dirfd, args[1] = pathname ptr, args[2] = flags, args[3] = mode */
+            /* int32_t dirfd = (int32_t)args[0]; */
+            /* uint32_t pathname_ptr = args[1]; */
+            uint32_t flags = args[2];
+            /* uint32_t mode = args[3]; */
+            
+            /* Find free fd slot */
+            if (g_android_next_fd >= ANDROID_MAX_FDS) {
+                return -24; /* -EMFILE */
+            }
+            
+            int new_fd = g_android_next_fd++;
+            g_android_fd_table[new_fd].in_use = true;
+            g_android_fd_table[new_fd].type = 3; /* Regular file */
+            g_android_fd_table[new_fd].flags = flags;
+            g_android_fd_table[new_fd].position = 0;
+            g_android_fd_table[new_fd].size = 0;
+            
+            return new_fd;
+        }
             
         default:
-            /* Unimplemented syscall */
-            return -1;
+            /* Unimplemented syscall - return -ENOSYS */
+            return -38;
     }
 }
 

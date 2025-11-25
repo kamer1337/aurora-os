@@ -73,13 +73,15 @@ int desktop_config_apply(const desktop_config_t* config);
 void desktop_config_reset(void);
 
 /**
- * Save configuration (stub for future persistence)
+ * Save configuration to VFS
+ * Writes configuration to /etc/aurora/desktop.cfg with checksums
  * @return 0 on success, -1 on failure
  */
 int desktop_config_save(void);
 
 /**
- * Load configuration (stub for future persistence)
+ * Load configuration from VFS
+ * Loads configuration from /etc/aurora/desktop.cfg with validation
  * @return 0 on success, -1 on failure
  */
 int desktop_config_load(void);
