@@ -11,10 +11,38 @@
 #include "theme_manager.h"
 #include "wallpaper_manager.h"
 #include "../memory/memory.h"
+#include "../../filesystem/vfs/vfs.h"
+
+/* Configuration file path */
+#define CONFIG_FILE_PATH "/etc/aurora/desktop.cfg"
+#define CONFIG_DIR_PATH "/etc/aurora"
+
+/* Configuration file magic number for validation */
+#define CONFIG_MAGIC 0x41555243  /* "AURC" */
+#define CONFIG_VERSION 1
+
+/* Configuration file header */
+typedef struct {
+    uint32_t magic;
+    uint32_t version;
+    uint32_t size;
+    uint32_t checksum;
+} config_header_t;
 
 // Global configuration
 static desktop_config_t config;
 static uint8_t config_initialized = 0;
+
+/* Simple checksum calculation */
+static uint32_t calculate_checksum(const void* data, size_t size) {
+    const uint8_t* bytes = (const uint8_t*)data;
+    uint32_t sum = 0;
+    for (size_t i = 0; i < size; i++) {
+        sum += bytes[i];
+        sum = (sum << 1) | (sum >> 31); /* Rotate left by 1 */
+    }
+    return sum;
+}
 
 int desktop_config_init(void) {
     if (config_initialized) {
@@ -100,33 +128,139 @@ void desktop_config_reset(void) {
 }
 
 int desktop_config_save(void) {
-    // Configuration persistence implementation
-    // In a full implementation, this would save to VFS
-    // For now, we maintain state in memory which persists during runtime
-    
     if (!config_initialized) {
         return -1;
     }
     
-    // Future enhancement: Save to /etc/aurora/desktop.cfg
-    // vfs_write("/etc/aurora/desktop.cfg", &config, sizeof(desktop_config_t));
+    /* Create configuration directory if it doesn't exist */
+    inode_t stat;
+    if (vfs_stat(CONFIG_DIR_PATH, &stat) < 0) {
+        vfs_mkdir(CONFIG_DIR_PATH);
+    }
     
+    /* Open config file for writing */
+    int fd = vfs_open(CONFIG_FILE_PATH, O_WRONLY | O_CREAT | O_TRUNC);
+    if (fd < 0) {
+        /* Try to create the file first */
+        if (vfs_create(CONFIG_FILE_PATH) < 0) {
+            return -1;
+        }
+        fd = vfs_open(CONFIG_FILE_PATH, O_WRONLY);
+        if (fd < 0) {
+            return -1;
+        }
+    }
+    
+    /* Prepare header */
+    config_header_t header;
+    header.magic = CONFIG_MAGIC;
+    header.version = CONFIG_VERSION;
+    header.size = sizeof(desktop_config_t);
+    header.checksum = calculate_checksum(&config, sizeof(desktop_config_t));
+    
+    /* Write header */
+    int bytes_written = vfs_write(fd, &header, sizeof(config_header_t));
+    if (bytes_written != (int)sizeof(config_header_t)) {
+        vfs_close(fd);
+        return -1;
+    }
+    
+    /* Write configuration data */
+    bytes_written = vfs_write(fd, &config, sizeof(desktop_config_t));
+    if (bytes_written != (int)sizeof(desktop_config_t)) {
+        vfs_close(fd);
+        return -1;
+    }
+    
+    vfs_close(fd);
     return 0;
 }
 
 int desktop_config_load(void) {
-    // Configuration loading implementation
-    // In a full implementation, this would load from VFS
-    // For now, we use default values initialized in desktop_config_init()
-    
-    if (!config_initialized) {
-        desktop_config_init();
+    /* Check if config file exists */
+    inode_t stat;
+    if (vfs_stat(CONFIG_FILE_PATH, &stat) < 0) {
+        /* No config file, use defaults */
+        if (!config_initialized) {
+            desktop_config_init();
+        }
+        return 0;
     }
     
-    // Future enhancement: Load from /etc/aurora/desktop.cfg
-    // if (vfs_exists("/etc/aurora/desktop.cfg")) {
-    //     vfs_read("/etc/aurora/desktop.cfg", &config, sizeof(desktop_config_t));
-    // }
+    /* Open config file for reading */
+    int fd = vfs_open(CONFIG_FILE_PATH, O_RDONLY);
+    if (fd < 0) {
+        if (!config_initialized) {
+            desktop_config_init();
+        }
+        return -1;
+    }
+    
+    /* Read header */
+    config_header_t header;
+    int bytes_read = vfs_read(fd, &header, sizeof(config_header_t));
+    if (bytes_read != (int)sizeof(config_header_t)) {
+        vfs_close(fd);
+        if (!config_initialized) {
+            desktop_config_init();
+        }
+        return -1;
+    }
+    
+    /* Validate header */
+    if (header.magic != CONFIG_MAGIC) {
+        vfs_close(fd);
+        if (!config_initialized) {
+            desktop_config_init();
+        }
+        return -1;
+    }
+    
+    /* Check version compatibility */
+    if (header.version > CONFIG_VERSION) {
+        vfs_close(fd);
+        if (!config_initialized) {
+            desktop_config_init();
+        }
+        return -1;
+    }
+    
+    /* Check size */
+    if (header.size != sizeof(desktop_config_t)) {
+        vfs_close(fd);
+        if (!config_initialized) {
+            desktop_config_init();
+        }
+        return -1;
+    }
+    
+    /* Read configuration data into temporary buffer */
+    desktop_config_t temp_config;
+    bytes_read = vfs_read(fd, &temp_config, sizeof(desktop_config_t));
+    vfs_close(fd);
+    
+    if (bytes_read != (int)sizeof(desktop_config_t)) {
+        if (!config_initialized) {
+            desktop_config_init();
+        }
+        return -1;
+    }
+    
+    /* Validate checksum */
+    uint32_t checksum = calculate_checksum(&temp_config, sizeof(desktop_config_t));
+    if (checksum != header.checksum) {
+        if (!config_initialized) {
+            desktop_config_init();
+        }
+        return -1;
+    }
+    
+    /* Copy validated configuration */
+    config = temp_config;
+    config_initialized = 1;
+    
+    /* Apply loaded configuration */
+    font_manager_set_current(config.default_font);
     
     return 0;
 }

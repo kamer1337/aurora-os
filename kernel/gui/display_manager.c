@@ -144,8 +144,8 @@ int display_manager_detect_displays(void) {
     // Try to read EDID for primary display
     display_read_edid(0);
     
-    // Detect additional displays (stub for now - can be extended with PCI enumeration)
-    // In a real implementation, this would scan PCI bus for additional graphics adapters
+    // Multi-display detection: Currently supports primary display
+    // Can be extended with PCI enumeration to detect additional graphics adapters
     
     return display_manager.display_count;
 }

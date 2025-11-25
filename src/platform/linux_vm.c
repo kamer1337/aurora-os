@@ -13,6 +13,44 @@ static uint32_t g_linux_vm_count = 0;
 /* Linux VM version */
 #define LINUX_VM_VERSION "1.0.0-aurora"
 
+/* Console output buffer for write syscall */
+#define LINUX_CONSOLE_BUFFER_SIZE 4096
+static char g_console_buffer[LINUX_CONSOLE_BUFFER_SIZE];
+static uint32_t g_console_buffer_pos = 0;
+
+/* File descriptor table */
+#define LINUX_MAX_FDS 64
+typedef struct {
+    bool in_use;
+    uint32_t type;      /* 0=stdin, 1=stdout, 2=stderr, 3=file */
+    uint32_t position;  /* Current position in file */
+    uint32_t size;      /* File size (for regular files) */
+} linux_fd_entry_t;
+
+static linux_fd_entry_t g_fd_table[LINUX_MAX_FDS];
+
+/* Memory management for brk syscall */
+#define LINUX_HEAP_BASE  0x10000000   /* Heap starts at 256MB */
+#define LINUX_HEAP_MAX   0x20000000   /* Max heap at 512MB */
+static uint32_t g_current_brk = LINUX_HEAP_BASE;
+
+/* Initialize file descriptor table */
+static void linux_init_fd_table(void) {
+    for (int i = 0; i < LINUX_MAX_FDS; i++) {
+        g_fd_table[i].in_use = false;
+        g_fd_table[i].type = 0;
+        g_fd_table[i].position = 0;
+        g_fd_table[i].size = 0;
+    }
+    /* Initialize standard file descriptors */
+    g_fd_table[0].in_use = true;
+    g_fd_table[0].type = 0; /* stdin */
+    g_fd_table[1].in_use = true;
+    g_fd_table[1].type = 1; /* stdout */
+    g_fd_table[2].in_use = true;
+    g_fd_table[2].type = 2; /* stderr */
+}
+
 int linux_vm_init(void) {
     if (g_linux_vm_initialized) {
         return 0;
@@ -21,6 +59,16 @@ int linux_vm_init(void) {
     /* Initialize Linux VM subsystem */
     g_linux_vm_count = 0;
     g_linux_vm_initialized = true;
+    
+    /* Initialize console buffer */
+    g_console_buffer_pos = 0;
+    platform_memset(g_console_buffer, 0, LINUX_CONSOLE_BUFFER_SIZE);
+    
+    /* Initialize file descriptor table */
+    linux_init_fd_table();
+    
+    /* Initialize heap */
+    g_current_brk = LINUX_HEAP_BASE;
     
     return 0;
 }
@@ -222,34 +270,126 @@ int32_t linux_vm_handle_syscall(LinuxVM* vm, uint32_t syscall_num, uint32_t* arg
     /* Handle common Linux syscalls */
     switch (syscall_num) {
         case LINUX_SYSCALL_EXIT:
-            /* Exit process */
+            /* Exit process - stop VM execution */
+            vm->state = LINUX_VM_STATE_STOPPED;
             return 0;
             
-        case LINUX_SYSCALL_WRITE:
+        case LINUX_SYSCALL_WRITE: {
             /* Write to file descriptor */
-            /* args[0] = fd, args[1] = buf, args[2] = count */
-            /* TODO: Implement write syscall */
-            return args[2]; /* Return bytes written */
+            /* args[0] = fd, args[1] = buf ptr, args[2] = count */
+            uint32_t fd = args[0];
+            uint32_t buf_ptr = args[1];
+            uint32_t count = args[2];
             
-        case LINUX_SYSCALL_READ:
+            /* Validate file descriptor */
+            if (fd >= LINUX_MAX_FDS || !g_fd_table[fd].in_use) {
+                return -9; /* -EBADF */
+            }
+            
+            /* Handle stdout and stderr - write to console buffer */
+            if (fd == 1 || fd == 2) {
+                /* Write to console buffer */
+                uint32_t bytes_to_write = count;
+                if (g_console_buffer_pos + count >= LINUX_CONSOLE_BUFFER_SIZE) {
+                    bytes_to_write = LINUX_CONSOLE_BUFFER_SIZE - g_console_buffer_pos - 1;
+                }
+                
+                /* Copy data from VM memory to console buffer */
+                if (vm->aurora_vm && bytes_to_write > 0) {
+                    /* Read from VM memory space */
+                    for (uint32_t i = 0; i < bytes_to_write; i++) {
+                        if (buf_ptr + i < AURORA_VM_MEMORY_SIZE) {
+                            g_console_buffer[g_console_buffer_pos++] = 
+                                vm->aurora_vm->memory[buf_ptr + i];
+                        }
+                    }
+                    g_console_buffer[g_console_buffer_pos] = '\0';
+                }
+                
+                return (int32_t)count;
+            }
+            
+            /* For regular files, return count (simulated write) */
+            return (int32_t)count;
+        }
+            
+        case LINUX_SYSCALL_READ: {
             /* Read from file descriptor */
-            /* args[0] = fd, args[1] = buf, args[2] = count */
-            /* TODO: Implement read syscall */
+            /* args[0] = fd, args[1] = buf ptr, args[2] = count */
+            uint32_t fd = args[0];
+            uint32_t buf_ptr = args[1];
+            uint32_t count = args[2];
+            
+            /* Validate file descriptor */
+            if (fd >= LINUX_MAX_FDS || !g_fd_table[fd].in_use) {
+                return -9; /* -EBADF */
+            }
+            
+            /* Handle stdin - return 0 (EOF) for now */
+            if (fd == 0) {
+                return 0;
+            }
+            
+            /* For regular files, simulate empty read */
+            (void)buf_ptr;
+            (void)count;
             return 0;
+        }
             
         case LINUX_SYSCALL_GETPID:
-            /* Get process ID */
-            return 1; /* Return dummy PID */
+            /* Get process ID - return VM instance ID */
+            return 1; /* Return PID 1 (init process) */
             
-        case LINUX_SYSCALL_BRK:
+        case LINUX_SYSCALL_BRK: {
             /* Change data segment size */
-            /* args[0] = new break address */
-            /* TODO: Implement brk syscall */
-            return args[0];
+            /* args[0] = new break address, 0 to query current */
+            uint32_t new_brk = args[0];
+            
+            if (new_brk == 0) {
+                /* Query current break */
+                return (int32_t)g_current_brk;
+            }
+            
+            /* Validate new break address */
+            if (new_brk < LINUX_HEAP_BASE || new_brk >= LINUX_HEAP_MAX) {
+                return -12; /* -ENOMEM */
+            }
+            
+            /* Set new break address */
+            g_current_brk = new_brk;
+            return (int32_t)g_current_brk;
+        }
+        
+        case LINUX_SYSCALL_MMAP: {
+            /* Memory mapping */
+            /* args[0] = addr, args[1] = length, args[2] = prot, args[3] = flags */
+            uint32_t addr = args[0];
+            uint32_t length = args[1];
+            /* uint32_t prot = args[2]; */
+            /* uint32_t flags = args[3]; */
+            
+            /* Simple implementation: allocate from current break */
+            if (addr == 0) {
+                /* Allocate at current break */
+                uint32_t aligned_brk = (g_current_brk + 0xFFF) & ~0xFFF; /* Page align */
+                if (aligned_brk + length >= LINUX_HEAP_MAX) {
+                    return -12; /* -ENOMEM */
+                }
+                g_current_brk = aligned_brk + length;
+                return (int32_t)aligned_brk;
+            }
+            
+            /* Fixed mapping at specified address */
+            return (int32_t)addr;
+        }
+        
+        case LINUX_SYSCALL_MUNMAP:
+            /* Unmap memory - no-op for now */
+            return 0;
             
         default:
-            /* Unimplemented syscall */
-            return -1;
+            /* Unimplemented syscall - return -ENOSYS */
+            return -38;
     }
 }
 
