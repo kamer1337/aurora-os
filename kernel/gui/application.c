@@ -1441,6 +1441,10 @@ static int launch_linux_installer(void) {
     gui_create_label(window, "Install Linux distributions in Aurora OS workspaces", 20, 45);
     
     // Get available distributions
+    #define MAX_DISPLAYED_DISTROS 4
+    #define DIST_TEXT_SIZE 128
+    #define SIZE_TEXT_SIZE 32
+    
     linux_distro_t distros[8];
     int distro_count = linux_installer_get_distros(distros, 8);
     
@@ -1448,9 +1452,10 @@ static int launch_linux_installer(void) {
     gui_create_label(window, "Available Distributions:", 20, 85);
     
     int y_offset = 115;
-    for (int i = 0; i < distro_count && i < 4; i++) {
+    int display_count = (distro_count < MAX_DISPLAYED_DISTROS) ? distro_count : MAX_DISPLAYED_DISTROS;
+    for (int i = 0; i < display_count; i++) {
         // Distribution name and version
-        char dist_text[128];
+        char dist_text[DIST_TEXT_SIZE];
         int pos = 0;
         
         // Add number prefix
@@ -1460,13 +1465,13 @@ static int launch_linux_installer(void) {
         
         // Add name
         const char* name = distros[i].name;
-        while (*name) dist_text[pos++] = *name++;
+        while (*name && pos < DIST_TEXT_SIZE - 20) dist_text[pos++] = *name++;
         dist_text[pos++] = ' ';
         dist_text[pos++] = 'v';
         
         // Add version
         const char* ver = distros[i].version;
-        while (*ver) dist_text[pos++] = *ver++;
+        while (*ver && pos < DIST_TEXT_SIZE - 5) dist_text[pos++] = *ver++;
         dist_text[pos] = '\0';
         
         gui_create_label(window, dist_text, 40, y_offset);
@@ -1475,15 +1480,31 @@ static int launch_linux_installer(void) {
         gui_create_label(window, distros[i].description, 60, y_offset + 25);
         
         // Add size info
-        char size_text[32];
+        char size_text[SIZE_TEXT_SIZE];
         pos = 0;
         const char* size_prefix = "Size: ";
         while (*size_prefix) size_text[pos++] = *size_prefix++;
         
         uint32_t size = distros[i].size_mb;
-        if (size >= 100) size_text[pos++] = '0' + (size / 100);
-        if (size >= 10) size_text[pos++] = '0' + ((size / 10) % 10);
-        size_text[pos++] = '0' + (size % 10);
+        // Properly handle sizes from 0 to 9999 MB
+        if (size >= 1000) {
+            size_text[pos++] = '0' + (size / 1000);
+            size %= 1000;
+            size_text[pos++] = '0' + (size / 100);
+            size %= 100;
+            size_text[pos++] = '0' + (size / 10);
+            size %= 10;
+            size_text[pos++] = '0' + size;
+        } else if (size >= 100) {
+            size_text[pos++] = '0' + (size / 100);
+            size_text[pos++] = '0' + ((size / 10) % 10);
+            size_text[pos++] = '0' + (size % 10);
+        } else if (size >= 10) {
+            size_text[pos++] = '0' + (size / 10);
+            size_text[pos++] = '0' + (size % 10);
+        } else {
+            size_text[pos++] = '0' + size;
+        }
         const char* mb_suffix = " MB";
         while (*mb_suffix) size_text[pos++] = *mb_suffix++;
         size_text[pos] = '\0';
