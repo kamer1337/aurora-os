@@ -568,7 +568,9 @@ int driver_resume(const char* name) {
 int driver_suspend_all(void) {
     int failed_count = 0;
     
-    /* Suspend in reverse priority order */
+    /* Suspend in reverse registration order (typically higher priority */
+    /* drivers are registered first, so this suspends them last) */
+    /* Note: For strict priority ordering, drivers should be sorted by priority */
     for (int i = driver_count - 1; i >= 0; i--) {
         if (drivers[i].status == DRIVER_STATUS_INITIALIZED) {
             if (driver_suspend(drivers[i].name) != 0) {

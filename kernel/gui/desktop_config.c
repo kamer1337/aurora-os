@@ -399,13 +399,25 @@ void desktop_config_show_settings(void) {
     y_pos += spacing;
     
     gui_create_label(settings_window, "Widget Transparency:", x_label, y_pos);
-    // Show transparency level
+    // Show transparency level (0-100)
     char trans_label[16];
-    trans_label[0] = (config.widget_transparency / 100) + '0';
-    trans_label[1] = ((config.widget_transparency / 10) % 10) + '0';
-    trans_label[2] = (config.widget_transparency % 10) + '0';
-    trans_label[3] = '%';
-    trans_label[4] = '\0';
+    uint8_t trans_val = config.widget_transparency;
+    if (trans_val >= 100) {
+        trans_label[0] = '1';
+        trans_label[1] = '0';
+        trans_label[2] = '0';
+        trans_label[3] = '%';
+        trans_label[4] = '\0';
+    } else if (trans_val >= 10) {
+        trans_label[0] = (trans_val / 10) + '0';
+        trans_label[1] = (trans_val % 10) + '0';
+        trans_label[2] = '%';
+        trans_label[3] = '\0';
+    } else {
+        trans_label[0] = trans_val + '0';
+        trans_label[1] = '%';
+        trans_label[2] = '\0';
+    }
     gui_create_button(settings_window, trans_label, x_control, y_pos - 5, 60, 25);
     y_pos += spacing;
     

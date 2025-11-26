@@ -10,7 +10,15 @@
 #include "../../include/platform/aurora_vm.h"
 #include "../../include/platform/platform_util.h"
 
-/* Define size_t for freestanding environment */
+/* Number of code pages (4KB code section / page_size) */
+#define AURORA_VM_CODE_PAGES (4096 / AURORA_VM_PAGE_SIZE)
+
+/* Maximum JIT blocks */
+#define AURORA_VM_JIT_MAX_BLOCKS 256
+
+/* Number of known opcodes */
+#define AURORA_VM_NUM_OPCODES 33
+
 #ifndef _SIZE_T_DEFINED
 #define _SIZE_T_DEFINED
 typedef unsigned int size_t;
@@ -72,7 +80,7 @@ int aurora_vm_init(AuroraVM *vm) {
     }
     
     /* Mark code pages as executable */
-    for (uint32_t i = 0; i < 16; i++) {  /* First 4KB is code */
+    for (uint32_t i = 0; i < AURORA_VM_CODE_PAGES; i++) {
         vm->pages[i].protection |= AURORA_PAGE_EXEC;
     }
     
@@ -352,7 +360,7 @@ int aurora_vm_disassemble(uint32_t instruction, char *buffer, size_t buffer_size
     uint8_t opcode = (instruction >> 24) & 0xFF;
     
     /* Simple disassembly stub */
-    const char *opcode_names[] = {
+    const char *opcode_names[AURORA_VM_NUM_OPCODES] = {
         "ADD", "SUB", "MUL", "DIV", "MOD", "NEG",
         "AND", "OR", "XOR", "NOT", "SHL", "SHR",
         "LOAD", "STORE", "LOADI", "LOADB", "STOREB", "MOVE",
@@ -361,7 +369,7 @@ int aurora_vm_disassemble(uint32_t instruction, char *buffer, size_t buffer_size
         "SYSCALL", "HALT"
     };
     
-    if (opcode < sizeof(opcode_names) / sizeof(opcode_names[0])) {
+    if (opcode < AURORA_VM_NUM_OPCODES) {
         /* Format: "OPCODE rd, rs1, rs2" */
         uint8_t rd = (instruction >> 20) & 0x0F;
         uint8_t rs1 = (instruction >> 16) & 0x0F;
@@ -695,7 +703,7 @@ int aurora_vm_jit_compile_block(AuroraVM *vm, uint32_t addr) {
     }
     
     /* Add new block */
-    if (vm->jit.num_blocks >= 256) {
+    if (vm->jit.num_blocks >= AURORA_VM_JIT_MAX_BLOCKS) {
         return -1;  /* Block table full */
     }
     
@@ -719,7 +727,7 @@ void aurora_vm_jit_clear_cache(AuroraVM *vm) {
     vm->jit.num_blocks = 0;
     
     /* Mark all blocks as not compiled */
-    for (uint32_t i = 0; i < 256; i++) {
+    for (uint32_t i = 0; i < AURORA_VM_JIT_MAX_BLOCKS; i++) {
         vm->jit.blocks[i].compiled = false;
         vm->jit.blocks[i].native_code = (uint8_t*)0;
     }

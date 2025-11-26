@@ -286,9 +286,12 @@ int gpu_allocate_vram(uint32_t size_bytes, uint32_t* handle) {
     }
     
     /* In a real implementation, this would allocate from GPU memory manager */
+    /* Note: In a multi-threaded environment, this should use atomic operations */
+    /* or mutex protection. For now, assume single-threaded kernel context. */
     gpu_state.info.vram_used_mb += size_mb;
     
     /* Generate a simple handle */
+    /* Note: Handle generation should be atomic in multi-threaded environment */
     static uint32_t next_handle = 1;
     *handle = next_handle++;
     
