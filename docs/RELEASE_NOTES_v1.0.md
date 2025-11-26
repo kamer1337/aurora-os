@@ -264,25 +264,25 @@ Aurora OS v1.0 represents the culmination of all five development phases and mar
 
 ### Current Limitations
 
-1. **Single-User System**: No user authentication or multi-user support
+1. ~~**Single-User System**: No user authentication or multi-user support~~ ✅ RESOLVED: Login/guest screen with user authentication implemented
 2. **Ramdisk Only**: No persistent storage to disk (data lost on reboot)
 3. **Network**: Basic packet I/O only, no TCP/IP stack
 4. **File Systems**: Ramdisk only (no Ext2/FAT32/NTFS support)
 5. **USB**: Basic support only
 6. **Applications**: Built-in apps only, no package manager
-7. **Configuration**: Not persisted across reboots
+7. ~~**Configuration**: Not persisted across reboots~~ ✅ RESOLVED: Desktop Configuration Persistence implemented with VFS-integrated save/load and checksum validation
 
 ### Known Issues
 
-1. **Configuration Persistence**: Desktop settings not saved to disk (in-memory only)
+1. ~~**Configuration Persistence**: Desktop settings not saved to disk (in-memory only)~~ ✅ RESOLVED: VFS-integrated save/load with checksum validation implemented
 2. **Image Wallpapers**: Image loading not implemented (gradients and live wallpapers work)
 3. **Network Protocol**: No TCP/IP, UDP, or higher-level protocols
-4. **Multi-user**: Single-user mode only
+4. ~~**Multi-user**: Single-user mode only~~ ✅ RESOLVED: User authentication with login/guest screen and session management
 
 ### Workarounds
 
-- **Data Persistence**: Export important data before shutdown
-- **Configuration**: Reconfigure settings after each boot
+- **Data Persistence**: Export important data before shutdown (ramdisk data not persisted)
+- ~~**Configuration**: Reconfigure settings after each boot~~ ✅ RESOLVED: Desktop settings now saved via VFS
 - **Network**: Use packet-based I/O directly
 - **Storage**: Use ramdisk for temporary storage
 

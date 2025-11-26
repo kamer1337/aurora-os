@@ -199,6 +199,27 @@ Aurora OS has completed all five development phases and is now ready for release
 - ✅ Phase 4: User Interface
 - ✅ Phase 5: Testing & Debugging
 
+## Known Issues Resolution Summary (November 2025) ✅
+
+The following known issues have been resolved:
+
+### Resolved Issues
+- [x] **Configuration Persistence**: Desktop settings now saved via VFS-integrated save/load with checksum validation
+- [x] **Single-user System**: Login/guest screen with user authentication and session management implemented
+- [x] **Limited Fonts**: Multiple fonts now available (Standard 8x8, Crystalline 8x8, Crystalline 5x7, Monospace 6x8)
+- [x] **Multiple Workspaces**: Virtual desktop support with OS type selection (Aurora OS, Linux VM, Android VM)
+- [x] **Theme System**: Theme Manager with 5 built-in themes (Modern, Classic, Dark, High Contrast, Light)
+- [x] **Developer Documentation**: API Reference, Installation Guide, Network API, Plugin System documentation available
+- [x] **Sample Applications**: Aurora VM examples, plugin examples, and comprehensive test suites
+
+### Remaining Limitations (Future Enhancements)
+- [ ] Ramdisk Only: No persistent storage to physical disk
+- [ ] Network: Basic packet I/O only, no TCP/IP stack
+- [ ] File Systems: Ramdisk only (no Ext2/FAT32/NTFS support)
+- [ ] USB: Basic support only
+- [ ] Applications: Built-in only, no package manager
+- [ ] Image Wallpapers: Image loading not implemented (gradients and live wallpapers work)
+
 ## Notes
 
 - Priority should be on getting a minimal bootable kernel first
