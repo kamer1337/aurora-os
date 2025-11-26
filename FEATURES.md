@@ -228,15 +228,27 @@
 - **User Guides**: Installation and usage guides
 - **Architecture Docs**: System design documentation
 
+## Recently Completed Features (November 2025) ✅
+
+The following previously planned features are now implemented:
+- ✅ **Login/Guest screen system**: User authentication UI with session management
+- ✅ **User authentication framework**: Password verification and guest mode support
+- ✅ **Desktop Configuration Persistence**: VFS-integrated save/load with checksum validation
+- ✅ **Multiple Workspaces**: Virtual desktop support with OS type selection (Aurora OS, Linux VM, Android VM)
+- ✅ **Theme Manager**: 5 built-in themes (Modern, Classic, Dark, High Contrast, Light)
+- ✅ **Linux/Android VM**: Comprehensive syscall implementations with installers
+- ✅ **Developer Documentation**: API Reference, Installation Guide, Plugin System documentation
+- ✅ **Sample Applications**: Goals Manager, VM examples, comprehensive test suites
+
 ## Future Features (Planned)
 
 See [ROADMAP.md](ROADMAP.md) for upcoming features including:
-- Login/Guest screen system
-- User authentication framework
-- Enhanced security features
-- Additional applications
-- Performance optimizations
-- Hardware compatibility expansions
+- Hardware GPU acceleration
+- 4K/8K display support
+- TCP/IP network stack
+- Ext2/FAT32/NTFS file system support
+- Application store/marketplace
+- Web browser
 - Cloud integration
 - Enterprise features
 

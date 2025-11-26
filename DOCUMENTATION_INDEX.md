@@ -1,6 +1,6 @@
 # Aurora OS - Documentation Index
 
-**Last Updated**: November 19, 2025  
+**Last Updated**: November 26, 2025  
 **Project Status**: Release Candidate
 
 ---
@@ -234,6 +234,14 @@ All Aurora OS documentation follows these standards:
 ---
 
 ## Recent Updates
+
+### November 26, 2025 - Known Issues Resolution and Future Enhancements
+- **RESOLVED**: Configuration persistence issue - Desktop settings now persist via VFS
+- **RESOLVED**: Single-user system limitation - Login/guest screen with authentication implemented
+- **RESOLVED**: Limited fonts issue - Multiple fonts now available (4 font families)
+- **RESOLVED**: Multiple workspaces - Virtual desktop support with OS type selection
+- **UPDATED**: All known issues documentation across ROADMAP.md, FEATURES.md, TODO.md, FAQ.md, RELEASE_NOTES_v1.0.md
+- **MARKED DONE**: Theme Manager, Plugin system, Developer documentation in ROADMAP.md
 
 ### November 19, 2025 - Major Cleanup and Enhancements
 - **ADDED**: [FEATURES.md](FEATURES.md) - Comprehensive feature list

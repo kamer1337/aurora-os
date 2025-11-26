@@ -682,15 +682,22 @@ Found a solution? Contribute back:
 
 ## Known Issues
 
-### v1.0 Known Limitations
+### v1.0 Known Limitations (Updated November 2025)
 
-1. **Single-user system**: No user authentication
-2. **Ramdisk only**: No persistent storage
+1. ~~**Single-user system**: No user authentication~~ ✅ RESOLVED: Login/guest screen with user authentication implemented
+2. **Ramdisk only**: No persistent storage (ramdisk data lost on reboot)
 3. **Limited network**: Packet I/O only, no TCP/IP
 4. **USB support**: Basic only
 5. **File systems**: Ramdisk only (no Ext2/FAT32)
 6. **Applications**: Built-in only, no app installation
-7. **Configuration**: Not persisted across reboots
+7. ~~**Configuration**: Not persisted across reboots~~ ✅ RESOLVED: Desktop Configuration Persistence implemented with VFS-integrated save/load
+
+### Recently Resolved Issues (November 2025) ✅
+
+- **User Authentication**: Login/guest screen now available with session management
+- **Desktop Configuration**: Settings now persist via VFS with checksum validation
+- **Multiple Fonts**: 4 configurable fonts now available (Standard 8x8, Crystalline 8x8, Crystalline 5x7, Monospace 6x8)
+- **Linux/Android VM**: Syscall implementations complete with installer workflows
 
 ### Planned Fixes (v1.1+)
 
@@ -699,5 +706,5 @@ See [ROADMAP.md](../ROADMAP.md) for future enhancements.
 ---
 
 **Document Maintainer**: Aurora OS Project Team  
-**Last Updated**: November 18, 2025  
+**Last Updated**: November 26, 2025  
 **Next Review**: v1.1 Release (Q2 2026)

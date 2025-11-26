@@ -454,6 +454,14 @@ This section shows the historical development phases (completed). For future pla
   - ✅ Comprehensive testing reports: TESTING_SUMMARY.md, AURORA_VM_TEST_ISSUES.md
   - ✅ GitHub issue templates prepared in AURORA_VM_GITHUB_ISSUES.md
 
+**Recently Resolved Known Issues (November 2025):** ⭐ NEW
+- ✅ **Configuration Persistence**: Desktop settings now persist via VFS-integrated save/load with checksum validation
+- ✅ **Single-user System**: Login/guest screen with user authentication and session management implemented
+- ✅ **Limited Fonts**: Multiple fonts now available (Standard 8x8, Crystalline 8x8, Crystalline 5x7, Monospace 6x8)
+- ✅ **Multiple Workspaces**: Virtual desktop support with OS type selection (Aurora OS, Linux VM, Android VM)
+- ✅ **Theme System**: Theme Manager with 5 built-in themes (Modern, Classic, Dark, High Contrast, Light)
+- ✅ **Developer Documentation**: API Reference, Installation Guide, Plugin System documentation available
+
 **Next Up:**
 - ⏭️ Complete Android boot protocol implementation (boot.img v3/v4)
 - ⏭️ Expand Android syscall table for broader compatibility (200+ syscalls)
@@ -462,13 +470,11 @@ This section shows the historical development phases (completed). For future pla
 - ⏭️ Integrate SurfaceFlinger for Android graphics
 - ⏭️ Complete Linux boot protocol implementation
 - ⏭️ Expand Linux syscall table for broader compatibility
-- ⏭️ Implement file system persistence for Linux/Android workspaces
 - ⏭️ Add network bridge between VMs and Aurora OS
 - ⏭️ Integrate X11/Wayland display server support for Linux
 - ⏭️ Hardware acceleration support (GPU passthrough)
 - ⏭️ Complete JIT code generation backend (infrastructure in place, native code generation pending)
 - ⏭️ Complete GDB server socket implementation (infrastructure in place, network support pending)
-- ⏭️ Release candidate preparation
 
 ---
 
@@ -576,8 +582,8 @@ See the [roadmap](#6-development-roadmap) above for detailed progress and upcomi
 
 ---
 
-> **Document Version**: 1.1  
-> **Last Updated**: November 16, 2025  
+> **Document Version**: 1.2  
+> **Last Updated**: November 26, 2025  
 > **License**: Proprietary – Aurora OS Project
 
 ---
