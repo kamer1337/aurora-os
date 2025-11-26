@@ -43,6 +43,7 @@
   - [x] Multi-step installation workflow
   - [x] Progress tracking with detailed status messages
   - [x] Kernel command line configuration
+  - [x] Start Menu access for Linux Installer
 - [x] **Android Installer Enhancement**
   - [x] Complete 9-step installation process
   - [x] Boot.img, system.img, vendor.img setup simulation
