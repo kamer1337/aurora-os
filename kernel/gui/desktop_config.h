@@ -46,6 +46,31 @@ typedef struct {
     
     // Live wallpaper settings
     uint8_t enable_live_wallpaper;
+    
+    // Widget window transparency (0-100, 0=fully transparent, 100=opaque)
+    uint8_t widget_transparency;
+    
+    // Taskbar settings
+    uint8_t taskbar_position;      // 0=bottom, 1=top, 2=left, 3=right
+    uint8_t taskbar_auto_hide;     // Auto-hide taskbar
+    uint32_t taskbar_height;       // Taskbar height in pixels
+    
+    // Desktop icon layout
+    uint8_t icon_grid_auto;        // Auto-arrange icons
+    uint8_t icon_label_position;   // 0=bottom, 1=right
+    
+    // Window behavior
+    uint8_t double_click_titlebar; // 0=maximize, 1=shade, 2=nothing
+    uint8_t focus_follows_mouse;   // Focus window on hover
+    uint8_t raise_on_focus;        // Raise window when focused
+    
+    // Cursor settings
+    uint8_t cursor_theme;          // 0=default, 1=large, 2=custom
+    uint8_t cursor_blink_rate;     // Cursor blink rate (0-10)
+    
+    // Sound settings
+    uint8_t enable_ui_sounds;      // Enable UI sound effects
+    uint8_t sound_volume;          // UI sound volume (0-100)
 } desktop_config_t;
 
 /**
