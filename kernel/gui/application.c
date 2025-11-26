@@ -14,6 +14,7 @@
 #include "text_editor.h"
 #include "calculator.h"
 #include "goals_manager.h"
+#include "linux_installer.h"
 #include "../memory/memory.h"
 #include "../drivers/storage.h"
 #include <stddef.h>
@@ -52,6 +53,7 @@ static int launch_clock(void);
 static int launch_music_player(void);
 static int launch_video_player(void);
 static int launch_goals_manager(void);
+static int launch_linux_installer(void);
 
 void app_init(void) {
     if (app_framework_initialized) return;
@@ -233,6 +235,14 @@ void app_init(void) {
         .running = 0
     };
     
+    applications[APP_LINUX_INSTALLER] = (application_t){
+        .type = APP_LINUX_INSTALLER,
+        .name = "Linux Installer",
+        .description = "Install Linux distributions in Aurora OS workspaces",
+        .window = NULL,
+        .running = 0
+    };
+    
     app_framework_initialized = 1;
 }
 
@@ -316,6 +326,9 @@ int app_launch(app_type_t type) {
             break;
         case APP_GOALS_MANAGER:
             result = launch_goals_manager();
+            break;
+        case APP_LINUX_INSTALLER:
+            result = launch_linux_installer();
             break;
         default:
             return -1;
@@ -1411,4 +1424,101 @@ static int launch_video_player(void) {
 static int launch_goals_manager(void) {
     applications[APP_GOALS_MANAGER].window = goals_manager_create();
     return applications[APP_GOALS_MANAGER].window ? 0 : -1;
+}
+
+static int launch_linux_installer(void) {
+    // Initialize the Linux installer system
+    linux_installer_init();
+    
+    // Create installer window
+    window_t* window = gui_create_window("Linux Installer", 100, 100, 720, 520);
+    if (!window) return -1;
+    
+    applications[APP_LINUX_INSTALLER].window = window;
+    
+    // Add installer header
+    gui_create_label(window, "Linux Installer", 20, 20);
+    gui_create_label(window, "Install Linux distributions in Aurora OS workspaces", 20, 45);
+    
+    // Get available distributions
+    linux_distro_t distros[8];
+    int distro_count = linux_installer_get_distros(distros, 8);
+    
+    // List available distributions
+    gui_create_label(window, "Available Distributions:", 20, 85);
+    
+    int y_offset = 115;
+    for (int i = 0; i < distro_count && i < 4; i++) {
+        // Distribution name and version
+        char dist_text[128];
+        int pos = 0;
+        
+        // Add number prefix
+        dist_text[pos++] = '0' + (i + 1);
+        dist_text[pos++] = '.';
+        dist_text[pos++] = ' ';
+        
+        // Add name
+        const char* name = distros[i].name;
+        while (*name) dist_text[pos++] = *name++;
+        dist_text[pos++] = ' ';
+        dist_text[pos++] = 'v';
+        
+        // Add version
+        const char* ver = distros[i].version;
+        while (*ver) dist_text[pos++] = *ver++;
+        dist_text[pos] = '\0';
+        
+        gui_create_label(window, dist_text, 40, y_offset);
+        
+        // Add description
+        gui_create_label(window, distros[i].description, 60, y_offset + 25);
+        
+        // Add size info
+        char size_text[32];
+        pos = 0;
+        const char* size_prefix = "Size: ";
+        while (*size_prefix) size_text[pos++] = *size_prefix++;
+        
+        uint32_t size = distros[i].size_mb;
+        if (size >= 100) size_text[pos++] = '0' + (size / 100);
+        if (size >= 10) size_text[pos++] = '0' + ((size / 10) % 10);
+        size_text[pos++] = '0' + (size % 10);
+        const char* mb_suffix = " MB";
+        while (*mb_suffix) size_text[pos++] = *mb_suffix++;
+        size_text[pos] = '\0';
+        
+        gui_create_label(window, size_text, 60, y_offset + 50);
+        
+        // Add status indicator
+        const char* status = distros[i].available ? "[Available]" : "[Coming Soon]";
+        gui_create_label(window, status, 200, y_offset + 50);
+        
+        // Add install button for available distributions
+        if (distros[i].available) {
+            gui_create_button(window, "Install", 600, y_offset + 20, 90, 35);
+        }
+        
+        y_offset += 95;
+    }
+    
+    // Installation status section
+    gui_create_label(window, "Installation Status:", 20, 420);
+    
+    linux_installer_t status;
+    if (linux_installer_get_status(&status) == 0) {
+        if (linux_installer_is_installed()) {
+            gui_create_label(window, "Linux is installed and ready", 40, 445);
+        } else {
+            gui_create_label(window, "No Linux distribution installed", 40, 445);
+        }
+    }
+    
+    // Instructions
+    gui_create_label(window, "Press number key (1-4) to select distribution for installation", 20, 480);
+    
+    gui_show_window(window);
+    gui_focus_window(window);
+    
+    return 0;
 }

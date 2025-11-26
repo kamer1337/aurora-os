@@ -65,7 +65,7 @@ static uint8_t start_menu_animating = 0;
 
 // Start menu keyboard navigation state
 static int32_t start_menu_selected_item = 0;
-static const int32_t start_menu_item_count = 15;  // Updated for Goals Manager
+static const int32_t start_menu_item_count = 16;  // Updated for Linux Installer
 
 // Desktop icons
 typedef struct desktop_icon {
@@ -549,10 +549,13 @@ void gui_process_event(event_t* event) {
                             case 11: // Goals Manager
                                 app_launch(APP_GOALS_MANAGER);
                                 break;
-                            case 12: // Help & Support
+                            case 12: // Linux Installer
+                                app_launch(APP_LINUX_INSTALLER);
+                                break;
+                            case 13: // Help & Support
                                 app_launch(APP_HELP);
                                 break;
-                            case 13: // Toggle Wallpaper
+                            case 14: // Toggle Wallpaper
                                 {
                                     desktop_config_t* cfg = desktop_config_get();
                                     if (cfg) {
@@ -565,7 +568,7 @@ void gui_process_event(event_t* event) {
                                     }
                                 }
                                 break;
-                            case 14: // Power Options (placeholder)
+                            case 15: // Power Options (placeholder)
                                 break;
                         }
                         start_menu_visible = 0;
@@ -1205,7 +1208,7 @@ static void gui_draw_start_menu(void) {
     if (!fb) return;
     
     uint32_t menu_width = 250;
-    uint32_t menu_height = 680;  // Increased height for more items
+    uint32_t menu_height = 725;  // Increased height for Linux Installer
     uint32_t menu_x = 5;
     uint32_t menu_y = fb->height - 40 - menu_height;
     
@@ -1227,7 +1230,7 @@ static void gui_draw_start_menu(void) {
                           (color_t){200, 200, 200, 255},
                           (color_t){0, 120, 215, 255});
     
-    // Draw menu items (updated to include new applications)
+    // Draw menu items (updated to include Linux Installer)
     const char* items[] = {
         "File Manager",
         "Terminal",
@@ -1241,6 +1244,7 @@ static void gui_draw_start_menu(void) {
         "System Information",
         "Calculator",
         "Goals Manager",
+        "Linux Installer",
         "Help & Support",
         "Toggle Wallpaper",
         "Power Options"
@@ -1249,7 +1253,7 @@ static void gui_draw_start_menu(void) {
     uint32_t item_height = 40;
     uint32_t item_y = menu_y + 70;
     
-    for (int i = 0; i < 15; i++) {
+    for (int i = 0; i < 16; i++) {
         // Draw item background (highlight selected item)
         color_t item_bg;
         if (i == start_menu_selected_item) {
