@@ -81,6 +81,31 @@ int desktop_config_init(void) {
     // Live wallpaper settings
     config.enable_live_wallpaper = 0;  // Disabled by default (optional feature)
     
+    // Widget window transparency (100 = fully opaque)
+    config.widget_transparency = 100;
+    
+    // Taskbar settings
+    config.taskbar_position = 0;      // Bottom
+    config.taskbar_auto_hide = 0;     // Don't auto-hide
+    config.taskbar_height = 40;       // 40 pixels
+    
+    // Desktop icon layout
+    config.icon_grid_auto = 1;        // Auto-arrange
+    config.icon_label_position = 0;   // Labels below icons
+    
+    // Window behavior
+    config.double_click_titlebar = 0; // Maximize
+    config.focus_follows_mouse = 0;   // Click to focus
+    config.raise_on_focus = 1;        // Raise on focus
+    
+    // Cursor settings
+    config.cursor_theme = 0;          // Default cursor
+    config.cursor_blink_rate = 5;     // Medium blink rate
+    
+    // Sound settings
+    config.enable_ui_sounds = 1;      // Enable sounds
+    config.sound_volume = 70;         // 70% volume
+    
     config_initialized = 1;
     
     // Initialize theme and wallpaper managers
@@ -279,7 +304,7 @@ void desktop_config_show_settings(void) {
     }
     
     // Create settings window (increased height for new options)
-    window_t* settings_window = gui_create_window("Desktop Settings", 200, 100, 500, 520);
+    window_t* settings_window = gui_create_window("Desktop Settings", 150, 50, 600, 680);
     if (!settings_window) {
         return;
     }
@@ -288,12 +313,12 @@ void desktop_config_show_settings(void) {
     
     int32_t y_pos = 20;
     int32_t x_label = 20;
-    int32_t x_control = 180;
-    int32_t spacing = 45;
+    int32_t x_control = 200;
+    int32_t spacing = 35;
     
     // Font Selection Section
     gui_create_label(settings_window, "=== Appearance ===", x_label, y_pos);
-    y_pos += 30;
+    y_pos += 25;
     
     gui_create_label(settings_window, "Font:", x_label, y_pos);
     create_dropdown(settings_window, "", x_control, y_pos - 5, 200);
@@ -315,7 +340,7 @@ void desktop_config_show_settings(void) {
     
     // Desktop Icons Section
     gui_create_label(settings_window, "=== Desktop ===", x_label, y_pos);
-    y_pos += 30;
+    y_pos += 25;
     
     gui_create_label(settings_window, "Show Desktop Icons:", x_label, y_pos);
     gui_create_button(settings_window, 
@@ -337,7 +362,7 @@ void desktop_config_show_settings(void) {
     
     // Effects Section
     gui_create_label(settings_window, "=== Effects ===", x_label, y_pos);
-    y_pos += 30;
+    y_pos += 25;
     
     gui_create_label(settings_window, "Enable Animations:", x_label, y_pos);
     gui_create_button(settings_window, 
@@ -363,9 +388,52 @@ void desktop_config_show_settings(void) {
         x_control, y_pos - 5, 40, 25);
     y_pos += spacing;
     
+    // Transparency Section
+    gui_create_label(settings_window, "=== Transparency ===", x_label, y_pos);
+    y_pos += 25;
+    
+    gui_create_label(settings_window, "Enable Transparency:", x_label, y_pos);
+    gui_create_button(settings_window, 
+        config.enable_transparency ? "[X]" : "[ ]", 
+        x_control, y_pos - 5, 40, 25);
+    y_pos += spacing;
+    
+    gui_create_label(settings_window, "Widget Transparency:", x_label, y_pos);
+    // Show transparency level (0-100)
+    char trans_label[16];
+    uint8_t trans_val = config.widget_transparency;
+    if (trans_val >= 100) {
+        trans_label[0] = '1';
+        trans_label[1] = '0';
+        trans_label[2] = '0';
+        trans_label[3] = '%';
+        trans_label[4] = '\0';
+    } else if (trans_val >= 10) {
+        trans_label[0] = (trans_val / 10) + '0';
+        trans_label[1] = (trans_val % 10) + '0';
+        trans_label[2] = '%';
+        trans_label[3] = '\0';
+    } else {
+        trans_label[0] = trans_val + '0';
+        trans_label[1] = '%';
+        trans_label[2] = '\0';
+    }
+    gui_create_button(settings_window, trans_label, x_control, y_pos - 5, 60, 25);
+    y_pos += spacing;
+    
+    // Taskbar Section
+    gui_create_label(settings_window, "=== Taskbar ===", x_label, y_pos);
+    y_pos += 25;
+    
+    gui_create_label(settings_window, "Auto-hide Taskbar:", x_label, y_pos);
+    gui_create_button(settings_window, 
+        config.taskbar_auto_hide ? "[X]" : "[ ]", 
+        x_control, y_pos - 5, 40, 25);
+    y_pos += spacing;
+    
     // Theme and Wallpaper Section
     gui_create_label(settings_window, "=== Theme & Wallpaper ===", x_label, y_pos);
-    y_pos += 30;
+    y_pos += 25;
     
     gui_create_label(settings_window, "Theme:", x_label, y_pos);
     gui_create_button(settings_window, "Change Theme...", x_control, y_pos - 5, 120, 25);
@@ -376,10 +444,11 @@ void desktop_config_show_settings(void) {
     y_pos += spacing;
     
     // Action buttons
-    y_pos += 20;
+    y_pos += 10;
     gui_create_button(settings_window, "Apply", 150, y_pos, 80, 30);
     gui_create_button(settings_window, "Reset", 240, y_pos, 80, 30);
-    gui_create_button(settings_window, "Close", 330, y_pos, 80, 30);
+    gui_create_button(settings_window, "Save", 330, y_pos, 80, 30);
+    gui_create_button(settings_window, "Close", 420, y_pos, 80, 30);
     
     // Show the window
     gui_show_window(settings_window);
