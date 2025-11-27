@@ -8,11 +8,45 @@
 #define WINAPI_H
 
 #include <stdint.h>
+#include <stddef.h>
 
 /* Windows API calling convention */
 #define WINAPI __attribute__((stdcall))
 
 /* Common Windows types */
+typedef uint32_t DWORD;
+typedef uint16_t WORD;
+typedef uint16_t USHORT;
+typedef uint8_t BYTE;
+typedef int32_t LONG;
+typedef uint32_t ULONG;
+typedef unsigned int UINT;
+typedef int INT;
+typedef int16_t SHORT;
+typedef int BOOL;
+typedef char CHAR;
+typedef unsigned char UCHAR;
+typedef unsigned char BOOLEAN;
+typedef uint16_t WCHAR;
+typedef int WPARAM;
+typedef long LPARAM;
+typedef long LRESULT;
+typedef uint16_t ATOM;
+typedef size_t SIZE_T;
+typedef void* LPVOID;
+typedef const void* LPCVOID;
+typedef char* LPSTR;
+typedef const char* LPCSTR;
+typedef uint16_t* LPWSTR;
+typedef const uint16_t* LPCWSTR;
+typedef LONG* LPLONG;
+typedef DWORD* LPDWORD;
+typedef WORD* LPWORD;
+typedef int* LPBOOL;
+typedef SIZE_T* PSIZE_T;
+typedef ULONG* PULONG;
+typedef DWORD COLORREF;
+
 typedef void* HANDLE;
 typedef void* HMODULE;
 typedef void* HINSTANCE;
@@ -21,24 +55,17 @@ typedef void* HDC;
 typedef void* HKEY;
 typedef void* HGLOBAL;
 typedef void* HLOCAL;
+typedef void* HGDIOBJ;
+typedef void* HPEN;
+typedef void* HBRUSH;
+typedef void* HFONT;
+typedef void* HBITMAP;
+typedef void* HICON;
+typedef void* HCURSOR;
+typedef void* HPALETTE;
+typedef void* HRGN;
 typedef void* FARPROC;
-typedef uint32_t DWORD;
-typedef uint16_t WORD;
-typedef uint8_t BYTE;
-typedef int32_t LONG;
-typedef uint32_t ULONG;
-typedef unsigned int UINT;
-typedef int INT;
-typedef int BOOL;
-typedef char CHAR;
-typedef unsigned char UCHAR;
-typedef uint16_t WCHAR;
-typedef void* LPVOID;
-typedef const void* LPCVOID;
-typedef char* LPSTR;
-typedef const char* LPCSTR;
-typedef uint16_t* LPWSTR;
-typedef const uint16_t* LPCWSTR;
+typedef HANDLE* PHANDLE;
 
 /* Boolean values */
 #define TRUE  1
@@ -212,8 +239,6 @@ typedef BYTE* LPBYTE;
 typedef LONG* LPLONG;
 typedef int* LPINT;
 typedef BOOL* LPBOOL;
-typedef uint32_t SIZE_T;
-typedef SIZE_T* PSIZE_T;
 
 /* Handle type for heap */
 typedef HANDLE HHEAP;

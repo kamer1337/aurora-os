@@ -60,6 +60,7 @@ typedef struct {
     DWORD attributes;
     uint8_t* buffer;      /* In-memory file buffer for ramdisk simulation */
     DWORD buffer_size;
+    int vfs_fd;           /* VFS file descriptor, -1 if not using VFS */
 } file_data_t;
 
 /* Event handle data */
@@ -130,9 +131,6 @@ static DWORD g_next_process_id = 2;
 static DWORD g_next_thread_id = 2;
 static DWORD g_process_exit_code = 0;
 
-/* System tick counter (updated by timer) */
-static volatile DWORD g_tick_count = 0;
-
 /* Environment variables storage */
 #define MAX_ENV_VARS 64
 #define MAX_ENV_NAME 128
@@ -175,14 +173,6 @@ static STARTUPINFOA g_startup_info = {0};
 /* ============================================================================
  * Internal Helper Functions
  * ============================================================================ */
-
-/* Handle to VFS file descriptor mapping */
-#define MAX_FILE_HANDLES 64
-static struct {
-    HANDLE handle;
-    int vfs_fd;
-    int in_use;
-} file_handle_table[MAX_FILE_HANDLES];
 
 /* String helper functions */
 static int k32_strlen(const char* s) {
@@ -529,86 +519,6 @@ DWORD WINAPI ResumeThread(HANDLE hThread) {
     return prev_count;
 }
 
-/* ========== File Management Functions ========== */
-
-HANDLE WINAPI CreateFileA(LPCSTR filename, DWORD access, DWORD share_mode,
-                          void* security, DWORD creation, DWORD flags, HANDLE template_file) {
-    (void)share_mode;
-    (void)security;
-    (void)flags;
-    (void)template_file;
-    
-    if (!filename) {
-        winapi_set_last_error(ERROR_INVALID_PARAMETER);
-        return INVALID_HANDLE_VALUE;
-    }
-    
-    vga_write("Kernel32: CreateFileA called for: ");
-    vga_write(filename);
-    vga_write("\n");
-    
-    /* Convert Windows access flags to VFS flags */
-    int vfs_flags = 0;
-    if (access & GENERIC_READ) {
-        vfs_flags |= O_RDONLY;
-    }
-    if (access & GENERIC_WRITE) {
-        vfs_flags |= O_WRONLY;
-    }
-    if ((access & GENERIC_READ) && (access & GENERIC_WRITE)) {
-        vfs_flags = O_RDWR;
-    }
-    
-    /* Handle creation disposition */
-    switch (creation) {
-        case CREATE_NEW:
-        case CREATE_ALWAYS:
-            vfs_flags |= O_CREAT;
-            break;
-        case OPEN_EXISTING:
-            /* No additional flags needed */
-            break;
-        case OPEN_ALWAYS:
-            vfs_flags |= O_CREAT;
-            break;
-        case TRUNCATE_EXISTING:
-            vfs_flags |= O_TRUNC;
-            break;
-        default:
-            break;
-    }
-    
-    /* Open file using VFS */
-    int vfs_fd = vfs_open(filename, vfs_flags);
-    if (vfs_fd < 0) {
-        /* Try to create if O_CREAT was set */
-        if (vfs_flags & O_CREAT) {
-            if (vfs_create(filename) == 0) {
-                vfs_fd = vfs_open(filename, vfs_flags & ~O_CREAT);
-            }
-        }
-        
-        if (vfs_fd < 0) {
-            winapi_set_last_error(ERROR_FILE_NOT_FOUND);
-            return INVALID_HANDLE_VALUE;
-        }
-    }
-    
-    /* Allocate Windows handle for VFS fd */
-    HANDLE handle = alloc_file_handle(vfs_fd);
-    if (handle == INVALID_HANDLE_VALUE) {
-        vfs_close(vfs_fd);
-        winapi_set_last_error(ERROR_NOT_ENOUGH_MEMORY);
-        return INVALID_HANDLE_VALUE;
-    }
-    
-    winapi_set_last_error(ERROR_SUCCESS);
-    return handle;
-}
-
-BOOL WINAPI ReadFile(HANDLE file, LPVOID buffer, DWORD bytes_to_read,
-                     DWORD* bytes_read, void* overlapped) {
-    (void)overlapped;
 DWORD WINAPI SuspendThread(HANDLE hThread) {
     if (hThread == (HANDLE)(uintptr_t)0xFFFFFFFE) {
         winapi_set_last_error(ERROR_ACCESS_DENIED);
@@ -635,52 +545,19 @@ DWORD WINAPI SuspendThread(HANDLE hThread) {
 }
 
 BOOL WINAPI SetThreadPriority(HANDLE hThread, int nPriority) {
-    handle_entry_t* entry = NULL;
-    thread_data_t* thread = NULL;
-    
     if (hThread == (HANDLE)(uintptr_t)0xFFFFFFFE) {
         /* Current thread - would need to track in real implementation */
         winapi_set_last_error(ERROR_SUCCESS);
         return TRUE;
     }
     
-    if (!buffer) {
-        winapi_set_last_error(ERROR_INVALID_PARAMETER);
-        return FALSE;
-    }
-    
-    /* Get VFS file descriptor */
-    int vfs_fd = get_vfs_fd(file);
-    if (vfs_fd < 0) {
-        winapi_set_last_error(ERROR_INVALID_HANDLE);
-        return FALSE;
-    }
-    
-    /* Read from VFS */
-    int result = vfs_read(vfs_fd, buffer, bytes_to_read);
-    if (result < 0) {
-        winapi_set_last_error(ERROR_READ_FAULT);
-        return FALSE;
-    }
-    
-    if (bytes_read) {
-        *bytes_read = (DWORD)result;
-    }
-    
-    winapi_set_last_error(ERROR_SUCCESS);
-    return TRUE;
-}
-
-BOOL WINAPI WriteFile(HANDLE file, LPCVOID buffer, DWORD bytes_to_write,
-                      DWORD* bytes_written, void* overlapped) {
-    (void)overlapped;
-    entry = get_handle_entry(hThread);
+    handle_entry_t* entry = get_handle_entry(hThread);
     if (!entry || entry->type != HANDLE_TYPE_THREAD) {
         winapi_set_last_error(ERROR_INVALID_HANDLE);
         return FALSE;
     }
     
-    thread = (thread_data_t*)entry->data;
+    thread_data_t* thread = (thread_data_t*)entry->data;
     if (thread) {
         thread->priority = nPriority;
     }
@@ -689,56 +566,6 @@ BOOL WINAPI WriteFile(HANDLE file, LPCVOID buffer, DWORD bytes_to_write,
     return TRUE;
 }
 
-DWORD WINAPI GetFileSize(HANDLE file, DWORD* high_size) {
-    if (high_size) {
-        *high_size = 0;
-    }
-    
-    /* Get VFS file descriptor */
-    int vfs_fd = get_vfs_fd(file);
-    if (vfs_fd < 0) {
-        winapi_set_last_error(ERROR_INVALID_HANDLE);
-        return 0xFFFFFFFF;
-    }
-    
-    /* Get file info using stat */
-    /* For now, we use seek to determine size */
-    long current_pos = vfs_seek(vfs_fd, 0, SEEK_CUR);
-    if (current_pos < 0) {
-        winapi_set_last_error(ERROR_INVALID_HANDLE);
-        return 0xFFFFFFFF;
-    }
-    
-    long file_size = vfs_seek(vfs_fd, 0, SEEK_END);
-    vfs_seek(vfs_fd, current_pos, SEEK_SET); /* Restore position */
-    
-    if (file_size < 0) {
-        winapi_set_last_error(ERROR_INVALID_HANDLE);
-        return 0xFFFFFFFF;
-    }
-    
-    winapi_set_last_error(ERROR_SUCCESS);
-    return (DWORD)file_size;
-}
-
-BOOL WINAPI DeleteFileA(LPCSTR filename) {
-    if (!filename) {
-        winapi_set_last_error(ERROR_INVALID_PARAMETER);
-        return FALSE;
-    }
-    
-    vga_write("Kernel32: DeleteFileA called for: ");
-    vga_write(filename);
-    vga_write("\n");
-    
-    int result = vfs_unlink(filename);
-    if (result < 0) {
-        winapi_set_last_error(ERROR_FILE_NOT_FOUND);
-        return FALSE;
-    }
-    
-    winapi_set_last_error(ERROR_SUCCESS);
-    return TRUE;
 int WINAPI GetThreadPriority(HANDLE hThread) {
     if (hThread == (HANDLE)(uintptr_t)0xFFFFFFFE) {
         winapi_set_last_error(ERROR_SUCCESS);
@@ -1114,62 +941,6 @@ HLOCAL WINAPI LocalFree(HLOCAL hMem) {
     return (HLOCAL)GlobalFree((HGLOBAL)hMem);
 }
 
-/* SYSTEM_INFO structure */
-typedef struct {
-    WORD wProcessorArchitecture;
-    WORD wReserved;
-    DWORD dwPageSize;
-    LPVOID lpMinimumApplicationAddress;
-    LPVOID lpMaximumApplicationAddress;
-    DWORD dwActiveProcessorMask;
-    DWORD dwNumberOfProcessors;
-    DWORD dwProcessorType;
-    DWORD dwAllocationGranularity;
-    WORD wProcessorLevel;
-    WORD wProcessorRevision;
-} SYSTEM_INFO;
-
-void WINAPI GetSystemInfo(void* system_info) {
-    if (!system_info) {
-        return;
-    }
-    
-    SYSTEM_INFO* info = (SYSTEM_INFO*)system_info;
-    
-    /* Fill in system information */
-    info->wProcessorArchitecture = 0; /* PROCESSOR_ARCHITECTURE_INTEL */
-    info->wReserved = 0;
-    info->dwPageSize = 4096;
-    info->lpMinimumApplicationAddress = (LPVOID)0x10000;
-    info->lpMaximumApplicationAddress = (LPVOID)0x7FFEFFFF;
-    info->dwActiveProcessorMask = 1;
-    info->dwNumberOfProcessors = 1;
-    info->dwProcessorType = 586; /* PROCESSOR_INTEL_PENTIUM */
-    info->dwAllocationGranularity = 65536;
-    info->wProcessorLevel = 6;
-    info->wProcessorRevision = 0;
-    
-    vga_write("Kernel32: GetSystemInfo called\n");
-}
-
-/* Static tick counter - would be updated by timer interrupt */
-static volatile DWORD g_tick_count = 0;
-
-DWORD WINAPI GetTickCount(void) {
-    /* Read PIT counter for more accurate timing */
-    /* PIT runs at approximately 1.193182 MHz */
-    /* Each tick is approximately 1/1000 of a second when configured properly */
-    
-    /* For now, use a simple incrementing counter */
-    /* In a real implementation, this would be updated by the timer interrupt handler */
-    g_tick_count++;
-    
-    return g_tick_count;
-}
-
-/* Function to update tick count from timer interrupt */
-void kernel32_update_tick_count(DWORD delta_ms) {
-    g_tick_count += delta_ms;
 LPVOID WINAPI LocalLock(HLOCAL hMem) {
     return GlobalLock((HGLOBAL)hMem);
 }
@@ -1373,38 +1144,74 @@ HANDLE WINAPI CreateFileA(LPCSTR lpFileName, DWORD dwDesiredAccess, DWORD dwShar
     file->share_mode = dwShareMode;
     file->position = 0;
     file->attributes = dwFlagsAndAttributes & 0xFFFF;
+    file->vfs_fd = -1;
     
-    /* For ramdisk simulation, allocate buffer for new files */
+    /* Try to use VFS first */
+    int vfs_flags = 0;
+    if (dwDesiredAccess & GENERIC_READ) vfs_flags |= O_RDONLY;
+    if (dwDesiredAccess & GENERIC_WRITE) vfs_flags |= O_WRONLY;
+    if ((dwDesiredAccess & GENERIC_READ) && (dwDesiredAccess & GENERIC_WRITE)) vfs_flags = O_RDWR;
+    
     switch (dwCreationDisposition) {
         case CREATE_NEW:
         case CREATE_ALWAYS:
-        case OPEN_ALWAYS:
-            file->buffer_size = 4096;  /* Initial 4KB buffer */
-            file->buffer = (uint8_t*)kmalloc(file->buffer_size);
-            if (!file->buffer) {
-                kfree(file);
-                winapi_set_last_error(ERROR_NOT_ENOUGH_MEMORY);
-                return INVALID_HANDLE_VALUE;
-            }
-            k32_memset(file->buffer, 0, file->buffer_size);
-            file->size = 0;
+            vfs_flags |= O_CREAT;
+            if (dwCreationDisposition == CREATE_ALWAYS) vfs_flags |= O_TRUNC;
             break;
-            
-        case OPEN_EXISTING:
+        case OPEN_ALWAYS:
+            vfs_flags |= O_CREAT;
+            break;
         case TRUNCATE_EXISTING:
-            /* File not found in ramdisk - would need VFS integration */
-            kfree(file);
-            winapi_set_last_error(ERROR_FILE_NOT_FOUND);
-            return INVALID_HANDLE_VALUE;
-            
+            vfs_flags |= O_TRUNC;
+            break;
+        case OPEN_EXISTING:
         default:
-            kfree(file);
-            winapi_set_last_error(ERROR_INVALID_PARAMETER);
-            return INVALID_HANDLE_VALUE;
+            break;
+    }
+    
+    /* Try VFS open */
+    int vfs_fd = vfs_open(lpFileName, vfs_flags);
+    if (vfs_fd >= 0) {
+        file->vfs_fd = vfs_fd;
+    } else if (vfs_flags & O_CREAT) {
+        /* Try creating the file */
+        if (vfs_create(lpFileName) == 0) {
+            vfs_fd = vfs_open(lpFileName, vfs_flags & ~O_CREAT);
+            if (vfs_fd >= 0) {
+                file->vfs_fd = vfs_fd;
+            }
+        }
+    }
+    
+    /* If VFS failed, use ramdisk simulation for new files */
+    if (file->vfs_fd < 0) {
+        switch (dwCreationDisposition) {
+            case CREATE_NEW:
+            case CREATE_ALWAYS:
+            case OPEN_ALWAYS:
+                file->buffer_size = 4096;  /* Initial 4KB buffer */
+                file->buffer = (uint8_t*)kmalloc(file->buffer_size);
+                if (!file->buffer) {
+                    kfree(file);
+                    winapi_set_last_error(ERROR_NOT_ENOUGH_MEMORY);
+                    return INVALID_HANDLE_VALUE;
+                }
+                k32_memset(file->buffer, 0, file->buffer_size);
+                file->size = 0;
+                break;
+                
+            case OPEN_EXISTING:
+            case TRUNCATE_EXISTING:
+            default:
+                kfree(file);
+                winapi_set_last_error(ERROR_FILE_NOT_FOUND);
+                return INVALID_HANDLE_VALUE;
+        }
     }
     
     HANDLE hFile = alloc_handle(HANDLE_TYPE_FILE, file);
     if (hFile == INVALID_HANDLE_VALUE) {
+        if (file->vfs_fd >= 0) vfs_close(file->vfs_fd);
         if (file->buffer) kfree(file->buffer);
         kfree(file);
         winapi_set_last_error(ERROR_NOT_ENOUGH_MEMORY);
@@ -1453,17 +1260,28 @@ BOOL WINAPI ReadFile(HANDLE hFile, LPVOID lpBuffer, DWORD nNumberOfBytesToRead,
         return FALSE;
     }
     
-    /* Calculate bytes to read */
-    DWORD bytes_available = (file->position < file->size) ? (file->size - file->position) : 0;
-    DWORD bytes_to_read = (nNumberOfBytesToRead < bytes_available) ? nNumberOfBytesToRead : bytes_available;
+    DWORD bytes_read = 0;
     
-    if (bytes_to_read > 0 && file->buffer) {
-        k32_memcpy(lpBuffer, file->buffer + file->position, bytes_to_read);
-        file->position += bytes_to_read;
+    /* Use VFS if available */
+    if (file->vfs_fd >= 0) {
+        int result = vfs_read(file->vfs_fd, lpBuffer, nNumberOfBytesToRead);
+        if (result >= 0) {
+            bytes_read = (DWORD)result;
+        }
+    } else if (file->buffer) {
+        /* Read from ramdisk buffer */
+        DWORD bytes_available = (file->position < file->size) ? (file->size - file->position) : 0;
+        DWORD bytes_to_read = (nNumberOfBytesToRead < bytes_available) ? nNumberOfBytesToRead : bytes_available;
+        
+        if (bytes_to_read > 0) {
+            k32_memcpy(lpBuffer, file->buffer + file->position, bytes_to_read);
+            file->position += bytes_to_read;
+            bytes_read = bytes_to_read;
+        }
     }
     
     if (lpNumberOfBytesRead) {
-        *lpNumberOfBytesRead = bytes_to_read;
+        *lpNumberOfBytesRead = bytes_read;
     }
     
     winapi_set_last_error(ERROR_SUCCESS);
@@ -1517,35 +1335,48 @@ BOOL WINAPI WriteFile(HANDLE hFile, LPCVOID lpBuffer, DWORD nNumberOfBytesToWrit
         return FALSE;
     }
     
-    /* Expand buffer if needed */
-    DWORD new_end = file->position + nNumberOfBytesToWrite;
-    if (new_end > file->buffer_size) {
-        DWORD new_size = ((new_end + 4095) / 4096) * 4096;  /* Round up to 4KB */
-        uint8_t* new_buffer = (uint8_t*)kmalloc(new_size);
-        if (!new_buffer) {
-            winapi_set_last_error(ERROR_NOT_ENOUGH_MEMORY);
-            return FALSE;
-        }
-        if (file->buffer && file->size > 0) {
-            k32_memcpy(new_buffer, file->buffer, file->size);
-        }
-        if (file->buffer) {
-            kfree(file->buffer);
-        }
-        file->buffer = new_buffer;
-        file->buffer_size = new_size;
-    }
+    DWORD bytes_written = 0;
     
-    /* Write data */
-    k32_memcpy(file->buffer + file->position, lpBuffer, nNumberOfBytesToWrite);
-    file->position += nNumberOfBytesToWrite;
-    
-    if (file->position > file->size) {
-        file->size = file->position;
+    /* Use VFS if available */
+    if (file->vfs_fd >= 0) {
+        int result = vfs_write(file->vfs_fd, lpBuffer, nNumberOfBytesToWrite);
+        if (result >= 0) {
+            bytes_written = (DWORD)result;
+        }
+    } else {
+        /* Write to ramdisk buffer */
+        /* Expand buffer if needed */
+        DWORD new_end = file->position + nNumberOfBytesToWrite;
+        if (new_end > file->buffer_size) {
+            DWORD new_size = ((new_end + 4095) / 4096) * 4096;  /* Round up to 4KB */
+            uint8_t* new_buffer = (uint8_t*)kmalloc(new_size);
+            if (!new_buffer) {
+                winapi_set_last_error(ERROR_NOT_ENOUGH_MEMORY);
+                return FALSE;
+            }
+            if (file->buffer && file->size > 0) {
+                k32_memcpy(new_buffer, file->buffer, file->size);
+            }
+            if (file->buffer) {
+                kfree(file->buffer);
+            }
+            file->buffer = new_buffer;
+            file->buffer_size = new_size;
+        }
+        
+        /* Write data */
+        k32_memcpy(file->buffer + file->position, lpBuffer, nNumberOfBytesToWrite);
+        file->position += nNumberOfBytesToWrite;
+        
+        if (file->position > file->size) {
+            file->size = file->position;
+        }
+        
+        bytes_written = nNumberOfBytesToWrite;
     }
     
     if (lpNumberOfBytesWritten) {
-        *lpNumberOfBytesWritten = nNumberOfBytesToWrite;
+        *lpNumberOfBytesWritten = bytes_written;
     }
     
     winapi_set_last_error(ERROR_SUCCESS);
@@ -1577,9 +1408,14 @@ BOOL WINAPI CloseHandle(HANDLE hObject) {
     /* Special cleanup for file handles */
     if (entry->type == HANDLE_TYPE_FILE) {
         file_data_t* file = (file_data_t*)entry->data;
-        if (file && file->buffer) {
-            kfree(file->buffer);
-            file->buffer = NULL;
+        if (file) {
+            if (file->vfs_fd >= 0) {
+                vfs_close(file->vfs_fd);
+            }
+            if (file->buffer) {
+                kfree(file->buffer);
+                file->buffer = NULL;
+            }
         }
     }
     
@@ -1609,30 +1445,27 @@ DWORD WINAPI GetFileSize(HANDLE hFile, LPDWORD lpFileSizeHigh) {
     return file->size;
 }
 
-
 BOOL WINAPI GetFileSizeEx(HANDLE hFile, void* lpFileSize) {
     if (!lpFileSize) {
         winapi_set_last_error(ERROR_INVALID_PARAMETER);
         return FALSE;
     }
     
-    DWORD high = 0;
-    DWORD low = GetFileSize(hFile, &high);
-    
-    if (low == INVALID_FILE_SIZE && winapi_get_last_error() != ERROR_SUCCESS) {
+    DWORD size = GetFileSize(hFile, NULL);
+    if (size == INVALID_FILE_SIZE) {
         return FALSE;
     }
     
-    /* lpFileSize is a LARGE_INTEGER pointer */
-    *((DWORD*)lpFileSize) = low;
-    *((DWORD*)lpFileSize + 1) = high;
+    /* LARGE_INTEGER layout: low DWORD, high DWORD */
+    ((DWORD*)lpFileSize)[0] = size;
+    ((DWORD*)lpFileSize)[1] = 0;
     
     return TRUE;
 }
 
 DWORD WINAPI SetFilePointer(HANDLE hFile, LONG lDistanceToMove,
                             LPLONG lpDistanceToMoveHigh, DWORD dwMoveMethod) {
-    (void)lpDistanceToMoveHigh;
+    (void)lpDistanceToMoveHigh;  /* High word not supported */
     
     handle_entry_t* entry = get_handle_entry(hFile);
     if (!entry || entry->type != HANDLE_TYPE_FILE) {
@@ -1668,10 +1501,15 @@ DWORD WINAPI SetFilePointer(HANDLE hFile, LONG lDistanceToMove,
     }
     
     file->position = (DWORD)new_pos;
+    
+    /* Also update VFS position if using VFS */
+    if (file->vfs_fd >= 0) {
+        vfs_seek(file->vfs_fd, new_pos, SEEK_SET);
+    }
+    
     winapi_set_last_error(ERROR_SUCCESS);
     return file->position;
 }
-
 
 BOOL WINAPI SetEndOfFile(HANDLE hFile) {
     handle_entry_t* entry = get_handle_entry(hFile);
@@ -1694,25 +1532,29 @@ BOOL WINAPI SetEndOfFile(HANDLE hFile) {
 BOOL WINAPI FlushFileBuffers(HANDLE hFile) {
     handle_entry_t* entry = get_handle_entry(hFile);
     if (!entry || entry->type != HANDLE_TYPE_FILE) {
-        /* Also accept console handles */
-        if (hFile == g_std_output || hFile == g_std_error) {
-            winapi_set_last_error(ERROR_SUCCESS);
-            return TRUE;
-        }
         winapi_set_last_error(ERROR_INVALID_HANDLE);
         return FALSE;
     }
     
-    /* No actual flushing needed for ramdisk */
+    /* Flush not implemented - data is already in memory */
     winapi_set_last_error(ERROR_SUCCESS);
     return TRUE;
 }
 
 BOOL WINAPI DeleteFileA(LPCSTR lpFileName) {
-    (void)lpFileName;
-    /* File deletion not implemented for ramdisk */
-    winapi_set_last_error(ERROR_FILE_NOT_FOUND);
-    return FALSE;
+    if (!lpFileName) {
+        winapi_set_last_error(ERROR_INVALID_PARAMETER);
+        return FALSE;
+    }
+    
+    int result = vfs_unlink(lpFileName);
+    if (result < 0) {
+        winapi_set_last_error(ERROR_FILE_NOT_FOUND);
+        return FALSE;
+    }
+    
+    winapi_set_last_error(ERROR_SUCCESS);
+    return TRUE;
 }
 
 BOOL WINAPI CopyFileA(LPCSTR lpExistingFileName, LPCSTR lpNewFileName, BOOL bFailIfExists) {
@@ -1732,7 +1574,6 @@ BOOL WINAPI MoveFileA(LPCSTR lpExistingFileName, LPCSTR lpNewFileName) {
 
 DWORD WINAPI GetFileAttributesA(LPCSTR lpFileName) {
     (void)lpFileName;
-    /* Return normal file attributes */
     winapi_set_last_error(ERROR_SUCCESS);
     return FILE_ATTRIBUTE_NORMAL;
 }
@@ -1855,29 +1696,30 @@ BOOL WINAPI UnlockFile(HANDLE hFile, DWORD dwFileOffsetLow, DWORD dwFileOffsetHi
  * ============================================================================ */
 
 BOOL WINAPI CreateDirectoryA(LPCSTR lpPathName, LPSECURITY_ATTRIBUTES lpSecurityAttributes) {
-    (void)lpPathName;
     (void)lpSecurityAttributes;
-    winapi_set_last_error(ERROR_SUCCESS);
-    return TRUE;
+    if (!lpPathName) {
+        winapi_set_last_error(ERROR_INVALID_PARAMETER);
+        return FALSE;
+    }
+    int result = vfs_mkdir(lpPathName);
+    winapi_set_last_error(result == 0 ? ERROR_SUCCESS : ERROR_PATH_NOT_FOUND);
+    return result == 0;
 }
 
 BOOL WINAPI RemoveDirectoryA(LPCSTR lpPathName) {
-    (void)lpPathName;
-    winapi_set_last_error(ERROR_SUCCESS);
-    return TRUE;
+    if (!lpPathName) {
+        winapi_set_last_error(ERROR_INVALID_PARAMETER);
+        return FALSE;
+    }
+    int result = vfs_rmdir(lpPathName);
+    winapi_set_last_error(result == 0 ? ERROR_SUCCESS : ERROR_PATH_NOT_FOUND);
+    return result == 0;
 }
 
 DWORD WINAPI GetCurrentDirectoryA(DWORD nBufferLength, LPSTR lpBuffer) {
     DWORD len = (DWORD)k32_strlen(g_current_directory);
-    
-    if (!lpBuffer || nBufferLength == 0) {
-        return len + 1;
-    }
-    
-    if (nBufferLength <= len) {
-        return len + 1;
-    }
-    
+    if (!lpBuffer || nBufferLength == 0) return len + 1;
+    if (nBufferLength <= len) return len + 1;
     k32_strcpy(lpBuffer, g_current_directory);
     winapi_set_last_error(ERROR_SUCCESS);
     return len;
@@ -1888,7 +1730,6 @@ BOOL WINAPI SetCurrentDirectoryA(LPCSTR lpPathName) {
         winapi_set_last_error(ERROR_INVALID_PARAMETER);
         return FALSE;
     }
-    
     k32_strncpy(g_current_directory, lpPathName, MAX_PATH);
     winapi_set_last_error(ERROR_SUCCESS);
     return TRUE;
@@ -1899,31 +1740,14 @@ HANDLE WINAPI FindFirstFileA(LPCSTR lpFileName, LPWIN32_FIND_DATAA lpFindFileDat
         winapi_set_last_error(ERROR_INVALID_PARAMETER);
         return INVALID_HANDLE_VALUE;
     }
-    
-    find_data_t* find = (find_data_t*)kmalloc(sizeof(find_data_t));
-    if (!find) {
-        winapi_set_last_error(ERROR_NOT_ENOUGH_MEMORY);
-        return INVALID_HANDLE_VALUE;
-    }
-    
-    k32_strncpy(find->search_path, lpFileName, MAX_PATH);
-    find->current_index = 0;
-    
-    /* No files in empty ramdisk */
-    kfree(find);
+    /* Directory enumeration not fully implemented */
     winapi_set_last_error(ERROR_FILE_NOT_FOUND);
     return INVALID_HANDLE_VALUE;
 }
 
 BOOL WINAPI FindNextFileA(HANDLE hFindFile, LPWIN32_FIND_DATAA lpFindFileData) {
+    (void)hFindFile;
     (void)lpFindFileData;
-    
-    handle_entry_t* entry = get_handle_entry(hFindFile);
-    if (!entry || entry->type != HANDLE_TYPE_FIND) {
-        winapi_set_last_error(ERROR_INVALID_HANDLE);
-        return FALSE;
-    }
-    
     winapi_set_last_error(ERROR_NO_MORE_FILES);
     return FALSE;
 }
@@ -1932,32 +1756,20 @@ BOOL WINAPI FindClose(HANDLE hFindFile) {
     return CloseHandle(hFindFile);
 }
 
-DWORD WINAPI GetFullPathNameA(LPCSTR lpFileName, DWORD nBufferLength,
-                              LPSTR lpBuffer, LPSTR* lpFilePart) {
+DWORD WINAPI GetFullPathNameA(LPCSTR lpFileName, DWORD nBufferLength, LPSTR lpBuffer, LPSTR* lpFilePart) {
     if (!lpFileName) {
         winapi_set_last_error(ERROR_INVALID_PARAMETER);
         return 0;
     }
-    
-    /* Simple implementation - just return the filename as-is if it looks absolute */
     DWORD len = (DWORD)k32_strlen(lpFileName);
-    
-    if (!lpBuffer || nBufferLength <= len) {
-        return len + 1;
-    }
-    
+    if (!lpBuffer || nBufferLength <= len) return len + 1;
     k32_strcpy(lpBuffer, lpFileName);
-    
     if (lpFilePart) {
-        /* Find last path separator */
         *lpFilePart = lpBuffer;
         for (char* p = lpBuffer; *p; p++) {
-            if (*p == '\\' || *p == '/') {
-                *lpFilePart = p + 1;
-            }
+            if (*p == '\\' || *p == '/') *lpFilePart = p + 1;
         }
     }
-    
     winapi_set_last_error(ERROR_SUCCESS);
     return len;
 }
@@ -1965,11 +1777,7 @@ DWORD WINAPI GetFullPathNameA(LPCSTR lpFileName, DWORD nBufferLength,
 DWORD WINAPI GetTempPathA(DWORD nBufferLength, LPSTR lpBuffer) {
     const char* temp_path = "C:\\Windows\\Temp\\";
     DWORD len = (DWORD)k32_strlen(temp_path);
-    
-    if (!lpBuffer || nBufferLength <= len) {
-        return len + 1;
-    }
-    
+    if (!lpBuffer || nBufferLength <= len) return len + 1;
     k32_strcpy(lpBuffer, temp_path);
     winapi_set_last_error(ERROR_SUCCESS);
     return len;
@@ -1977,52 +1785,32 @@ DWORD WINAPI GetTempPathA(DWORD nBufferLength, LPSTR lpBuffer) {
 
 static DWORD g_temp_file_counter = 0;
 
-DWORD WINAPI GetTempFileNameA(LPCSTR lpPathName, LPCSTR lpPrefixString,
-                              DWORD uUnique, LPSTR lpTempFileName) {
+DWORD WINAPI GetTempFileNameA(LPCSTR lpPathName, LPCSTR lpPrefixString, DWORD uUnique, LPSTR lpTempFileName) {
     if (!lpPathName || !lpTempFileName) {
         winapi_set_last_error(ERROR_INVALID_PARAMETER);
         return 0;
     }
-    
     DWORD unique = uUnique ? uUnique : ++g_temp_file_counter;
-    
-    /* Build temp filename */
     k32_strcpy(lpTempFileName, lpPathName);
-    
-    /* Ensure path ends with backslash */
     int len = k32_strlen(lpTempFileName);
     if (len > 0 && lpTempFileName[len-1] != '\\') {
         lpTempFileName[len] = '\\';
         lpTempFileName[len+1] = '\0';
     }
-    
-    /* Add prefix */
     if (lpPrefixString) {
         char prefix[4] = {0};
         k32_strncpy(prefix, lpPrefixString, 3);
         k32_strcpy(lpTempFileName + k32_strlen(lpTempFileName), prefix);
     }
-    
-    /* Add unique number and extension */
+    /* Add unique number */
     char num_str[16];
     int i = 0;
     DWORD temp = unique;
-    do {
-        num_str[i++] = '0' + (temp % 10);
-        temp /= 10;
-    } while (temp > 0);
+    do { num_str[i++] = '0' + (temp % 10); temp /= 10; } while (temp > 0);
     num_str[i] = '\0';
-    
-    /* Reverse the number string */
-    for (int j = 0; j < i/2; j++) {
-        char t = num_str[j];
-        num_str[j] = num_str[i-1-j];
-        num_str[i-1-j] = t;
-    }
-    
+    for (int j = 0; j < i/2; j++) { char t = num_str[j]; num_str[j] = num_str[i-1-j]; num_str[i-1-j] = t; }
     k32_strcpy(lpTempFileName + k32_strlen(lpTempFileName), num_str);
     k32_strcpy(lpTempFileName + k32_strlen(lpTempFileName), ".tmp");
-    
     winapi_set_last_error(ERROR_SUCCESS);
     return unique;
 }
@@ -2033,12 +1821,9 @@ DWORD WINAPI GetTempFileNameA(LPCSTR lpPathName, LPCSTR lpPrefixString,
 
 HANDLE WINAPI GetStdHandle(DWORD nStdHandle) {
     switch (nStdHandle) {
-        case STD_INPUT_HANDLE:
-            return g_std_input;
-        case STD_OUTPUT_HANDLE:
-            return g_std_output;
-        case STD_ERROR_HANDLE:
-            return g_std_error;
+        case STD_INPUT_HANDLE: return g_std_input;
+        case STD_OUTPUT_HANDLE: return g_std_output;
+        case STD_ERROR_HANDLE: return g_std_error;
         default:
             winapi_set_last_error(ERROR_INVALID_PARAMETER);
             return INVALID_HANDLE_VALUE;
@@ -2047,15 +1832,9 @@ HANDLE WINAPI GetStdHandle(DWORD nStdHandle) {
 
 BOOL WINAPI SetStdHandle(DWORD nStdHandle, HANDLE hHandle) {
     switch (nStdHandle) {
-        case STD_INPUT_HANDLE:
-            g_std_input = hHandle;
-            break;
-        case STD_OUTPUT_HANDLE:
-            g_std_output = hHandle;
-            break;
-        case STD_ERROR_HANDLE:
-            g_std_error = hHandle;
-            break;
+        case STD_INPUT_HANDLE: g_std_input = hHandle; break;
+        case STD_OUTPUT_HANDLE: g_std_output = hHandle; break;
+        case STD_ERROR_HANDLE: g_std_error = hHandle; break;
         default:
             winapi_set_last_error(ERROR_INVALID_PARAMETER);
             return FALSE;
@@ -2068,14 +1847,11 @@ BOOL WINAPI WriteConsoleA(HANDLE hConsoleOutput, LPCVOID lpBuffer, DWORD nNumber
                           LPDWORD lpNumberOfCharsWritten, LPVOID lpReserved) {
     (void)hConsoleOutput;
     (void)lpReserved;
-    
     if (!lpBuffer) {
         if (lpNumberOfCharsWritten) *lpNumberOfCharsWritten = 0;
         winapi_set_last_error(ERROR_INVALID_PARAMETER);
         return FALSE;
     }
-    
-    /* Write to VGA console */
     const char* str = (const char*)lpBuffer;
     DWORD written = 0;
     for (DWORD i = 0; i < nNumberOfCharsToWrite && str[i]; i++) {
@@ -2083,90 +1859,48 @@ BOOL WINAPI WriteConsoleA(HANDLE hConsoleOutput, LPCVOID lpBuffer, DWORD nNumber
         vga_write(c);
         written++;
     }
-    
-    if (lpNumberOfCharsWritten) {
-        *lpNumberOfCharsWritten = written;
-    }
-    
+    if (lpNumberOfCharsWritten) *lpNumberOfCharsWritten = written;
     winapi_set_last_error(ERROR_SUCCESS);
     return TRUE;
 }
 
 BOOL WINAPI ReadConsoleA(HANDLE hConsoleInput, LPVOID lpBuffer, DWORD nNumberOfCharsToRead,
                          LPDWORD lpNumberOfCharsRead, LPVOID pInputControl) {
-    (void)hConsoleInput;
-    (void)lpBuffer;
-    (void)nNumberOfCharsToRead;
-    (void)pInputControl;
-    
-    /* Console input not fully implemented */
-    if (lpNumberOfCharsRead) {
-        *lpNumberOfCharsRead = 0;
-    }
-    
+    (void)hConsoleInput; (void)lpBuffer; (void)nNumberOfCharsToRead; (void)pInputControl;
+    if (lpNumberOfCharsRead) *lpNumberOfCharsRead = 0;
     winapi_set_last_error(ERROR_SUCCESS);
     return TRUE;
 }
 
-BOOL WINAPI AllocConsole(void) {
-    /* Console already allocated by default */
-    winapi_set_last_error(ERROR_SUCCESS);
-    return TRUE;
-}
-
-BOOL WINAPI FreeConsole(void) {
-    winapi_set_last_error(ERROR_SUCCESS);
-    return TRUE;
-}
+BOOL WINAPI AllocConsole(void) { winapi_set_last_error(ERROR_SUCCESS); return TRUE; }
+BOOL WINAPI FreeConsole(void) { winapi_set_last_error(ERROR_SUCCESS); return TRUE; }
 
 BOOL WINAPI SetConsoleMode(HANDLE hConsoleHandle, DWORD dwMode) {
-    if (hConsoleHandle == g_std_input) {
-        g_console_mode_input = dwMode;
-    } else if (hConsoleHandle == g_std_output || hConsoleHandle == g_std_error) {
-        g_console_mode_output = dwMode;
-    } else {
-        winapi_set_last_error(ERROR_INVALID_HANDLE);
-        return FALSE;
-    }
-    
+    if (hConsoleHandle == g_std_input) g_console_mode_input = dwMode;
+    else if (hConsoleHandle == g_std_output || hConsoleHandle == g_std_error) g_console_mode_output = dwMode;
+    else { winapi_set_last_error(ERROR_INVALID_HANDLE); return FALSE; }
     winapi_set_last_error(ERROR_SUCCESS);
     return TRUE;
 }
 
 BOOL WINAPI GetConsoleMode(HANDLE hConsoleHandle, LPDWORD lpMode) {
-    if (!lpMode) {
-        winapi_set_last_error(ERROR_INVALID_PARAMETER);
-        return FALSE;
-    }
-    
-    if (hConsoleHandle == g_std_input) {
-        *lpMode = g_console_mode_input;
-    } else if (hConsoleHandle == g_std_output || hConsoleHandle == g_std_error) {
-        *lpMode = g_console_mode_output;
-    } else {
-        winapi_set_last_error(ERROR_INVALID_HANDLE);
-        return FALSE;
-    }
-    
+    if (!lpMode) { winapi_set_last_error(ERROR_INVALID_PARAMETER); return FALSE; }
+    if (hConsoleHandle == g_std_input) *lpMode = g_console_mode_input;
+    else if (hConsoleHandle == g_std_output || hConsoleHandle == g_std_error) *lpMode = g_console_mode_output;
+    else { winapi_set_last_error(ERROR_INVALID_HANDLE); return FALSE; }
     winapi_set_last_error(ERROR_SUCCESS);
     return TRUE;
 }
 
 BOOL WINAPI SetConsoleTitleA(LPCSTR lpConsoleTitle) {
-    if (lpConsoleTitle) {
-        k32_strncpy(g_console_title, lpConsoleTitle, sizeof(g_console_title) - 1);
-    }
+    if (lpConsoleTitle) k32_strncpy(g_console_title, lpConsoleTitle, sizeof(g_console_title) - 1);
     winapi_set_last_error(ERROR_SUCCESS);
     return TRUE;
 }
 
 DWORD WINAPI GetConsoleTitleA(LPSTR lpConsoleTitle, DWORD nSize) {
     DWORD len = (DWORD)k32_strlen(g_console_title);
-    
-    if (!lpConsoleTitle || nSize == 0) {
-        return len + 1;
-    }
-    
+    if (!lpConsoleTitle || nSize == 0) return len + 1;
     k32_strncpy(lpConsoleTitle, g_console_title, (int)nSize);
     winapi_set_last_error(ERROR_SUCCESS);
     return len < nSize ? len : nSize - 1;
@@ -2176,21 +1910,15 @@ DWORD WINAPI GetConsoleTitleA(LPSTR lpConsoleTitle, DWORD nSize) {
  * String Functions
  * ============================================================================ */
 
-int WINAPI lstrlenA(LPCSTR lpString) {
-    return k32_strlen(lpString);
-}
+int WINAPI lstrlenA(LPCSTR lpString) { return k32_strlen(lpString); }
 
 LPSTR WINAPI lstrcpyA(LPSTR lpString1, LPCSTR lpString2) {
-    if (lpString1 && lpString2) {
-        k32_strcpy(lpString1, lpString2);
-    }
+    if (lpString1 && lpString2) k32_strcpy(lpString1, lpString2);
     return lpString1;
 }
 
 LPSTR WINAPI lstrcpynA(LPSTR lpString1, LPCSTR lpString2, int iMaxLength) {
-    if (lpString1 && lpString2 && iMaxLength > 0) {
-        k32_strncpy(lpString1, lpString2, iMaxLength);
-    }
+    if (lpString1 && lpString2 && iMaxLength > 0) k32_strncpy(lpString1, lpString2, iMaxLength);
     return lpString1;
 }
 
@@ -2203,35 +1931,19 @@ LPSTR WINAPI lstrcatA(LPSTR lpString1, LPCSTR lpString2) {
     return lpString1;
 }
 
-int WINAPI lstrcmpA(LPCSTR lpString1, LPCSTR lpString2) {
-    return k32_strcmp(lpString1, lpString2);
-}
-
-int WINAPI lstrcmpiA(LPCSTR lpString1, LPCSTR lpString2) {
-    return k32_stricmp(lpString1, lpString2);
-}
+int WINAPI lstrcmpA(LPCSTR lpString1, LPCSTR lpString2) { return k32_strcmp(lpString1, lpString2); }
+int WINAPI lstrcmpiA(LPCSTR lpString1, LPCSTR lpString2) { return k32_stricmp(lpString1, lpString2); }
 
 int WINAPI MultiByteToWideChar(DWORD CodePage, DWORD dwFlags, LPCSTR lpMultiByteStr,
                                int cbMultiByte, LPWSTR lpWideCharStr, int cchWideChar) {
-    (void)CodePage;
-    (void)dwFlags;
-    
-    if (!lpMultiByteStr) {
-        winapi_set_last_error(ERROR_INVALID_PARAMETER);
-        return 0;
-    }
-    
+    (void)CodePage; (void)dwFlags;
+    if (!lpMultiByteStr) { winapi_set_last_error(ERROR_INVALID_PARAMETER); return 0; }
     int src_len = (cbMultiByte < 0) ? k32_strlen(lpMultiByteStr) + 1 : cbMultiByte;
-    
-    if (!lpWideCharStr || cchWideChar == 0) {
-        return src_len;  /* Return required buffer size */
-    }
-    
+    if (!lpWideCharStr || cchWideChar == 0) return src_len;
     int i;
     for (i = 0; i < src_len && i < cchWideChar; i++) {
         lpWideCharStr[i] = (WCHAR)(unsigned char)lpMultiByteStr[i];
     }
-    
     winapi_set_last_error(ERROR_SUCCESS);
     return i;
 }
@@ -2239,36 +1951,17 @@ int WINAPI MultiByteToWideChar(DWORD CodePage, DWORD dwFlags, LPCSTR lpMultiByte
 int WINAPI WideCharToMultiByte(DWORD CodePage, DWORD dwFlags, LPCWSTR lpWideCharStr,
                                int cchWideChar, LPSTR lpMultiByteStr, int cbMultiByte,
                                LPCSTR lpDefaultChar, LPBOOL lpUsedDefaultChar) {
-    (void)CodePage;
-    (void)dwFlags;
-    (void)lpDefaultChar;
-    
+    (void)CodePage; (void)dwFlags; (void)lpDefaultChar;
     if (lpUsedDefaultChar) *lpUsedDefaultChar = FALSE;
-    
-    if (!lpWideCharStr) {
-        winapi_set_last_error(ERROR_INVALID_PARAMETER);
-        return 0;
-    }
-    
-    /* Calculate source length */
+    if (!lpWideCharStr) { winapi_set_last_error(ERROR_INVALID_PARAMETER); return 0; }
     int src_len;
-    if (cchWideChar < 0) {
-        src_len = 0;
-        while (lpWideCharStr[src_len]) src_len++;
-        src_len++;  /* Include null terminator */
-    } else {
-        src_len = cchWideChar;
-    }
-    
-    if (!lpMultiByteStr || cbMultiByte == 0) {
-        return src_len;  /* Return required buffer size */
-    }
-    
+    if (cchWideChar < 0) { src_len = 0; while (lpWideCharStr[src_len]) src_len++; src_len++; }
+    else src_len = cchWideChar;
+    if (!lpMultiByteStr || cbMultiByte == 0) return src_len;
     int i;
     for (i = 0; i < src_len && i < cbMultiByte; i++) {
         lpMultiByteStr[i] = (lpWideCharStr[i] < 256) ? (char)lpWideCharStr[i] : '?';
     }
-    
     winapi_set_last_error(ERROR_SUCCESS);
     return i;
 }
@@ -2278,93 +1971,48 @@ int WINAPI WideCharToMultiByte(DWORD CodePage, DWORD dwFlags, LPCWSTR lpWideChar
  * ============================================================================ */
 
 HMODULE WINAPI LoadLibraryA(LPCSTR lpLibFileName) {
-    if (!lpLibFileName) {
-        winapi_set_last_error(ERROR_INVALID_PARAMETER);
-        return NULL;
-    }
-    
+    if (!lpLibFileName) { winapi_set_last_error(ERROR_INVALID_PARAMETER); return NULL; }
     HMODULE handle = dll_load(lpLibFileName);
-    if (!handle) {
-        winapi_set_last_error(ERROR_MOD_NOT_FOUND);
-        return NULL;
-    }
-    
+    if (!handle) { winapi_set_last_error(ERROR_MOD_NOT_FOUND); return NULL; }
     winapi_set_last_error(ERROR_SUCCESS);
     return handle;
 }
 
 HMODULE WINAPI LoadLibraryExA(LPCSTR lpLibFileName, HANDLE hFile, DWORD dwFlags) {
-    (void)hFile;
-    (void)dwFlags;
+    (void)hFile; (void)dwFlags;
     return LoadLibraryA(lpLibFileName);
 }
 
 BOOL WINAPI FreeLibrary(HMODULE hLibModule) {
-    if (!hLibModule) {
-        winapi_set_last_error(ERROR_INVALID_HANDLE);
-        return FALSE;
-    }
-    
+    if (!hLibModule) { winapi_set_last_error(ERROR_INVALID_HANDLE); return FALSE; }
     int result = dll_free(hLibModule);
-    if (result != 0) {
-        winapi_set_last_error(ERROR_INVALID_HANDLE);
-        return FALSE;
-    }
-    
+    if (result != 0) { winapi_set_last_error(ERROR_INVALID_HANDLE); return FALSE; }
     winapi_set_last_error(ERROR_SUCCESS);
     return TRUE;
 }
 
 FARPROC WINAPI GetProcAddress(HMODULE hModule, LPCSTR lpProcName) {
-    if (!hModule || !lpProcName) {
-        winapi_set_last_error(ERROR_INVALID_PARAMETER);
-        return NULL;
-    }
-    
+    if (!hModule || !lpProcName) { winapi_set_last_error(ERROR_INVALID_PARAMETER); return NULL; }
     void* proc = dll_get_proc_address(hModule, lpProcName);
-    if (!proc) {
-        winapi_set_last_error(ERROR_PROC_NOT_FOUND);
-        return NULL;
-    }
-    
+    if (!proc) { winapi_set_last_error(ERROR_PROC_NOT_FOUND); return NULL; }
     winapi_set_last_error(ERROR_SUCCESS);
     return (FARPROC)proc;
 }
 
 HMODULE WINAPI GetModuleHandleA(LPCSTR lpModuleName) {
-    if (!lpModuleName) {
-        /* Return handle to current executable */
-        winapi_set_last_error(ERROR_SUCCESS);
-        return (HMODULE)0x400000;
-    }
-    
+    if (!lpModuleName) { winapi_set_last_error(ERROR_SUCCESS); return (HMODULE)0x400000; }
     HMODULE handle = dll_get_module_handle(lpModuleName);
-    if (!handle) {
-        winapi_set_last_error(ERROR_MOD_NOT_FOUND);
-        return NULL;
-    }
-    
+    if (!handle) { winapi_set_last_error(ERROR_MOD_NOT_FOUND); return NULL; }
     winapi_set_last_error(ERROR_SUCCESS);
     return handle;
 }
 
 DWORD WINAPI GetModuleFileNameA(HMODULE hModule, LPSTR lpFilename, DWORD nSize) {
     (void)hModule;
-    
     const char* module_name = "C:\\aurora.exe";
     DWORD len = (DWORD)k32_strlen(module_name);
-    
-    if (!lpFilename || nSize == 0) {
-        winapi_set_last_error(ERROR_INSUFFICIENT_BUFFER);
-        return 0;
-    }
-    
-    if (nSize <= len) {
-        k32_strncpy(lpFilename, module_name, (int)nSize);
-        winapi_set_last_error(ERROR_INSUFFICIENT_BUFFER);
-        return nSize;
-    }
-    
+    if (!lpFilename || nSize == 0) { winapi_set_last_error(ERROR_INSUFFICIENT_BUFFER); return 0; }
+    if (nSize <= len) { k32_strncpy(lpFilename, module_name, (int)nSize); winapi_set_last_error(ERROR_INSUFFICIENT_BUFFER); return nSize; }
     k32_strcpy(lpFilename, module_name);
     winapi_set_last_error(ERROR_SUCCESS);
     return len;
@@ -2374,58 +2022,27 @@ DWORD WINAPI GetModuleFileNameA(HMODULE hModule, LPSTR lpFilename, DWORD nSize) 
  * Error Functions
  * ============================================================================ */
 
-DWORD WINAPI GetLastError(void) {
-    return winapi_get_last_error();
-}
-
-void WINAPI SetLastError(DWORD dwErrCode) {
-    winapi_set_last_error(dwErrCode);
-}
+DWORD WINAPI GetLastError(void) { return winapi_get_last_error(); }
+void WINAPI SetLastError(DWORD dwErrCode) { winapi_set_last_error(dwErrCode); }
 
 DWORD WINAPI FormatMessageA(DWORD dwFlags, LPCVOID lpSource, DWORD dwMessageId,
                             DWORD dwLanguageId, LPSTR lpBuffer, DWORD nSize, void* Arguments) {
-    (void)dwFlags;
-    (void)lpSource;
-    (void)dwLanguageId;
-    (void)Arguments;
-    
-    if (!lpBuffer || nSize == 0) {
-        winapi_set_last_error(ERROR_INVALID_PARAMETER);
-        return 0;
-    }
-    
+    (void)dwFlags; (void)lpSource; (void)dwLanguageId; (void)Arguments;
+    if (!lpBuffer || nSize == 0) { winapi_set_last_error(ERROR_INVALID_PARAMETER); return 0; }
     const char* msg;
     switch (dwMessageId) {
-        case ERROR_SUCCESS:
-            msg = "The operation completed successfully.";
-            break;
-        case ERROR_FILE_NOT_FOUND:
-            msg = "The system cannot find the file specified.";
-            break;
-        case ERROR_PATH_NOT_FOUND:
-            msg = "The system cannot find the path specified.";
-            break;
-        case ERROR_ACCESS_DENIED:
-            msg = "Access is denied.";
-            break;
-        case ERROR_INVALID_HANDLE:
-            msg = "The handle is invalid.";
-            break;
-        case ERROR_NOT_ENOUGH_MEMORY:
-            msg = "Not enough memory resources are available.";
-            break;
-        case ERROR_INVALID_PARAMETER:
-            msg = "The parameter is incorrect.";
-            break;
-        default:
-            msg = "Unknown error.";
-            break;
+        case ERROR_SUCCESS: msg = "The operation completed successfully."; break;
+        case ERROR_FILE_NOT_FOUND: msg = "The system cannot find the file specified."; break;
+        case ERROR_PATH_NOT_FOUND: msg = "The system cannot find the path specified."; break;
+        case ERROR_ACCESS_DENIED: msg = "Access is denied."; break;
+        case ERROR_INVALID_HANDLE: msg = "The handle is invalid."; break;
+        case ERROR_NOT_ENOUGH_MEMORY: msg = "Not enough memory resources are available."; break;
+        case ERROR_INVALID_PARAMETER: msg = "The parameter is incorrect."; break;
+        default: msg = "Unknown error."; break;
     }
-    
     DWORD len = (DWORD)k32_strlen(msg);
     if (len >= nSize) len = nSize - 1;
     k32_strncpy(lpBuffer, msg, (int)len + 1);
-    
     winapi_set_last_error(ERROR_SUCCESS);
     return len;
 }
@@ -2435,60 +2052,28 @@ DWORD WINAPI FormatMessageA(DWORD dwFlags, LPCVOID lpSource, DWORD dwMessageId,
  * ============================================================================ */
 
 DWORD WINAPI GetEnvironmentVariableA(LPCSTR lpName, LPSTR lpBuffer, DWORD nSize) {
-    if (!lpName) {
-        winapi_set_last_error(ERROR_INVALID_PARAMETER);
-        return 0;
-    }
-    
+    if (!lpName) { winapi_set_last_error(ERROR_INVALID_PARAMETER); return 0; }
     env_var_t* var = find_env_var(lpName);
-    if (!var) {
-        winapi_set_last_error(ERROR_ENVVAR_NOT_FOUND);
-        return 0;
-    }
-    
+    if (!var) { winapi_set_last_error(ERROR_ENVVAR_NOT_FOUND); return 0; }
     DWORD len = (DWORD)k32_strlen(var->value);
-    
-    if (!lpBuffer || nSize == 0) {
-        return len + 1;
-    }
-    
-    if (nSize <= len) {
-        winapi_set_last_error(ERROR_INSUFFICIENT_BUFFER);
-        return len + 1;
-    }
-    
+    if (!lpBuffer || nSize == 0) return len + 1;
+    if (nSize <= len) { winapi_set_last_error(ERROR_INSUFFICIENT_BUFFER); return len + 1; }
     k32_strcpy(lpBuffer, var->value);
     winapi_set_last_error(ERROR_SUCCESS);
     return len;
 }
 
 BOOL WINAPI SetEnvironmentVariableA(LPCSTR lpName, LPCSTR lpValue) {
-    if (!lpName || k32_strlen(lpName) == 0) {
-        winapi_set_last_error(ERROR_INVALID_PARAMETER);
-        return FALSE;
-    }
-    
+    if (!lpName || k32_strlen(lpName) == 0) { winapi_set_last_error(ERROR_INVALID_PARAMETER); return FALSE; }
     init_env();
-    
-    /* Look for existing variable */
     env_var_t* var = find_env_var(lpName);
-    
     if (!lpValue) {
-        /* Delete variable */
-        if (var) {
-            var->in_use = 0;
-            var->name[0] = '\0';
-            var->value[0] = '\0';
-        }
+        if (var) { var->in_use = 0; var->name[0] = '\0'; var->value[0] = '\0'; }
         winapi_set_last_error(ERROR_SUCCESS);
         return TRUE;
     }
-    
-    if (var) {
-        /* Update existing */
-        k32_strncpy(var->value, lpValue, MAX_ENV_VALUE - 1);
-    } else {
-        /* Find free slot */
+    if (var) { k32_strncpy(var->value, lpValue, MAX_ENV_VALUE - 1); }
+    else {
         for (int i = 0; i < MAX_ENV_VARS; i++) {
             if (!g_env_vars[i].in_use) {
                 k32_strncpy(g_env_vars[i].name, lpName, MAX_ENV_NAME - 1);
@@ -2501,29 +2086,20 @@ BOOL WINAPI SetEnvironmentVariableA(LPCSTR lpName, LPCSTR lpValue) {
         winapi_set_last_error(ERROR_NOT_ENOUGH_MEMORY);
         return FALSE;
     }
-    
     winapi_set_last_error(ERROR_SUCCESS);
     return TRUE;
 }
 
 LPSTR WINAPI GetEnvironmentStringsA(void) {
     init_env();
-    
-    /* Calculate total size needed */
-    SIZE_T total_size = 1;  /* Final null */
+    SIZE_T total_size = 1;
     for (int i = 0; i < MAX_ENV_VARS; i++) {
         if (g_env_vars[i].in_use) {
-            total_size += k32_strlen(g_env_vars[i].name) + 1 + 
-                          k32_strlen(g_env_vars[i].value) + 1;
+            total_size += k32_strlen(g_env_vars[i].name) + 1 + k32_strlen(g_env_vars[i].value) + 1;
         }
     }
-    
     char* buffer = (char*)kmalloc(total_size);
-    if (!buffer) {
-        winapi_set_last_error(ERROR_NOT_ENOUGH_MEMORY);
-        return NULL;
-    }
-    
+    if (!buffer) { winapi_set_last_error(ERROR_NOT_ENOUGH_MEMORY); return NULL; }
     char* p = buffer;
     for (int i = 0; i < MAX_ENV_VARS; i++) {
         if (g_env_vars[i].in_use) {
@@ -2535,16 +2111,13 @@ LPSTR WINAPI GetEnvironmentStringsA(void) {
             *p++ = '\0';
         }
     }
-    *p = '\0';  /* Double null at end */
-    
+    *p = '\0';
     winapi_set_last_error(ERROR_SUCCESS);
     return buffer;
 }
 
 BOOL WINAPI FreeEnvironmentStringsA(LPSTR lpszEnvironmentBlock) {
-    if (lpszEnvironmentBlock) {
-        kfree(lpszEnvironmentBlock);
-    }
+    if (lpszEnvironmentBlock) kfree(lpszEnvironmentBlock);
     winapi_set_last_error(ERROR_SUCCESS);
     return TRUE;
 }
@@ -2559,10 +2132,7 @@ LPSTR WINAPI GetCommandLineA(void) {
  * ============================================================================ */
 
 void WINAPI GetSystemInfo(LPSYSTEM_INFO lpSystemInfo) {
-    if (!lpSystemInfo) {
-        return;
-    }
-    
+    if (!lpSystemInfo) return;
     k32_memset(lpSystemInfo, 0, sizeof(SYSTEM_INFO));
     lpSystemInfo->wProcessorArchitecture = PROCESSOR_ARCHITECTURE_INTEL;
     lpSystemInfo->dwPageSize = PAGE_SIZE;
@@ -2570,56 +2140,38 @@ void WINAPI GetSystemInfo(LPSYSTEM_INFO lpSystemInfo) {
     lpSystemInfo->lpMaximumApplicationAddress = (LPVOID)0x7FFEFFFF;
     lpSystemInfo->dwActiveProcessorMask = 1;
     lpSystemInfo->dwNumberOfProcessors = 1;
-    lpSystemInfo->dwProcessorType = 586;  /* Pentium class */
-    lpSystemInfo->dwAllocationGranularity = 0x10000;  /* 64KB */
+    lpSystemInfo->dwProcessorType = 586;
+    lpSystemInfo->dwAllocationGranularity = 0x10000;
     lpSystemInfo->wProcessorLevel = 6;
     lpSystemInfo->wProcessorRevision = 0;
-    
     winapi_set_last_error(ERROR_SUCCESS);
 }
 
-void WINAPI GetNativeSystemInfo(LPSYSTEM_INFO lpSystemInfo) {
-    GetSystemInfo(lpSystemInfo);
-}
+void WINAPI GetNativeSystemInfo(LPSYSTEM_INFO lpSystemInfo) { GetSystemInfo(lpSystemInfo); }
 
-DWORD WINAPI GetTickCount(void) {
-    return timer_get_ticks();
-}
+DWORD WINAPI GetTickCount(void) { return timer_get_ticks(); }
 
 BOOL WINAPI GetVersionExA(LPOSVERSIONINFOA lpVersionInfo) {
     if (!lpVersionInfo || lpVersionInfo->dwOSVersionInfoSize < sizeof(OSVERSIONINFOA)) {
         winapi_set_last_error(ERROR_INVALID_PARAMETER);
         return FALSE;
     }
-    
-    lpVersionInfo->dwMajorVersion = 6;  /* Windows Vista/7 era */
+    lpVersionInfo->dwMajorVersion = 6;
     lpVersionInfo->dwMinorVersion = 1;
     lpVersionInfo->dwBuildNumber = 7601;
     lpVersionInfo->dwPlatformId = VER_PLATFORM_WIN32_NT;
     k32_strcpy(lpVersionInfo->szCSDVersion, "Aurora OS");
-    
     winapi_set_last_error(ERROR_SUCCESS);
     return TRUE;
 }
 
-DWORD WINAPI GetVersion(void) {
-    /* Returns packed version info for compatibility */
-    /* Low word: major.minor, High word: build number | platform */
-    return 0x80000106;  /* Win32s, version 6.1 */
-}
+DWORD WINAPI GetVersion(void) { return 0x80000106; }
 
 UINT WINAPI GetSystemDirectoryA(LPSTR lpBuffer, UINT uSize) {
     const char* sys_dir = "C:\\Windows\\System32";
     UINT len = (UINT)k32_strlen(sys_dir);
-    
-    if (!lpBuffer || uSize == 0) {
-        return len + 1;
-    }
-    
-    if (uSize <= len) {
-        return len + 1;
-    }
-    
+    if (!lpBuffer || uSize == 0) return len + 1;
+    if (uSize <= len) return len + 1;
     k32_strcpy(lpBuffer, sys_dir);
     winapi_set_last_error(ERROR_SUCCESS);
     return len;
@@ -2628,15 +2180,8 @@ UINT WINAPI GetSystemDirectoryA(LPSTR lpBuffer, UINT uSize) {
 UINT WINAPI GetWindowsDirectoryA(LPSTR lpBuffer, UINT uSize) {
     const char* win_dir = "C:\\Windows";
     UINT len = (UINT)k32_strlen(win_dir);
-    
-    if (!lpBuffer || uSize == 0) {
-        return len + 1;
-    }
-    
-    if (uSize <= len) {
-        return len + 1;
-    }
-    
+    if (!lpBuffer || uSize == 0) return len + 1;
+    if (uSize <= len) return len + 1;
     k32_strcpy(lpBuffer, win_dir);
     winapi_set_last_error(ERROR_SUCCESS);
     return len;
@@ -2644,14 +2189,10 @@ UINT WINAPI GetWindowsDirectoryA(LPSTR lpBuffer, UINT uSize) {
 
 void WINAPI GetSystemTime(LPSYSTEMTIME lpSystemTime) {
     if (!lpSystemTime) return;
-    
     DWORD ticks = timer_get_ticks();
-    
-    /* Convert ticks to time (simplified - assumes 1000 ticks/second) */
     DWORD seconds = ticks / 1000;
     DWORD minutes = seconds / 60;
     DWORD hours = minutes / 60;
-    
     lpSystemTime->wYear = 2024;
     lpSystemTime->wMonth = 1;
     lpSystemTime->wDayOfWeek = 0;
@@ -2662,46 +2203,22 @@ void WINAPI GetSystemTime(LPSYSTEMTIME lpSystemTime) {
     lpSystemTime->wMilliseconds = (WORD)(ticks % 1000);
 }
 
-void WINAPI GetLocalTime(LPSYSTEMTIME lpSystemTime) {
-    GetSystemTime(lpSystemTime);  /* No timezone support */
-}
-
-BOOL WINAPI SetSystemTime(const SYSTEMTIME* lpSystemTime) {
-    (void)lpSystemTime;
-    winapi_set_last_error(ERROR_SUCCESS);
-    return TRUE;
-}
-
-BOOL WINAPI SetLocalTime(const SYSTEMTIME* lpSystemTime) {
-    return SetSystemTime(lpSystemTime);
-}
+void WINAPI GetLocalTime(LPSYSTEMTIME lpSystemTime) { GetSystemTime(lpSystemTime); }
+BOOL WINAPI SetSystemTime(const SYSTEMTIME* lpSystemTime) { (void)lpSystemTime; winapi_set_last_error(ERROR_SUCCESS); return TRUE; }
+BOOL WINAPI SetLocalTime(const SYSTEMTIME* lpSystemTime) { return SetSystemTime(lpSystemTime); }
 
 BOOL WINAPI SystemTimeToFileTime(const SYSTEMTIME* lpSystemTime, LPFILETIME lpFileTime) {
-    if (!lpSystemTime || !lpFileTime) {
-        winapi_set_last_error(ERROR_INVALID_PARAMETER);
-        return FALSE;
-    }
-    
-    /* Simple conversion - not accurate but functional */
-    DWORD ticks = lpSystemTime->wMilliseconds +
-                  lpSystemTime->wSecond * 1000 +
-                  lpSystemTime->wMinute * 60000;
-    
+    if (!lpSystemTime || !lpFileTime) { winapi_set_last_error(ERROR_INVALID_PARAMETER); return FALSE; }
+    DWORD ticks = lpSystemTime->wMilliseconds + lpSystemTime->wSecond * 1000 + lpSystemTime->wMinute * 60000;
     lpFileTime->dwLowDateTime = ticks;
     lpFileTime->dwHighDateTime = 0;
-    
     winapi_set_last_error(ERROR_SUCCESS);
     return TRUE;
 }
 
 BOOL WINAPI FileTimeToSystemTime(const FILETIME* lpFileTime, LPSYSTEMTIME lpSystemTime) {
-    if (!lpFileTime || !lpSystemTime) {
-        winapi_set_last_error(ERROR_INVALID_PARAMETER);
-        return FALSE;
-    }
-    
+    if (!lpFileTime || !lpSystemTime) { winapi_set_last_error(ERROR_INVALID_PARAMETER); return FALSE; }
     DWORD ticks = lpFileTime->dwLowDateTime;
-    
     lpSystemTime->wMilliseconds = (WORD)(ticks % 1000);
     lpSystemTime->wSecond = (WORD)((ticks / 1000) % 60);
     lpSystemTime->wMinute = (WORD)((ticks / 60000) % 60);
@@ -2710,77 +2227,50 @@ BOOL WINAPI FileTimeToSystemTime(const FILETIME* lpFileTime, LPSYSTEMTIME lpSyst
     lpSystemTime->wMonth = 1;
     lpSystemTime->wYear = 2024;
     lpSystemTime->wDayOfWeek = 0;
-    
     winapi_set_last_error(ERROR_SUCCESS);
     return TRUE;
 }
 
-DWORD WINAPI GetTimeZoneInformation(void* lpTimeZoneInformation) {
-    (void)lpTimeZoneInformation;
-    return 0;  /* TIME_ZONE_ID_UNKNOWN */
-}
+DWORD WINAPI GetTimeZoneInformation(void* lpTimeZoneInformation) { (void)lpTimeZoneInformation; return 0; }
 
 BOOL WINAPI QueryPerformanceCounter(void* lpPerformanceCount) {
-    if (!lpPerformanceCount) {
-        winapi_set_last_error(ERROR_INVALID_PARAMETER);
-        return FALSE;
-    }
-    
+    if (!lpPerformanceCount) { winapi_set_last_error(ERROR_INVALID_PARAMETER); return FALSE; }
     DWORD ticks = timer_get_ticks();
-    *((DWORD*)lpPerformanceCount) = ticks;
-    *((DWORD*)lpPerformanceCount + 1) = 0;
-    
+    ((DWORD*)lpPerformanceCount)[0] = ticks;
+    ((DWORD*)lpPerformanceCount)[1] = 0;
     winapi_set_last_error(ERROR_SUCCESS);
     return TRUE;
 }
 
 BOOL WINAPI QueryPerformanceFrequency(void* lpFrequency) {
-    if (!lpFrequency) {
-        winapi_set_last_error(ERROR_INVALID_PARAMETER);
-        return FALSE;
-    }
-    
-    /* Return 1000 Hz (1ms resolution) */
-    *((DWORD*)lpFrequency) = 1000;
-    *((DWORD*)lpFrequency + 1) = 0;
-    
+    if (!lpFrequency) { winapi_set_last_error(ERROR_INVALID_PARAMETER); return FALSE; }
+    ((DWORD*)lpFrequency)[0] = 1000;
+    ((DWORD*)lpFrequency)[1] = 0;
     winapi_set_last_error(ERROR_SUCCESS);
     return TRUE;
 }
 
-DWORD WINAPI GetLogicalDrives(void) {
-    /* Return C: drive only */
-    return 0x04;  /* Bit 2 = C: */
-}
+DWORD WINAPI GetLogicalDrives(void) { return 0x04; }
 
 DWORD WINAPI GetLogicalDriveStringsA(DWORD nBufferLength, LPSTR lpBuffer) {
     const char* drives = "C:\\\0";
-    DWORD len = 4;  /* "C:\" + null + final null */
-    
-    if (!lpBuffer || nBufferLength < len) {
-        return len;
-    }
-    
+    DWORD len = 4;
+    if (!lpBuffer || nBufferLength < len) return len;
     k32_memcpy(lpBuffer, drives, len);
     winapi_set_last_error(ERROR_SUCCESS);
     return len - 1;
 }
 
-UINT WINAPI GetDriveTypeA(LPCSTR lpRootPathName) {
-    (void)lpRootPathName;
-    return 3;  /* DRIVE_FIXED */
-}
+UINT WINAPI GetDriveTypeA(LPCSTR lpRootPathName) { (void)lpRootPathName; return 3; }
 
 BOOL WINAPI GetDiskFreeSpaceA(LPCSTR lpRootPathName, LPDWORD lpSectorsPerCluster,
                               LPDWORD lpBytesPerSector, LPDWORD lpNumberOfFreeClusters,
                               LPDWORD lpTotalNumberOfClusters) {
     (void)lpRootPathName;
-    
     if (lpSectorsPerCluster) *lpSectorsPerCluster = 8;
     if (lpBytesPerSector) *lpBytesPerSector = 512;
     if (lpNumberOfFreeClusters) *lpNumberOfFreeClusters = 100000;
     if (lpTotalNumberOfClusters) *lpTotalNumberOfClusters = 200000;
-    
     winapi_set_last_error(ERROR_SUCCESS);
     return TRUE;
 }
@@ -2788,30 +2278,25 @@ BOOL WINAPI GetDiskFreeSpaceA(LPCSTR lpRootPathName, LPDWORD lpSectorsPerCluster
 BOOL WINAPI GetComputerNameA(LPSTR lpBuffer, LPDWORD nSize) {
     const char* name = "AURORA";
     DWORD len = (DWORD)k32_strlen(name);
-    
     if (!lpBuffer || !nSize || *nSize <= len) {
         if (nSize) *nSize = len + 1;
         winapi_set_last_error(ERROR_BUFFER_OVERFLOW);
         return FALSE;
     }
-    
     k32_strcpy(lpBuffer, name);
     *nSize = len;
     winapi_set_last_error(ERROR_SUCCESS);
     return TRUE;
 }
 
-
 BOOL WINAPI GetUserNameA(LPSTR lpBuffer, LPDWORD pcbBuffer) {
     const char* name = "User";
     DWORD len = (DWORD)k32_strlen(name);
-    
     if (!lpBuffer || !pcbBuffer || *pcbBuffer <= len) {
         if (pcbBuffer) *pcbBuffer = len + 1;
         winapi_set_last_error(ERROR_INSUFFICIENT_BUFFER);
         return FALSE;
     }
-    
     k32_strcpy(lpBuffer, name);
     *pcbBuffer = len + 1;
     winapi_set_last_error(ERROR_SUCCESS);
@@ -2825,188 +2310,95 @@ BOOL WINAPI GetUserNameA(LPSTR lpBuffer, LPDWORD pcbBuffer) {
 HANDLE WINAPI CreateEventA(LPSECURITY_ATTRIBUTES lpEventAttributes, BOOL bManualReset,
                            BOOL bInitialState, LPCSTR lpName) {
     (void)lpEventAttributes;
-    
     event_data_t* event = (event_data_t*)kmalloc(sizeof(event_data_t));
-    if (!event) {
-        winapi_set_last_error(ERROR_NOT_ENOUGH_MEMORY);
-        return NULL;
-    }
-    
+    if (!event) { winapi_set_last_error(ERROR_NOT_ENOUGH_MEMORY); return NULL; }
     k32_memset(event, 0, sizeof(event_data_t));
     event->signaled = bInitialState ? 1 : 0;
     event->manual_reset = bManualReset ? 1 : 0;
-    if (lpName) {
-        k32_strncpy(event->name, lpName, sizeof(event->name) - 1);
-    }
-    
+    if (lpName) k32_strncpy(event->name, lpName, sizeof(event->name) - 1);
     HANDLE hEvent = alloc_handle(HANDLE_TYPE_EVENT, event);
-    if (hEvent == INVALID_HANDLE_VALUE) {
-        kfree(event);
-        winapi_set_last_error(ERROR_NOT_ENOUGH_MEMORY);
-        return NULL;
-    }
-    
+    if (hEvent == INVALID_HANDLE_VALUE) { kfree(event); winapi_set_last_error(ERROR_NOT_ENOUGH_MEMORY); return NULL; }
     winapi_set_last_error(ERROR_SUCCESS);
     return hEvent;
 }
 
 BOOL WINAPI SetEvent(HANDLE hEvent) {
     handle_entry_t* entry = get_handle_entry(hEvent);
-    if (!entry || entry->type != HANDLE_TYPE_EVENT) {
-        winapi_set_last_error(ERROR_INVALID_HANDLE);
-        return FALSE;
-    }
-    
+    if (!entry || entry->type != HANDLE_TYPE_EVENT) { winapi_set_last_error(ERROR_INVALID_HANDLE); return FALSE; }
     event_data_t* event = (event_data_t*)entry->data;
-    if (event) {
-        event->signaled = 1;
-    }
-    
+    if (event) event->signaled = 1;
     winapi_set_last_error(ERROR_SUCCESS);
     return TRUE;
 }
 
 BOOL WINAPI ResetEvent(HANDLE hEvent) {
     handle_entry_t* entry = get_handle_entry(hEvent);
-    if (!entry || entry->type != HANDLE_TYPE_EVENT) {
-        winapi_set_last_error(ERROR_INVALID_HANDLE);
-        return FALSE;
-    }
-    
+    if (!entry || entry->type != HANDLE_TYPE_EVENT) { winapi_set_last_error(ERROR_INVALID_HANDLE); return FALSE; }
     event_data_t* event = (event_data_t*)entry->data;
-    if (event) {
-        event->signaled = 0;
-    }
-    
+    if (event) event->signaled = 0;
     winapi_set_last_error(ERROR_SUCCESS);
     return TRUE;
 }
 
-BOOL WINAPI PulseEvent(HANDLE hEvent) {
-    SetEvent(hEvent);
-    ResetEvent(hEvent);
-    return TRUE;
-}
+BOOL WINAPI PulseEvent(HANDLE hEvent) { SetEvent(hEvent); ResetEvent(hEvent); return TRUE; }
 
 HANDLE WINAPI CreateMutexA(LPSECURITY_ATTRIBUTES lpMutexAttributes, BOOL bInitialOwner, LPCSTR lpName) {
     (void)lpMutexAttributes;
-    
     mutex_data_t* mutex = (mutex_data_t*)kmalloc(sizeof(mutex_data_t));
-    if (!mutex) {
-        winapi_set_last_error(ERROR_NOT_ENOUGH_MEMORY);
-        return NULL;
-    }
-    
+    if (!mutex) { winapi_set_last_error(ERROR_NOT_ENOUGH_MEMORY); return NULL; }
     k32_memset(mutex, 0, sizeof(mutex_data_t));
-    if (bInitialOwner) {
-        mutex->locked = 1;
-        mutex->owner_thread = g_current_thread_id;
-        mutex->recursion_count = 1;
-    }
-    if (lpName) {
-        k32_strncpy(mutex->name, lpName, sizeof(mutex->name) - 1);
-    }
-    
+    if (bInitialOwner) { mutex->locked = 1; mutex->owner_thread = g_current_thread_id; mutex->recursion_count = 1; }
+    if (lpName) k32_strncpy(mutex->name, lpName, sizeof(mutex->name) - 1);
     HANDLE hMutex = alloc_handle(HANDLE_TYPE_MUTEX, mutex);
-    if (hMutex == INVALID_HANDLE_VALUE) {
-        kfree(mutex);
-        winapi_set_last_error(ERROR_NOT_ENOUGH_MEMORY);
-        return NULL;
-    }
-    
+    if (hMutex == INVALID_HANDLE_VALUE) { kfree(mutex); winapi_set_last_error(ERROR_NOT_ENOUGH_MEMORY); return NULL; }
     winapi_set_last_error(ERROR_SUCCESS);
     return hMutex;
 }
 
 BOOL WINAPI ReleaseMutex(HANDLE hMutex) {
     handle_entry_t* entry = get_handle_entry(hMutex);
-    if (!entry || entry->type != HANDLE_TYPE_MUTEX) {
-        winapi_set_last_error(ERROR_INVALID_HANDLE);
-        return FALSE;
-    }
-    
+    if (!entry || entry->type != HANDLE_TYPE_MUTEX) { winapi_set_last_error(ERROR_INVALID_HANDLE); return FALSE; }
     mutex_data_t* mutex = (mutex_data_t*)entry->data;
-    if (!mutex || mutex->owner_thread != g_current_thread_id) {
-        winapi_set_last_error(ERROR_NOT_OWNER);
-        return FALSE;
-    }
-    
+    if (!mutex || mutex->owner_thread != g_current_thread_id) { winapi_set_last_error(ERROR_NOT_OWNER); return FALSE; }
     mutex->recursion_count--;
-    if (mutex->recursion_count <= 0) {
-        mutex->locked = 0;
-        mutex->owner_thread = 0;
-    }
-    
+    if (mutex->recursion_count <= 0) { mutex->locked = 0; mutex->owner_thread = 0; }
     winapi_set_last_error(ERROR_SUCCESS);
     return TRUE;
 }
 
-
 HANDLE WINAPI CreateSemaphoreA(LPSECURITY_ATTRIBUTES lpSemaphoreAttributes, LONG lInitialCount,
                                LONG lMaximumCount, LPCSTR lpName) {
     (void)lpSemaphoreAttributes;
-    
     if (lInitialCount < 0 || lMaximumCount <= 0 || lInitialCount > lMaximumCount) {
         winapi_set_last_error(ERROR_INVALID_PARAMETER);
         return NULL;
     }
-    
     semaphore_data_t* sem = (semaphore_data_t*)kmalloc(sizeof(semaphore_data_t));
-    if (!sem) {
-        winapi_set_last_error(ERROR_NOT_ENOUGH_MEMORY);
-        return NULL;
-    }
-    
+    if (!sem) { winapi_set_last_error(ERROR_NOT_ENOUGH_MEMORY); return NULL; }
     k32_memset(sem, 0, sizeof(semaphore_data_t));
     sem->count = lInitialCount;
     sem->max_count = lMaximumCount;
-    if (lpName) {
-        k32_strncpy(sem->name, lpName, sizeof(sem->name) - 1);
-    }
-    
+    if (lpName) k32_strncpy(sem->name, lpName, sizeof(sem->name) - 1);
     HANDLE hSemaphore = alloc_handle(HANDLE_TYPE_SEMAPHORE, sem);
-    if (hSemaphore == INVALID_HANDLE_VALUE) {
-        kfree(sem);
-        winapi_set_last_error(ERROR_NOT_ENOUGH_MEMORY);
-        return NULL;
-    }
-    
+    if (hSemaphore == INVALID_HANDLE_VALUE) { kfree(sem); winapi_set_last_error(ERROR_NOT_ENOUGH_MEMORY); return NULL; }
     winapi_set_last_error(ERROR_SUCCESS);
     return hSemaphore;
 }
 
 BOOL WINAPI ReleaseSemaphore(HANDLE hSemaphore, LONG lReleaseCount, LPLONG lpPreviousCount) {
     handle_entry_t* entry = get_handle_entry(hSemaphore);
-    if (!entry || entry->type != HANDLE_TYPE_SEMAPHORE) {
-        winapi_set_last_error(ERROR_INVALID_HANDLE);
-        return FALSE;
-    }
-    
+    if (!entry || entry->type != HANDLE_TYPE_SEMAPHORE) { winapi_set_last_error(ERROR_INVALID_HANDLE); return FALSE; }
     semaphore_data_t* sem = (semaphore_data_t*)entry->data;
-    if (!sem) {
-        winapi_set_last_error(ERROR_INVALID_HANDLE);
-        return FALSE;
-    }
-    
-    if (lpPreviousCount) {
-        *lpPreviousCount = sem->count;
-    }
-    
-    if (sem->count + lReleaseCount > sem->max_count) {
-        winapi_set_last_error(ERROR_TOO_MANY_POSTS);
-        return FALSE;
-    }
-    
+    if (!sem) { winapi_set_last_error(ERROR_INVALID_HANDLE); return FALSE; }
+    if (lpPreviousCount) *lpPreviousCount = sem->count;
+    if (sem->count + lReleaseCount > sem->max_count) { winapi_set_last_error(ERROR_TOO_MANY_POSTS); return FALSE; }
     sem->count += lReleaseCount;
-    
     winapi_set_last_error(ERROR_SUCCESS);
     return TRUE;
 }
 
-
 void WINAPI InitializeCriticalSection(LPCRITICAL_SECTION lpCriticalSection) {
     if (!lpCriticalSection) return;
-    
     k32_memset(lpCriticalSection, 0, sizeof(CRITICAL_SECTION));
     lpCriticalSection->LockCount = -1;
     lpCriticalSection->RecursionCount = 0;
@@ -3015,8 +2407,6 @@ void WINAPI InitializeCriticalSection(LPCRITICAL_SECTION lpCriticalSection) {
 
 void WINAPI EnterCriticalSection(LPCRITICAL_SECTION lpCriticalSection) {
     if (!lpCriticalSection) return;
-    
-    /* Simple spinlock implementation */
     while (1) {
         LONG old_count = lpCriticalSection->LockCount;
         if (old_count < 0) {
@@ -3025,25 +2415,17 @@ void WINAPI EnterCriticalSection(LPCRITICAL_SECTION lpCriticalSection) {
             lpCriticalSection->OwningThread = (HANDLE)(uintptr_t)g_current_thread_id;
             return;
         }
-        
-        /* Check for recursive entry */
         if (lpCriticalSection->OwningThread == (HANDLE)(uintptr_t)g_current_thread_id) {
             lpCriticalSection->RecursionCount++;
             return;
         }
-        
-        /* Spin */
         process_yield();
     }
 }
 
 void WINAPI LeaveCriticalSection(LPCRITICAL_SECTION lpCriticalSection) {
     if (!lpCriticalSection) return;
-    
-    if (lpCriticalSection->OwningThread != (HANDLE)(uintptr_t)g_current_thread_id) {
-        return;  /* Not owner */
-    }
-    
+    if (lpCriticalSection->OwningThread != (HANDLE)(uintptr_t)g_current_thread_id) return;
     lpCriticalSection->RecursionCount--;
     if (lpCriticalSection->RecursionCount == 0) {
         lpCriticalSection->OwningThread = NULL;
@@ -3058,62 +2440,43 @@ void WINAPI DeleteCriticalSection(LPCRITICAL_SECTION lpCriticalSection) {
 
 BOOL WINAPI TryEnterCriticalSection(LPCRITICAL_SECTION lpCriticalSection) {
     if (!lpCriticalSection) return FALSE;
-    
     if (lpCriticalSection->LockCount < 0) {
         lpCriticalSection->LockCount = 0;
         lpCriticalSection->RecursionCount = 1;
         lpCriticalSection->OwningThread = (HANDLE)(uintptr_t)g_current_thread_id;
         return TRUE;
     }
-    
     if (lpCriticalSection->OwningThread == (HANDLE)(uintptr_t)g_current_thread_id) {
         lpCriticalSection->RecursionCount++;
         return TRUE;
     }
-    
     return FALSE;
 }
 
-LONG WINAPI InterlockedIncrement(LONG volatile* lpAddend) {
-    if (!lpAddend) return 0;
-    return ++(*lpAddend);
-}
-
-LONG WINAPI InterlockedDecrement(LONG volatile* lpAddend) {
-    if (!lpAddend) return 0;
-    return --(*lpAddend);
-}
-
+LONG WINAPI InterlockedIncrement(LONG volatile* lpAddend) { if (!lpAddend) return 0; return ++(*lpAddend); }
+LONG WINAPI InterlockedDecrement(LONG volatile* lpAddend) { if (!lpAddend) return 0; return --(*lpAddend); }
 LONG WINAPI InterlockedExchange(LONG volatile* Target, LONG Value) {
     if (!Target) return 0;
     LONG old = *Target;
     *Target = Value;
     return old;
 }
-
 LONG WINAPI InterlockedCompareExchange(LONG volatile* Destination, LONG Exchange, LONG Comparand) {
     if (!Destination) return 0;
     LONG old = *Destination;
-    if (old == Comparand) {
-        *Destination = Exchange;
-    }
+    if (old == Comparand) *Destination = Exchange;
     return old;
 }
-
 LPVOID WINAPI InterlockedExchangePointer(LPVOID volatile* Target, LPVOID Value) {
     if (!Target) return NULL;
     LPVOID old = *Target;
     *Target = Value;
     return old;
 }
-
-LPVOID WINAPI InterlockedCompareExchangePointer(LPVOID volatile* Destination,
-                                                 LPVOID Exchange, LPVOID Comparand) {
+LPVOID WINAPI InterlockedCompareExchangePointer(LPVOID volatile* Destination, LPVOID Exchange, LPVOID Comparand) {
     if (!Destination) return NULL;
     LPVOID old = *Destination;
-    if (old == Comparand) {
-        *Destination = Exchange;
-    }
+    if (old == Comparand) *Destination = Exchange;
     return old;
 }
 
@@ -3123,22 +2486,14 @@ LPVOID WINAPI InterlockedCompareExchangePointer(LPVOID volatile* Destination,
 
 DWORD WINAPI TlsAlloc(void) {
     for (DWORD i = 0; i < TLS_SLOTS; i++) {
-        if (!g_tls_in_use[i]) {
-            g_tls_in_use[i] = 1;
-            g_tls_slots[i] = NULL;
-            return i;
-        }
+        if (!g_tls_in_use[i]) { g_tls_in_use[i] = 1; g_tls_slots[i] = NULL; return i; }
     }
     winapi_set_last_error(ERROR_NO_MORE_ITEMS);
     return 0xFFFFFFFF;
 }
 
 BOOL WINAPI TlsFree(DWORD dwTlsIndex) {
-    if (dwTlsIndex >= TLS_SLOTS) {
-        winapi_set_last_error(ERROR_INVALID_PARAMETER);
-        return FALSE;
-    }
-    
+    if (dwTlsIndex >= TLS_SLOTS) { winapi_set_last_error(ERROR_INVALID_PARAMETER); return FALSE; }
     g_tls_in_use[dwTlsIndex] = 0;
     g_tls_slots[dwTlsIndex] = NULL;
     winapi_set_last_error(ERROR_SUCCESS);
@@ -3146,21 +2501,13 @@ BOOL WINAPI TlsFree(DWORD dwTlsIndex) {
 }
 
 LPVOID WINAPI TlsGetValue(DWORD dwTlsIndex) {
-    if (dwTlsIndex >= TLS_SLOTS) {
-        winapi_set_last_error(ERROR_INVALID_PARAMETER);
-        return NULL;
-    }
-    
+    if (dwTlsIndex >= TLS_SLOTS) { winapi_set_last_error(ERROR_INVALID_PARAMETER); return NULL; }
     winapi_set_last_error(ERROR_SUCCESS);
     return g_tls_slots[dwTlsIndex];
 }
 
 BOOL WINAPI TlsSetValue(DWORD dwTlsIndex, LPVOID lpTlsValue) {
-    if (dwTlsIndex >= TLS_SLOTS) {
-        winapi_set_last_error(ERROR_INVALID_PARAMETER);
-        return FALSE;
-    }
-    
+    if (dwTlsIndex >= TLS_SLOTS) { winapi_set_last_error(ERROR_INVALID_PARAMETER); return FALSE; }
     g_tls_slots[dwTlsIndex] = lpTlsValue;
     winapi_set_last_error(ERROR_SUCCESS);
     return TRUE;
@@ -3177,58 +2524,29 @@ BOOL WINAPI CreateProcessA(LPCSTR lpApplicationName, LPSTR lpCommandLine,
                            LPVOID lpEnvironment, LPCSTR lpCurrentDirectory,
                            LPSTARTUPINFOA lpStartupInfo,
                            LPPROCESS_INFORMATION lpProcessInformation) {
-    (void)lpApplicationName;
-    (void)lpCommandLine;
-    (void)lpProcessAttributes;
-    (void)lpThreadAttributes;
-    (void)bInheritHandles;
-    (void)dwCreationFlags;
-    (void)lpEnvironment;
-    (void)lpCurrentDirectory;
-    (void)lpStartupInfo;
+    (void)lpApplicationName; (void)lpCommandLine; (void)lpProcessAttributes;
+    (void)lpThreadAttributes; (void)bInheritHandles; (void)dwCreationFlags;
+    (void)lpEnvironment; (void)lpCurrentDirectory; (void)lpStartupInfo;
     
-    if (!lpProcessInformation) {
-        winapi_set_last_error(ERROR_INVALID_PARAMETER);
-        return FALSE;
-    }
+    if (!lpProcessInformation) { winapi_set_last_error(ERROR_INVALID_PARAMETER); return FALSE; }
     
-    /* Allocate process data */
     process_data_t* proc = (process_data_t*)kmalloc(sizeof(process_data_t));
-    if (!proc) {
-        winapi_set_last_error(ERROR_NOT_ENOUGH_MEMORY);
-        return FALSE;
-    }
-    
+    if (!proc) { winapi_set_last_error(ERROR_NOT_ENOUGH_MEMORY); return FALSE; }
     k32_memset(proc, 0, sizeof(process_data_t));
     proc->process_id = g_next_process_id++;
     proc->terminated = 0;
     
     HANDLE hProcess = alloc_handle(HANDLE_TYPE_PROCESS, proc);
-    if (hProcess == INVALID_HANDLE_VALUE) {
-        kfree(proc);
-        winapi_set_last_error(ERROR_NOT_ENOUGH_MEMORY);
-        return FALSE;
-    }
+    if (hProcess == INVALID_HANDLE_VALUE) { kfree(proc); winapi_set_last_error(ERROR_NOT_ENOUGH_MEMORY); return FALSE; }
     
-    /* Allocate thread data */
     thread_data_t* thread = (thread_data_t*)kmalloc(sizeof(thread_data_t));
-    if (!thread) {
-        free_handle(hProcess);
-        winapi_set_last_error(ERROR_NOT_ENOUGH_MEMORY);
-        return FALSE;
-    }
-    
+    if (!thread) { free_handle(hProcess); winapi_set_last_error(ERROR_NOT_ENOUGH_MEMORY); return FALSE; }
     k32_memset(thread, 0, sizeof(thread_data_t));
     thread->thread_id = g_next_thread_id++;
     thread->suspended = (dwCreationFlags & CREATE_SUSPENDED) ? 1 : 0;
     
     HANDLE hThread = alloc_handle(HANDLE_TYPE_THREAD, thread);
-    if (hThread == INVALID_HANDLE_VALUE) {
-        free_handle(hProcess);
-        kfree(thread);
-        winapi_set_last_error(ERROR_NOT_ENOUGH_MEMORY);
-        return FALSE;
-    }
+    if (hThread == INVALID_HANDLE_VALUE) { free_handle(hProcess); kfree(thread); winapi_set_last_error(ERROR_NOT_ENOUGH_MEMORY); return FALSE; }
     
     lpProcessInformation->hProcess = hProcess;
     lpProcessInformation->hThread = hThread;
@@ -3240,14 +2558,8 @@ BOOL WINAPI CreateProcessA(LPCSTR lpApplicationName, LPSTR lpCommandLine,
 }
 
 HANDLE WINAPI OpenProcess(DWORD dwDesiredAccess, BOOL bInheritHandle, DWORD dwProcessId) {
-    (void)dwDesiredAccess;
-    (void)bInheritHandle;
-    
-    if (dwProcessId == g_current_process_id) {
-        return GetCurrentProcess();
-    }
-    
-    /* Other processes not supported */
+    (void)dwDesiredAccess; (void)bInheritHandle;
+    if (dwProcessId == g_current_process_id) return GetCurrentProcess();
     winapi_set_last_error(ERROR_INVALID_PARAMETER);
     return NULL;
 }
@@ -3264,13 +2576,9 @@ void WINAPI OutputDebugStringA(LPCSTR lpOutputString) {
     }
 }
 
-BOOL WINAPI IsDebuggerPresent(void) {
-    return FALSE;  /* No debugger in kernel mode */
-}
+BOOL WINAPI IsDebuggerPresent(void) { return FALSE; }
 
-void WINAPI DebugBreak(void) {
-    __asm__ volatile("int $3");
-}
+void WINAPI DebugBreak(void) { __asm__ volatile("int $3"); }
 
 /* ============================================================================
  * Exception Handling
@@ -3281,12 +2589,7 @@ static int g_veh_count = 0;
 
 LPVOID WINAPI AddVectoredExceptionHandler(DWORD First, void* Handler) {
     (void)First;
-    
-    if (g_veh_count >= 16 || !Handler) {
-        winapi_set_last_error(ERROR_INVALID_PARAMETER);
-        return NULL;
-    }
-    
+    if (g_veh_count >= 16 || !Handler) { winapi_set_last_error(ERROR_INVALID_PARAMETER); return NULL; }
     g_veh_handlers[g_veh_count++] = Handler;
     winapi_set_last_error(ERROR_SUCCESS);
     return Handler;
@@ -3295,9 +2598,7 @@ LPVOID WINAPI AddVectoredExceptionHandler(DWORD First, void* Handler) {
 DWORD WINAPI RemoveVectoredExceptionHandler(LPVOID Handle) {
     for (int i = 0; i < g_veh_count; i++) {
         if (g_veh_handlers[i] == Handle) {
-            for (int j = i; j < g_veh_count - 1; j++) {
-                g_veh_handlers[j] = g_veh_handlers[j+1];
-            }
+            for (int j = i; j < g_veh_count - 1; j++) g_veh_handlers[j] = g_veh_handlers[j+1];
             g_veh_count--;
             return 1;
         }
@@ -3307,11 +2608,7 @@ DWORD WINAPI RemoveVectoredExceptionHandler(LPVOID Handle) {
 
 void WINAPI RaiseException(DWORD dwExceptionCode, DWORD dwExceptionFlags,
                            DWORD nNumberOfArguments, const DWORD* lpArguments) {
-    (void)dwExceptionCode;
-    (void)dwExceptionFlags;
-    (void)nNumberOfArguments;
-    (void)lpArguments;
-    
+    (void)dwExceptionCode; (void)dwExceptionFlags; (void)nNumberOfArguments; (void)lpArguments;
     vga_write("Kernel32: Exception raised!\n");
 }
 
@@ -3329,10 +2626,7 @@ DWORD WINAPI GetCurrentDirectory_A(DWORD nBufferLength, LPSTR lpBuffer) {
 }
 
 BOOL WINAPI Beep(DWORD dwFreq, DWORD dwDuration) {
-    (void)dwFreq;
-    (void)dwDuration;
-    
-    /* PC speaker not implemented */
+    (void)dwFreq; (void)dwDuration;
     winapi_set_last_error(ERROR_SUCCESS);
     return TRUE;
 }
@@ -3346,31 +2640,16 @@ UINT WINAPI SetErrorMode(UINT uMode) {
 
 DWORD WINAPI GetPrivateProfileStringA(LPCSTR lpAppName, LPCSTR lpKeyName, LPCSTR lpDefault,
                                       LPSTR lpReturnedString, DWORD nSize, LPCSTR lpFileName) {
-    (void)lpAppName;
-    (void)lpKeyName;
-    (void)lpFileName;
-    
-    if (!lpReturnedString || nSize == 0) {
-        return 0;
-    }
-    
-    if (lpDefault) {
-        k32_strncpy(lpReturnedString, lpDefault, (int)nSize - 1);
-        return (DWORD)k32_strlen(lpReturnedString);
-    }
-    
+    (void)lpAppName; (void)lpKeyName; (void)lpFileName;
+    if (!lpReturnedString || nSize == 0) return 0;
+    if (lpDefault) { k32_strncpy(lpReturnedString, lpDefault, (int)nSize - 1); return (DWORD)k32_strlen(lpReturnedString); }
     lpReturnedString[0] = '\0';
     return 0;
 }
 
 BOOL WINAPI WritePrivateProfileStringA(LPCSTR lpAppName, LPCSTR lpKeyName,
                                        LPCSTR lpString, LPCSTR lpFileName) {
-    (void)lpAppName;
-    (void)lpKeyName;
-    (void)lpString;
-    (void)lpFileName;
-    
-    /* INI file writing not implemented */
+    (void)lpAppName; (void)lpKeyName; (void)lpString; (void)lpFileName;
     winapi_set_last_error(ERROR_SUCCESS);
     return TRUE;
 }

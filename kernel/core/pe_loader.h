@@ -213,4 +213,75 @@ void* pe_get_entry_point(pe_image_t* image);
  */
 int pe_resolve_imports(pe_image_t* image);
 
+/**
+ * Process base relocations for PE image
+ * @param image PE image structure
+ * @param delta Difference between actual and preferred load address
+ * @return 0 on success, -1 on error
+ */
+int pe_apply_relocations(pe_image_t* image, int32_t delta);
+
+/**
+ * Get export address from PE image by name
+ * @param image PE image structure
+ * @param name Export function name
+ * @return Function address or NULL if not found
+ */
+void* pe_get_export_by_name(pe_image_t* image, const char* name);
+
+/**
+ * Get export address from PE image by ordinal
+ * @param image PE image structure
+ * @param ordinal Export ordinal number
+ * @return Function address or NULL if not found
+ */
+void* pe_get_export_by_ordinal(pe_image_t* image, uint16_t ordinal);
+
+/**
+ * Get number of exports in PE image
+ * @param image PE image structure
+ * @return Number of exports
+ */
+uint32_t pe_get_export_count(pe_image_t* image);
+
+/**
+ * Get export name by index
+ * @param image PE image structure
+ * @param index Export index
+ * @return Export name or NULL
+ */
+const char* pe_get_export_name(pe_image_t* image, uint32_t index);
+
+/* Base relocation types */
+#define IMAGE_REL_BASED_ABSOLUTE       0
+#define IMAGE_REL_BASED_HIGH           1
+#define IMAGE_REL_BASED_LOW            2
+#define IMAGE_REL_BASED_HIGHLOW        3
+#define IMAGE_REL_BASED_HIGHADJ        4
+#define IMAGE_REL_BASED_DIR64          10
+
+/* Base relocation block header */
+typedef struct {
+    uint32_t VirtualAddress;
+    uint32_t SizeOfBlock;
+} __attribute__((packed)) pe_base_reloc_block_t;
+
+/* Import lookup table entry (for 32-bit PE) */
+typedef struct {
+    union {
+        uint32_t ForwarderString;
+        uint32_t Function;
+        uint32_t Ordinal;
+        uint32_t AddressOfData;
+    };
+} __attribute__((packed)) pe_thunk_data32_t;
+
+/* Import hint/name entry */
+typedef struct {
+    uint16_t Hint;
+    char     Name[1];  /* Variable length name follows */
+} __attribute__((packed)) pe_import_by_name_t;
+
+#define IMAGE_ORDINAL_FLAG32 0x80000000
+
 #endif /* PE_LOADER_H */
