@@ -238,13 +238,13 @@ With all critical bugs resolved and documentation complete, the focus shifts to:
 
 #### JIT Compilation System
 - [x] JIT infrastructure and cache management (256KB cache)
-- [ ] Complete JIT code generation backend (native code generation)
+- [x] Complete JIT code generation backend (native code generation) ✅ NEW
 - [ ] Add JIT profiling and adaptive optimization
 - [ ] Support for dynamic code generation
 - [ ] Scripting language JIT (Python, JavaScript runtime)
 
 #### File System Expansion
-- [ ] Ext2/Ext3/Ext4 file system driver
+- [x] Ext2/Ext3/Ext4 file system driver ✅ NEW (ext4 implementation complete)
 - [ ] FAT32 file system driver for compatibility
 - [ ] NTFS read support (for dual-boot scenarios)
 - [ ] Custom Aurora FS with advanced features
@@ -304,8 +304,8 @@ With all critical bugs resolved and documentation complete, the focus shifts to:
 - [ ] Telemetry and diagnostics (opt-in)
 
 #### Advanced GUI and Multimedia
-- [ ] 3D desktop acceleration with GPU
-- [ ] Wayland/Compositor protocol
+- [x] 3D desktop acceleration with GPU ✅ NEW (GPU passthrough implementation complete)
+- [x] Wayland/Compositor protocol ✅ NEW (X11/Wayland display server support added)
 - [ ] HDR display support
 - [ ] Multi-monitor management
 - [ ] Touch and pen input support
