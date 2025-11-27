@@ -56,7 +56,7 @@ KERNEL_SOURCES = $(wildcard $(KERNEL_DIR)/core/*.c) \
                  $(wildcard $(KERNEL_DIR)/network/*.c) \
                  $(wildcard $(KERNEL_DIR)/usb/*.c)
 
-PLATFORM_SOURCES = $(filter-out src/platform/aurora_vm.c, $(wildcard src/platform/*.c))
+PLATFORM_SOURCES = $(filter-out src/platform/aurora_vm_stub.c, $(wildcard src/platform/*.c))
 
 ASM_SOURCES = $(KERNEL_DIR)/core/boot.s
 

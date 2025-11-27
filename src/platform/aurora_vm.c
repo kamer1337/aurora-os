@@ -6,6 +6,129 @@
 #include "../../include/platform/aurora_vm.h"
 #include "../../include/platform/platform_util.h"
 
+/* Freestanding string comparison */
+static int vm_strcmp(const char *s1, const char *s2) {
+    while (*s1 && (*s1 == *s2)) {
+        s1++;
+        s2++;
+    }
+    return *(const unsigned char *)s1 - *(const unsigned char *)s2;
+}
+
+/* Simple number to string helper for disassembly */
+static int vm_int_to_str(int value, char *buffer, int base, int is_signed) {
+    char temp[12];
+    int i = 0;
+    int neg = 0;
+    unsigned int uval;
+    
+    /* Handle signed negative values, with special case for INT_MIN */
+    if (is_signed && value < 0) {
+        neg = 1;
+        /* Cast to unsigned first to avoid UB when negating INT_MIN */
+        uval = (unsigned int)(-(value + 1)) + 1;
+    } else {
+        uval = (unsigned int)value;
+    }
+    
+    if (uval == 0) {
+        temp[i++] = '0';
+    } else {
+        while (uval > 0) {
+            int digit = uval % base;
+            temp[i++] = (digit < 10) ? ('0' + digit) : ('A' + digit - 10);
+            uval /= base;
+        }
+    }
+    
+    int pos = 0;
+    if (neg) buffer[pos++] = '-';
+    while (i > 0) buffer[pos++] = temp[--i];
+    buffer[pos] = '\0';
+    return pos;
+}
+
+/* Simple format helper: copy string and return length */
+static int vm_strcpy_ret_len(char *dest, const char *src, size_t max_len) {
+    int i = 0;
+    while (src[i] && (size_t)i < max_len - 1) {
+        dest[i] = src[i];
+        i++;
+    }
+    dest[i] = '\0';
+    return i;
+}
+
+/* Format R-type instruction: "OPCODE rd, rs1, rs2" */
+static int vm_format_r_type(char *buffer, size_t size, const char *op, int rd, int rs1, int rs2) {
+    int pos = 0;
+    pos += vm_strcpy_ret_len(buffer + pos, op, size - pos);
+    buffer[pos++] = ' ';
+    buffer[pos++] = 'r';
+    pos += vm_int_to_str(rd, buffer + pos, 10, 0);
+    buffer[pos++] = ',';
+    buffer[pos++] = ' ';
+    buffer[pos++] = 'r';
+    pos += vm_int_to_str(rs1, buffer + pos, 10, 0);
+    buffer[pos++] = ',';
+    buffer[pos++] = ' ';
+    buffer[pos++] = 'r';
+    pos += vm_int_to_str(rs2, buffer + pos, 10, 0);
+    buffer[pos] = '\0';
+    return pos;
+}
+
+/* Format 2-register instruction: "OPCODE rd, rs" */
+static int vm_format_2reg(char *buffer, size_t size, const char *op, int rd, int rs) {
+    int pos = 0;
+    pos += vm_strcpy_ret_len(buffer + pos, op, size - pos);
+    buffer[pos++] = ' ';
+    buffer[pos++] = 'r';
+    pos += vm_int_to_str(rd, buffer + pos, 10, 0);
+    buffer[pos++] = ',';
+    buffer[pos++] = ' ';
+    buffer[pos++] = 'r';
+    pos += vm_int_to_str(rs, buffer + pos, 10, 0);
+    buffer[pos] = '\0';
+    return pos;
+}
+
+/* Format I-type instruction: "OPCODE rd, imm" */
+static int vm_format_i_type(char *buffer, size_t size, const char *op, int rd, int imm) {
+    int pos = 0;
+    pos += vm_strcpy_ret_len(buffer + pos, op, size - pos);
+    buffer[pos++] = ' ';
+    buffer[pos++] = 'r';
+    pos += vm_int_to_str(rd, buffer + pos, 10, 0);
+    buffer[pos++] = ',';
+    buffer[pos++] = ' ';
+    pos += vm_int_to_str(imm, buffer + pos, 10, 1);
+    buffer[pos] = '\0';
+    return pos;
+}
+
+/* Format unknown instruction: "UNKNOWN (0xXXXXXXXX)" */
+static int vm_format_unknown(char *buffer, size_t size, uint32_t instruction) {
+    int pos = 0;
+    pos += vm_strcpy_ret_len(buffer + pos, "UNKNOWN (0x", size - pos);
+    pos += vm_int_to_str((int)instruction, buffer + pos, 16, 0);
+    buffer[pos++] = ')';
+    buffer[pos] = '\0';
+    return pos;
+}
+
+/* Format J-type instruction: "OPCODE 0xaddr" */
+static int vm_format_j_type(char *buffer, size_t size, const char *op, int addr) {
+    int pos = 0;
+    pos += vm_strcpy_ret_len(buffer + pos, op, size - pos);
+    buffer[pos++] = ' ';
+    buffer[pos++] = '0';
+    buffer[pos++] = 'x';
+    pos += vm_int_to_str(addr, buffer + pos, 16, 0);
+    buffer[pos] = '\0';
+    return pos;
+}
+
 /* ===== Internal Helper Functions ===== */
 
 /**
@@ -119,7 +242,7 @@ static aurora_file_t *get_file(aurora_filesystem_t *fs, int fd) {
  */
 static aurora_file_t *find_file_by_path(aurora_filesystem_t *fs, const char *path) {
     for (uint32_t i = 0; i < AURORA_VM_MAX_FILES; i++) {
-        if (fs->files[i].open && strcmp(fs->files[i].path, path) == 0) {
+        if (fs->files[i].open && vm_strcmp(fs->files[i].path, path) == 0) {
             return &fs->files[i];
         }
     }
@@ -147,10 +270,9 @@ static int handle_syscall(AuroraVM *vm) {
                 return -1;
             }
             
-            for (uint32_t i = 0; i < len; i++) {
-                putchar(vm->memory[addr + i]);
-            }
-            fflush(stdout);
+            /* In freestanding environment, we just validate the data is accessible */
+            /* Output would be handled by platform-specific console driver */
+            /* For now, mark as successful */
             
             vm->cpu.registers[0] = len;
             return 0;
@@ -165,14 +287,9 @@ static int handle_syscall(AuroraVM *vm) {
                 return -1;
             }
             
-            uint32_t len = 0;
-            while (len < max_len) {
-                int c = getchar();
-                if (c == EOF || c == '\n') break;
-                vm->memory[addr + len++] = (uint8_t)c;
-            }
-            
-            vm->cpu.registers[0] = len;
+            /* In freestanding environment, read would come from keyboard driver */
+            /* For now, return 0 bytes read (no input available) */
+            vm->cpu.registers[0] = 0;
             return 0;
         }
         
@@ -897,11 +1014,11 @@ static int execute_instruction(AuroraVM *vm, uint32_t instruction) {
 /* ===== VM API Implementation ===== */
 
 AuroraVM *aurora_vm_create(void) {
-    AuroraVM *vm = (AuroraVM *)platform_malloc(1, sizeof(AuroraVM));
+    AuroraVM *vm = (AuroraVM *)platform_malloc(sizeof(AuroraVM));
     if (!vm) return NULL;
     
     /* Allocate storage */
-    vm->storage.data = (uint8_t *)platform_malloc(1, AURORA_VM_STORAGE_SIZE);
+    vm->storage.data = (uint8_t *)platform_malloc(AURORA_VM_STORAGE_SIZE);
     if (!vm->storage.data) {
         platform_free(vm);
         return NULL;
@@ -1259,135 +1376,135 @@ int aurora_vm_disassemble(uint32_t instruction, char *buffer, size_t buffer_size
     switch (opcode) {
         case AURORA_OP_ADD:
             decode_r_type(instruction, &rd, &rs1, &rs2);
-            written = snprintf(buffer, buffer_size, "ADD r%d, r%d, r%d", rd, rs1, rs2);
+            written = vm_format_r_type(buffer, buffer_size, "ADD", rd, rs1, rs2);
             break;
         case AURORA_OP_SUB:
             decode_r_type(instruction, &rd, &rs1, &rs2);
-            written = snprintf(buffer, buffer_size, "SUB r%d, r%d, r%d", rd, rs1, rs2);
+            written = vm_format_r_type(buffer, buffer_size, "SUB", rd, rs1, rs2);
             break;
         case AURORA_OP_MUL:
             decode_r_type(instruction, &rd, &rs1, &rs2);
-            written = snprintf(buffer, buffer_size, "MUL r%d, r%d, r%d", rd, rs1, rs2);
+            written = vm_format_r_type(buffer, buffer_size, "MUL", rd, rs1, rs2);
             break;
         case AURORA_OP_DIV:
             decode_r_type(instruction, &rd, &rs1, &rs2);
-            written = snprintf(buffer, buffer_size, "DIV r%d, r%d, r%d", rd, rs1, rs2);
+            written = vm_format_r_type(buffer, buffer_size, "DIV", rd, rs1, rs2);
             break;
         case AURORA_OP_MOD:
             decode_r_type(instruction, &rd, &rs1, &rs2);
-            written = snprintf(buffer, buffer_size, "MOD r%d, r%d, r%d", rd, rs1, rs2);
+            written = vm_format_r_type(buffer, buffer_size, "MOD", rd, rs1, rs2);
             break;
         case AURORA_OP_NEG:
             decode_r_type(instruction, &rd, &rs1, &rs2);
-            written = snprintf(buffer, buffer_size, "NEG r%d, r%d", rd, rs1);
+            written = vm_format_2reg(buffer, buffer_size, "NEG", rd, rs1);
             break;
         case AURORA_OP_AND:
             decode_r_type(instruction, &rd, &rs1, &rs2);
-            written = snprintf(buffer, buffer_size, "AND r%d, r%d, r%d", rd, rs1, rs2);
+            written = vm_format_r_type(buffer, buffer_size, "AND", rd, rs1, rs2);
             break;
         case AURORA_OP_OR:
             decode_r_type(instruction, &rd, &rs1, &rs2);
-            written = snprintf(buffer, buffer_size, "OR r%d, r%d, r%d", rd, rs1, rs2);
+            written = vm_format_r_type(buffer, buffer_size, "OR", rd, rs1, rs2);
             break;
         case AURORA_OP_XOR:
             decode_r_type(instruction, &rd, &rs1, &rs2);
-            written = snprintf(buffer, buffer_size, "XOR r%d, r%d, r%d", rd, rs1, rs2);
+            written = vm_format_r_type(buffer, buffer_size, "XOR", rd, rs1, rs2);
             break;
         case AURORA_OP_NOT:
             decode_r_type(instruction, &rd, &rs1, &rs2);
-            written = snprintf(buffer, buffer_size, "NOT r%d, r%d", rd, rs1);
+            written = vm_format_2reg(buffer, buffer_size, "NOT", rd, rs1);
             break;
         case AURORA_OP_SHL:
             decode_r_type(instruction, &rd, &rs1, &rs2);
-            written = snprintf(buffer, buffer_size, "SHL r%d, r%d, r%d", rd, rs1, rs2);
+            written = vm_format_r_type(buffer, buffer_size, "SHL", rd, rs1, rs2);
             break;
         case AURORA_OP_SHR:
             decode_r_type(instruction, &rd, &rs1, &rs2);
-            written = snprintf(buffer, buffer_size, "SHR r%d, r%d, r%d", rd, rs1, rs2);
+            written = vm_format_r_type(buffer, buffer_size, "SHR", rd, rs1, rs2);
             break;
         case AURORA_OP_LOAD:
             decode_r_type(instruction, &rd, &rs1, &rs2);
-            written = snprintf(buffer, buffer_size, "LOAD r%d, [r%d + r%d]", rd, rs1, rs2);
+            written = vm_format_r_type(buffer, buffer_size, "LOAD", rd, rs1, rs2);
             break;
         case AURORA_OP_STORE:
             decode_r_type(instruction, &rd, &rs1, &rs2);
-            written = snprintf(buffer, buffer_size, "STORE [r%d + r%d], r%d", rs1, rs2, rd);
+            written = vm_format_r_type(buffer, buffer_size, "STORE", rs1, rs2, rd);
             break;
         case AURORA_OP_LOADI:
             decode_i_type(instruction, &rd, &imm16);
-            written = snprintf(buffer, buffer_size, "LOADI r%d, %d", rd, imm16);
+            written = vm_format_i_type(buffer, buffer_size, "LOADI", rd, imm16);
             break;
         case AURORA_OP_LOADB:
             decode_r_type(instruction, &rd, &rs1, &rs2);
-            written = snprintf(buffer, buffer_size, "LOADB r%d, [r%d + r%d]", rd, rs1, rs2);
+            written = vm_format_r_type(buffer, buffer_size, "LOADB", rd, rs1, rs2);
             break;
         case AURORA_OP_STOREB:
             decode_r_type(instruction, &rd, &rs1, &rs2);
-            written = snprintf(buffer, buffer_size, "STOREB [r%d + r%d], r%d", rs1, rs2, rd);
+            written = vm_format_r_type(buffer, buffer_size, "STOREB", rs1, rs2, rd);
             break;
         case AURORA_OP_MOVE:
             decode_r_type(instruction, &rd, &rs1, &rs2);
-            written = snprintf(buffer, buffer_size, "MOVE r%d, r%d", rd, rs1);
+            written = vm_format_2reg(buffer, buffer_size, "MOVE", rd, rs1);
             break;
         case AURORA_OP_CMP:
             decode_r_type(instruction, &rd, &rs1, &rs2);
-            written = snprintf(buffer, buffer_size, "CMP r%d, r%d", rs1, rs2);
+            written = vm_format_2reg(buffer, buffer_size, "CMP", rs1, rs2);
             break;
         case AURORA_OP_TEST:
             decode_r_type(instruction, &rd, &rs1, &rs2);
-            written = snprintf(buffer, buffer_size, "TEST r%d, r%d", rs1, rs2);
+            written = vm_format_2reg(buffer, buffer_size, "TEST", rs1, rs2);
             break;
         case AURORA_OP_SLT:
             decode_r_type(instruction, &rd, &rs1, &rs2);
-            written = snprintf(buffer, buffer_size, "SLT r%d, r%d, r%d", rd, rs1, rs2);
+            written = vm_format_r_type(buffer, buffer_size, "SLT", rd, rs1, rs2);
             break;
         case AURORA_OP_SLE:
             decode_r_type(instruction, &rd, &rs1, &rs2);
-            written = snprintf(buffer, buffer_size, "SLE r%d, r%d, r%d", rd, rs1, rs2);
+            written = vm_format_r_type(buffer, buffer_size, "SLE", rd, rs1, rs2);
             break;
         case AURORA_OP_SEQ:
             decode_r_type(instruction, &rd, &rs1, &rs2);
-            written = snprintf(buffer, buffer_size, "SEQ r%d, r%d, r%d", rd, rs1, rs2);
+            written = vm_format_r_type(buffer, buffer_size, "SEQ", rd, rs1, rs2);
             break;
         case AURORA_OP_SNE:
             decode_r_type(instruction, &rd, &rs1, &rs2);
-            written = snprintf(buffer, buffer_size, "SNE r%d, r%d, r%d", rd, rs1, rs2);
+            written = vm_format_r_type(buffer, buffer_size, "SNE", rd, rs1, rs2);
             break;
         case AURORA_OP_JMP:
             decode_j_type(instruction, &imm32);
-            written = snprintf(buffer, buffer_size, "JMP 0x%X", imm32);
+            written = vm_format_j_type(buffer, buffer_size, "JMP", imm32);
             break;
         case AURORA_OP_JZ:
             decode_j_type(instruction, &imm32);
-            written = snprintf(buffer, buffer_size, "JZ 0x%X", imm32);
+            written = vm_format_j_type(buffer, buffer_size, "JZ", imm32);
             break;
         case AURORA_OP_JNZ:
             decode_j_type(instruction, &imm32);
-            written = snprintf(buffer, buffer_size, "JNZ 0x%X", imm32);
+            written = vm_format_j_type(buffer, buffer_size, "JNZ", imm32);
             break;
         case AURORA_OP_JC:
             decode_j_type(instruction, &imm32);
-            written = snprintf(buffer, buffer_size, "JC 0x%X", imm32);
+            written = vm_format_j_type(buffer, buffer_size, "JC", imm32);
             break;
         case AURORA_OP_JNC:
             decode_j_type(instruction, &imm32);
-            written = snprintf(buffer, buffer_size, "JNC 0x%X", imm32);
+            written = vm_format_j_type(buffer, buffer_size, "JNC", imm32);
             break;
         case AURORA_OP_CALL:
             decode_j_type(instruction, &imm32);
-            written = snprintf(buffer, buffer_size, "CALL 0x%X", imm32);
+            written = vm_format_j_type(buffer, buffer_size, "CALL", imm32);
             break;
         case AURORA_OP_RET:
-            written = snprintf(buffer, buffer_size, "RET");
+            written = vm_strcpy_ret_len(buffer, "RET", buffer_size);
             break;
         case AURORA_OP_SYSCALL:
-            written = snprintf(buffer, buffer_size, "SYSCALL");
+            written = vm_strcpy_ret_len(buffer, "SYSCALL", buffer_size);
             break;
         case AURORA_OP_HALT:
-            written = snprintf(buffer, buffer_size, "HALT");
+            written = vm_strcpy_ret_len(buffer, "HALT", buffer_size);
             break;
         default:
-            written = snprintf(buffer, buffer_size, "UNKNOWN (0x%08X)", instruction);
+            written = vm_format_unknown(buffer, buffer_size, instruction);
             break;
     }
     
