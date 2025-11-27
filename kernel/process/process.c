@@ -210,15 +210,112 @@ void scheduler_init(void) {
 }
 
 /**
- * Context switch helper (simplified - no real context saving)
+ * CPU context structure for context switching
+ */
+typedef struct {
+    uint32_t eax;
+    uint32_t ebx;
+    uint32_t ecx;
+    uint32_t edx;
+    uint32_t esi;
+    uint32_t edi;
+    uint32_t ebp;
+    uint32_t esp;
+    uint32_t eip;
+    uint32_t eflags;
+} cpu_context_t;
+
+/* Context storage for each process */
+static cpu_context_t process_contexts[MAX_PROCESSES];
+
+/**
+ * Get process index in table
+ */
+static int get_process_index(process_t* process) {
+    if (!process) return -1;
+    for (uint32_t i = 0; i < MAX_PROCESSES; i++) {
+        if (&process_table[i] == process) {
+            return (int)i;
+        }
+    }
+    return -1;
+}
+
+/**
+ * Save current CPU context to process
+ */
+static void save_context(process_t* process) {
+    if (!process) return;
+    
+    int idx = get_process_index(process);
+    if (idx < 0) return;
+    
+    cpu_context_t* ctx = &process_contexts[idx];
+    
+    /* Save general purpose registers one at a time */
+    __asm__ volatile("movl %%eax, %0" : "=m"(ctx->eax));
+    __asm__ volatile("movl %%ebx, %0" : "=m"(ctx->ebx));
+    __asm__ volatile("movl %%ecx, %0" : "=m"(ctx->ecx));
+    __asm__ volatile("movl %%edx, %0" : "=m"(ctx->edx));
+    __asm__ volatile("movl %%esi, %0" : "=m"(ctx->esi));
+    __asm__ volatile("movl %%edi, %0" : "=m"(ctx->edi));
+    __asm__ volatile("movl %%ebp, %0" : "=m"(ctx->ebp));
+    __asm__ volatile("movl %%esp, %0" : "=m"(ctx->esp));
+    
+    /* Save flags */
+    __asm__ volatile("pushfl; popl %0" : "=m"(ctx->eflags));
+}
+
+/**
+ * Restore CPU context from process
+ */
+static void restore_context(process_t* process) {
+    if (!process) return;
+    
+    int idx = get_process_index(process);
+    if (idx < 0) return;
+    
+    cpu_context_t* ctx = &process_contexts[idx];
+    
+    /* Restore flags */
+    __asm__ volatile("pushl %0; popfl" : : "m"(ctx->eflags));
+    
+    /* Restore general purpose registers one at a time */
+    __asm__ volatile("movl %0, %%edi" : : "m"(ctx->edi));
+    __asm__ volatile("movl %0, %%esi" : : "m"(ctx->esi));
+    __asm__ volatile("movl %0, %%edx" : : "m"(ctx->edx));
+    __asm__ volatile("movl %0, %%ecx" : : "m"(ctx->ecx));
+    __asm__ volatile("movl %0, %%ebx" : : "m"(ctx->ebx));
+    __asm__ volatile("movl %0, %%ebp" : : "m"(ctx->ebp));
+    /* Note: eax, esp restored last as they're needed for return */
+}
+
+/**
+ * Context switch helper - saves old context and restores new context
  */
 static void switch_context(process_t* from, process_t* to) {
-    (void)from; /* In real implementation, would save context here */
+    if (!to) {
+        return;
+    }
     
-    if (to) {
-        current_process = to;
-        to->state = PROCESS_RUNNING;
-        /* In real implementation, would restore context and jump to process */
+    /* Save context of current process */
+    if (from && from->state != PROCESS_TERMINATED) {
+        save_context(from);
+        /* Store current stack pointer in process control block */
+        __asm__ volatile("movl %%esp, %0" : "=m"(from->stack_ptr));
+    }
+    
+    /* Switch to new process */
+    current_process = to;
+    to->state = PROCESS_RUNNING;
+    
+    /* Check if this is a new process (first time running) */
+    if (to->stack_ptr) {
+        /* Restore context of new process */
+        restore_context(to);
+        
+        /* Restore stack pointer from process control block */
+        __asm__ volatile("movl %0, %%esp" : : "m"(to->stack_ptr));
     }
 }
 
