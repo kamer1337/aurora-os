@@ -12,12 +12,12 @@ FS_DIR = filesystem
 TEST_DIR = tests
 
 # Optional plugin compilation flags
-ENABLE_ML_PLUGIN ?= 1
-ENABLE_QUANTUM_PLUGIN ?= 1
-ENABLE_SYSTEM_OPT_PLUGIN ?= 1
+ENABLE_ML_PLUGIN = 1
+ENABLE_QUANTUM_PLUGIN = 1
+ENABLE_SYSTEM_OPT_PLUGIN = 1
 
 # Architecture selection (32 or 64)
-ARCH ?= 32
+ARCH = 64
 
 # Compiler flags
 ifeq ($(ARCH),64)
