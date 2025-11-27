@@ -529,86 +529,6 @@ DWORD WINAPI ResumeThread(HANDLE hThread) {
     return prev_count;
 }
 
-/* ========== File Management Functions ========== */
-
-HANDLE WINAPI CreateFileA(LPCSTR filename, DWORD access, DWORD share_mode,
-                          void* security, DWORD creation, DWORD flags, HANDLE template_file) {
-    (void)share_mode;
-    (void)security;
-    (void)flags;
-    (void)template_file;
-    
-    if (!filename) {
-        winapi_set_last_error(ERROR_INVALID_PARAMETER);
-        return INVALID_HANDLE_VALUE;
-    }
-    
-    vga_write("Kernel32: CreateFileA called for: ");
-    vga_write(filename);
-    vga_write("\n");
-    
-    /* Convert Windows access flags to VFS flags */
-    int vfs_flags = 0;
-    if (access & GENERIC_READ) {
-        vfs_flags |= O_RDONLY;
-    }
-    if (access & GENERIC_WRITE) {
-        vfs_flags |= O_WRONLY;
-    }
-    if ((access & GENERIC_READ) && (access & GENERIC_WRITE)) {
-        vfs_flags = O_RDWR;
-    }
-    
-    /* Handle creation disposition */
-    switch (creation) {
-        case CREATE_NEW:
-        case CREATE_ALWAYS:
-            vfs_flags |= O_CREAT;
-            break;
-        case OPEN_EXISTING:
-            /* No additional flags needed */
-            break;
-        case OPEN_ALWAYS:
-            vfs_flags |= O_CREAT;
-            break;
-        case TRUNCATE_EXISTING:
-            vfs_flags |= O_TRUNC;
-            break;
-        default:
-            break;
-    }
-    
-    /* Open file using VFS */
-    int vfs_fd = vfs_open(filename, vfs_flags);
-    if (vfs_fd < 0) {
-        /* Try to create if O_CREAT was set */
-        if (vfs_flags & O_CREAT) {
-            if (vfs_create(filename) == 0) {
-                vfs_fd = vfs_open(filename, vfs_flags & ~O_CREAT);
-            }
-        }
-        
-        if (vfs_fd < 0) {
-            winapi_set_last_error(ERROR_FILE_NOT_FOUND);
-            return INVALID_HANDLE_VALUE;
-        }
-    }
-    
-    /* Allocate Windows handle for VFS fd */
-    HANDLE handle = alloc_file_handle(vfs_fd);
-    if (handle == INVALID_HANDLE_VALUE) {
-        vfs_close(vfs_fd);
-        winapi_set_last_error(ERROR_NOT_ENOUGH_MEMORY);
-        return INVALID_HANDLE_VALUE;
-    }
-    
-    winapi_set_last_error(ERROR_SUCCESS);
-    return handle;
-}
-
-BOOL WINAPI ReadFile(HANDLE file, LPVOID buffer, DWORD bytes_to_read,
-                     DWORD* bytes_read, void* overlapped) {
-    (void)overlapped;
 DWORD WINAPI SuspendThread(HANDLE hThread) {
     if (hThread == (HANDLE)(uintptr_t)0xFFFFFFFE) {
         winapi_set_last_error(ERROR_ACCESS_DENIED);
@@ -644,36 +564,6 @@ BOOL WINAPI SetThreadPriority(HANDLE hThread, int nPriority) {
         return TRUE;
     }
     
-    if (!buffer) {
-        winapi_set_last_error(ERROR_INVALID_PARAMETER);
-        return FALSE;
-    }
-    
-    /* Get VFS file descriptor */
-    int vfs_fd = get_vfs_fd(file);
-    if (vfs_fd < 0) {
-        winapi_set_last_error(ERROR_INVALID_HANDLE);
-        return FALSE;
-    }
-    
-    /* Read from VFS */
-    int result = vfs_read(vfs_fd, buffer, bytes_to_read);
-    if (result < 0) {
-        winapi_set_last_error(ERROR_READ_FAULT);
-        return FALSE;
-    }
-    
-    if (bytes_read) {
-        *bytes_read = (DWORD)result;
-    }
-    
-    winapi_set_last_error(ERROR_SUCCESS);
-    return TRUE;
-}
-
-BOOL WINAPI WriteFile(HANDLE file, LPCVOID buffer, DWORD bytes_to_write,
-                      DWORD* bytes_written, void* overlapped) {
-    (void)overlapped;
     entry = get_handle_entry(hThread);
     if (!entry || entry->type != HANDLE_TYPE_THREAD) {
         winapi_set_last_error(ERROR_INVALID_HANDLE);
@@ -689,56 +579,6 @@ BOOL WINAPI WriteFile(HANDLE file, LPCVOID buffer, DWORD bytes_to_write,
     return TRUE;
 }
 
-DWORD WINAPI GetFileSize(HANDLE file, DWORD* high_size) {
-    if (high_size) {
-        *high_size = 0;
-    }
-    
-    /* Get VFS file descriptor */
-    int vfs_fd = get_vfs_fd(file);
-    if (vfs_fd < 0) {
-        winapi_set_last_error(ERROR_INVALID_HANDLE);
-        return 0xFFFFFFFF;
-    }
-    
-    /* Get file info using stat */
-    /* For now, we use seek to determine size */
-    long current_pos = vfs_seek(vfs_fd, 0, SEEK_CUR);
-    if (current_pos < 0) {
-        winapi_set_last_error(ERROR_INVALID_HANDLE);
-        return 0xFFFFFFFF;
-    }
-    
-    long file_size = vfs_seek(vfs_fd, 0, SEEK_END);
-    vfs_seek(vfs_fd, current_pos, SEEK_SET); /* Restore position */
-    
-    if (file_size < 0) {
-        winapi_set_last_error(ERROR_INVALID_HANDLE);
-        return 0xFFFFFFFF;
-    }
-    
-    winapi_set_last_error(ERROR_SUCCESS);
-    return (DWORD)file_size;
-}
-
-BOOL WINAPI DeleteFileA(LPCSTR filename) {
-    if (!filename) {
-        winapi_set_last_error(ERROR_INVALID_PARAMETER);
-        return FALSE;
-    }
-    
-    vga_write("Kernel32: DeleteFileA called for: ");
-    vga_write(filename);
-    vga_write("\n");
-    
-    int result = vfs_unlink(filename);
-    if (result < 0) {
-        winapi_set_last_error(ERROR_FILE_NOT_FOUND);
-        return FALSE;
-    }
-    
-    winapi_set_last_error(ERROR_SUCCESS);
-    return TRUE;
 int WINAPI GetThreadPriority(HANDLE hThread) {
     if (hThread == (HANDLE)(uintptr_t)0xFFFFFFFE) {
         winapi_set_last_error(ERROR_SUCCESS);
@@ -1114,62 +954,6 @@ HLOCAL WINAPI LocalFree(HLOCAL hMem) {
     return (HLOCAL)GlobalFree((HGLOBAL)hMem);
 }
 
-/* SYSTEM_INFO structure */
-typedef struct {
-    WORD wProcessorArchitecture;
-    WORD wReserved;
-    DWORD dwPageSize;
-    LPVOID lpMinimumApplicationAddress;
-    LPVOID lpMaximumApplicationAddress;
-    DWORD dwActiveProcessorMask;
-    DWORD dwNumberOfProcessors;
-    DWORD dwProcessorType;
-    DWORD dwAllocationGranularity;
-    WORD wProcessorLevel;
-    WORD wProcessorRevision;
-} SYSTEM_INFO;
-
-void WINAPI GetSystemInfo(void* system_info) {
-    if (!system_info) {
-        return;
-    }
-    
-    SYSTEM_INFO* info = (SYSTEM_INFO*)system_info;
-    
-    /* Fill in system information */
-    info->wProcessorArchitecture = 0; /* PROCESSOR_ARCHITECTURE_INTEL */
-    info->wReserved = 0;
-    info->dwPageSize = 4096;
-    info->lpMinimumApplicationAddress = (LPVOID)0x10000;
-    info->lpMaximumApplicationAddress = (LPVOID)0x7FFEFFFF;
-    info->dwActiveProcessorMask = 1;
-    info->dwNumberOfProcessors = 1;
-    info->dwProcessorType = 586; /* PROCESSOR_INTEL_PENTIUM */
-    info->dwAllocationGranularity = 65536;
-    info->wProcessorLevel = 6;
-    info->wProcessorRevision = 0;
-    
-    vga_write("Kernel32: GetSystemInfo called\n");
-}
-
-/* Static tick counter - would be updated by timer interrupt */
-static volatile DWORD g_tick_count = 0;
-
-DWORD WINAPI GetTickCount(void) {
-    /* Read PIT counter for more accurate timing */
-    /* PIT runs at approximately 1.193182 MHz */
-    /* Each tick is approximately 1/1000 of a second when configured properly */
-    
-    /* For now, use a simple incrementing counter */
-    /* In a real implementation, this would be updated by the timer interrupt handler */
-    g_tick_count++;
-    
-    return g_tick_count;
-}
-
-/* Function to update tick count from timer interrupt */
-void kernel32_update_tick_count(DWORD delta_ms) {
-    g_tick_count += delta_ms;
 LPVOID WINAPI LocalLock(HLOCAL hMem) {
     return GlobalLock((HGLOBAL)hMem);
 }
@@ -3276,43 +3060,246 @@ void WINAPI DebugBreak(void) {
  * Exception Handling
  * ============================================================================ */
 
-static void* g_veh_handlers[16];
+/* Vectored Exception Handler storage */
+#define MAX_VEH_HANDLERS 32
+static struct {
+    void* handler;
+    int first;  /* 1 if first handler, 0 if last */
+    int in_use;
+} g_veh_handlers[MAX_VEH_HANDLERS];
 static int g_veh_count = 0;
 
+/* Structured Exception Handler chain (per-thread) */
+#define MAX_SEH_FRAMES 64
+static struct {
+    void* handler;
+    void* frame;
+    int in_use;
+} g_seh_chain[MAX_SEH_FRAMES];
+static int g_seh_depth = 0;
+
+/* Exception record structure */
+typedef struct _EXCEPTION_RECORD {
+    DWORD ExceptionCode;
+    DWORD ExceptionFlags;
+    struct _EXCEPTION_RECORD* ExceptionRecord;
+    LPVOID ExceptionAddress;
+    DWORD NumberParameters;
+    DWORD ExceptionInformation[15];
+} EXCEPTION_RECORD, *PEXCEPTION_RECORD;
+
+/* Context structure (simplified) */
+typedef struct _CONTEXT {
+    DWORD ContextFlags;
+    DWORD Eax;
+    DWORD Ebx;
+    DWORD Ecx;
+    DWORD Edx;
+    DWORD Esi;
+    DWORD Edi;
+    DWORD Ebp;
+    DWORD Esp;
+    DWORD Eip;
+    DWORD EFlags;
+} CONTEXT, *PCONTEXT;
+
+/* Exception pointers structure */
+typedef struct _EXCEPTION_POINTERS {
+    PEXCEPTION_RECORD ExceptionRecord;
+    PCONTEXT ContextRecord;
+} EXCEPTION_POINTERS, *PEXCEPTION_POINTERS;
+
+/* Vectored exception handler return values */
+#define EXCEPTION_CONTINUE_SEARCH 0
+#define EXCEPTION_CONTINUE_EXECUTION (-1)
+
+/* Exception disposition values */
+#define ExceptionContinueExecution 0
+#define ExceptionContinueSearch 1
+#define ExceptionNestedException 2
+#define ExceptionCollidedUnwind 3
+
 LPVOID WINAPI AddVectoredExceptionHandler(DWORD First, void* Handler) {
-    (void)First;
-    
-    if (g_veh_count >= 16 || !Handler) {
+    if (!Handler) {
         winapi_set_last_error(ERROR_INVALID_PARAMETER);
         return NULL;
     }
     
-    g_veh_handlers[g_veh_count++] = Handler;
+    if (g_veh_count >= MAX_VEH_HANDLERS) {
+        winapi_set_last_error(ERROR_NOT_ENOUGH_MEMORY);
+        return NULL;
+    }
+    
+    /* Find free slot */
+    int slot = -1;
+    for (int i = 0; i < MAX_VEH_HANDLERS; i++) {
+        if (!g_veh_handlers[i].in_use) {
+            slot = i;
+            break;
+        }
+    }
+    
+    if (slot < 0) {
+        winapi_set_last_error(ERROR_NOT_ENOUGH_MEMORY);
+        return NULL;
+    }
+    
+    g_veh_handlers[slot].handler = Handler;
+    g_veh_handlers[slot].first = First ? 1 : 0;
+    g_veh_handlers[slot].in_use = 1;
+    g_veh_count++;
+    
+    vga_write("Kernel32: Registered vectored exception handler\n");
+    
     winapi_set_last_error(ERROR_SUCCESS);
     return Handler;
 }
 
+LPVOID WINAPI AddVectoredContinueHandler(DWORD First, void* Handler) {
+    /* Continue handlers are called after SEH handlers */
+    return AddVectoredExceptionHandler(First, Handler);
+}
+
 DWORD WINAPI RemoveVectoredExceptionHandler(LPVOID Handle) {
-    for (int i = 0; i < g_veh_count; i++) {
-        if (g_veh_handlers[i] == Handle) {
-            for (int j = i; j < g_veh_count - 1; j++) {
-                g_veh_handlers[j] = g_veh_handlers[j+1];
-            }
+    if (!Handle) {
+        return 0;
+    }
+    
+    for (int i = 0; i < MAX_VEH_HANDLERS; i++) {
+        if (g_veh_handlers[i].in_use && g_veh_handlers[i].handler == Handle) {
+            g_veh_handlers[i].handler = NULL;
+            g_veh_handlers[i].first = 0;
+            g_veh_handlers[i].in_use = 0;
             g_veh_count--;
+            
+            vga_write("Kernel32: Removed vectored exception handler\n");
             return 1;
         }
     }
     return 0;
 }
 
+DWORD WINAPI RemoveVectoredContinueHandler(LPVOID Handle) {
+    return RemoveVectoredExceptionHandler(Handle);
+}
+
+/* Internal function to dispatch exception to VEH handlers */
+static int dispatch_to_veh_handlers(PEXCEPTION_POINTERS exception_info, int first_only) {
+    /* Call handlers marked as 'first' */
+    for (int i = 0; i < MAX_VEH_HANDLERS; i++) {
+        if (g_veh_handlers[i].in_use && g_veh_handlers[i].first) {
+            /* Validate handler pointer - basic sanity check */
+            void* handler_ptr = g_veh_handlers[i].handler;
+            if (!handler_ptr || (uintptr_t)handler_ptr < 0x1000) {
+                /* Invalid handler address - skip */
+                continue;
+            }
+            
+            typedef LONG (*VEH_HANDLER)(PEXCEPTION_POINTERS);
+            VEH_HANDLER handler = (VEH_HANDLER)handler_ptr;
+            LONG result = handler(exception_info);
+            if (result == EXCEPTION_CONTINUE_EXECUTION) {
+                return 1;  /* Exception handled */
+            }
+        }
+    }
+    
+    if (first_only) {
+        return 0;
+    }
+    
+    /* Call handlers marked as 'last' */
+    for (int i = 0; i < MAX_VEH_HANDLERS; i++) {
+        if (g_veh_handlers[i].in_use && !g_veh_handlers[i].first) {
+            /* Validate handler pointer - basic sanity check */
+            void* handler_ptr = g_veh_handlers[i].handler;
+            if (!handler_ptr || (uintptr_t)handler_ptr < 0x1000) {
+                /* Invalid handler address - skip */
+                continue;
+            }
+            
+            typedef LONG (*VEH_HANDLER)(PEXCEPTION_POINTERS);
+            VEH_HANDLER handler = (VEH_HANDLER)handler_ptr;
+            LONG result = handler(exception_info);
+            if (result == EXCEPTION_CONTINUE_EXECUTION) {
+                return 1;  /* Exception handled */
+            }
+        }
+    }
+    
+    return 0;
+}
+
 void WINAPI RaiseException(DWORD dwExceptionCode, DWORD dwExceptionFlags,
                            DWORD nNumberOfArguments, const DWORD* lpArguments) {
-    (void)dwExceptionCode;
-    (void)dwExceptionFlags;
-    (void)nNumberOfArguments;
-    (void)lpArguments;
+    vga_write("Kernel32: Exception raised - Code: ");
+    vga_write_hex(dwExceptionCode);
+    vga_write("\n");
     
-    vga_write("Kernel32: Exception raised!\n");
+    /* Build exception record */
+    EXCEPTION_RECORD exception_record;
+    k32_memset(&exception_record, 0, sizeof(EXCEPTION_RECORD));
+    exception_record.ExceptionCode = dwExceptionCode;
+    exception_record.ExceptionFlags = dwExceptionFlags;
+    exception_record.ExceptionRecord = NULL;
+    exception_record.ExceptionAddress = NULL;  /* Would get return address */
+    
+    if (nNumberOfArguments > 15) {
+        nNumberOfArguments = 15;
+    }
+    exception_record.NumberParameters = nNumberOfArguments;
+    
+    if (lpArguments && nNumberOfArguments > 0) {
+        for (DWORD i = 0; i < nNumberOfArguments; i++) {
+            exception_record.ExceptionInformation[i] = lpArguments[i];
+        }
+    }
+    
+    /* Build context */
+    CONTEXT context;
+    k32_memset(&context, 0, sizeof(CONTEXT));
+    context.ContextFlags = 0x10001F;  /* CONTEXT_FULL */
+    
+    /* Build exception pointers */
+    EXCEPTION_POINTERS exception_info;
+    exception_info.ExceptionRecord = &exception_record;
+    exception_info.ContextRecord = &context;
+    
+    /* Dispatch to VEH handlers */
+    if (dispatch_to_veh_handlers(&exception_info, 0)) {
+        vga_write("Kernel32: Exception handled by VEH\n");
+        return;
+    }
+    
+    /* If not handled and not continuable, this is fatal */
+    if (!(dwExceptionFlags & 0x01)) {  /* EXCEPTION_NONCONTINUABLE */
+        vga_write("Kernel32: Unhandled non-continuable exception!\n");
+        /* Would terminate process */
+    }
+}
+
+/* Set/Get unhandled exception filter */
+static void* g_unhandled_exception_filter = NULL;
+
+LPVOID WINAPI SetUnhandledExceptionFilter(void* lpTopLevelExceptionFilter) {
+    LPVOID old_filter = g_unhandled_exception_filter;
+    g_unhandled_exception_filter = lpTopLevelExceptionFilter;
+    winapi_set_last_error(ERROR_SUCCESS);
+    return old_filter;
+}
+
+/* Unhandled exception filter */
+LONG WINAPI UnhandledExceptionFilter(PEXCEPTION_POINTERS ExceptionInfo) {
+    (void)ExceptionInfo;
+    
+    if (g_unhandled_exception_filter) {
+        typedef LONG (*UEF)(PEXCEPTION_POINTERS);
+        UEF filter = (UEF)g_unhandled_exception_filter;
+        return filter(ExceptionInfo);
+    }
+    
+    /* Default behavior: terminate */
+    return 0;  /* EXCEPTION_EXECUTE_HANDLER - terminate process */
 }
 
 /* ============================================================================

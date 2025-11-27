@@ -376,3 +376,96 @@ int math_isinf(double x) {
 int math_isfinite(double x) {
     return !math_isnan(x) && !math_isinf(x);
 }
+
+/* 64-bit division helpers for freestanding builds */
+/* These are needed when compiling for 32-bit without libgcc */
+
+#ifdef __i386__
+
+uint64_t __udivdi3(uint64_t dividend, uint64_t divisor) {
+    if (divisor == 0) {
+        return 0;  /* Division by zero - return 0 */
+    }
+    
+    if (divisor > dividend) {
+        return 0;
+    }
+    
+    if (divisor == dividend) {
+        return 1;
+    }
+    
+    /* Simple long division algorithm */
+    uint64_t quotient = 0;
+    uint64_t remainder = 0;
+    
+    for (int i = 63; i >= 0; i--) {
+        remainder <<= 1;
+        remainder |= (dividend >> i) & 1;
+        
+        if (remainder >= divisor) {
+            remainder -= divisor;
+            quotient |= (1ULL << i);
+        }
+    }
+    
+    return quotient;
+}
+
+int64_t __divdi3(int64_t dividend, int64_t divisor) {
+    if (divisor == 0) {
+        return 0;  /* Division by zero - return 0 */
+    }
+    
+    int negative = 0;
+    uint64_t udividend = (uint64_t)dividend;
+    uint64_t udivisor = (uint64_t)divisor;
+    
+    if (dividend < 0) {
+        negative = !negative;
+        udividend = (uint64_t)(-dividend);
+    }
+    
+    if (divisor < 0) {
+        negative = !negative;
+        udivisor = (uint64_t)(-divisor);
+    }
+    
+    uint64_t result = __udivdi3(udividend, udivisor);
+    
+    return negative ? -(int64_t)result : (int64_t)result;
+}
+
+uint64_t __umoddi3(uint64_t dividend, uint64_t divisor) {
+    if (divisor == 0) {
+        return 0;  /* Division by zero - return 0 */
+    }
+    
+    uint64_t quotient = __udivdi3(dividend, divisor);
+    return dividend - (quotient * divisor);
+}
+
+int64_t __moddi3(int64_t dividend, int64_t divisor) {
+    if (divisor == 0) {
+        return 0;  /* Division by zero - return 0 */
+    }
+    
+    int negative = 0;
+    uint64_t udividend = (uint64_t)dividend;
+    uint64_t udivisor = (uint64_t)divisor;
+    
+    if (dividend < 0) {
+        negative = 1;
+        udividend = (uint64_t)(-dividend);
+    }
+    
+    if (divisor < 0) {
+        udivisor = (uint64_t)(-divisor);
+    }
+    
+    uint64_t result = __umoddi3(udividend, udivisor);
+    
+    return negative ? -(int64_t)result : (int64_t)result;
+}
+
+#endif /* __i386__ */

@@ -302,6 +302,56 @@ static void test_winapi_console(void) {
 }
 
 /**
+ * Test exception handling functions
+ */
+static void test_winapi_exception_handling(void) {
+    vga_write("\n=== Testing WinAPI Exception Handling ===\n");
+    
+    /* Test AddVectoredExceptionHandler */
+    void* handler1 = AddVectoredExceptionHandler(1, (void*)0x1000);
+    TEST_ASSERT(handler1 != 0, "AddVectoredExceptionHandler (first)");
+    
+    void* handler2 = AddVectoredExceptionHandler(0, (void*)0x2000);
+    TEST_ASSERT(handler2 != 0, "AddVectoredExceptionHandler (last)");
+    
+    /* Test RemoveVectoredExceptionHandler */
+    DWORD result = RemoveVectoredExceptionHandler(handler1);
+    TEST_ASSERT(result == 1, "RemoveVectoredExceptionHandler");
+    
+    result = RemoveVectoredExceptionHandler(handler2);
+    TEST_ASSERT(result == 1, "RemoveVectoredExceptionHandler (second)");
+    
+    /* Test SetUnhandledExceptionFilter */
+    void* old_filter = SetUnhandledExceptionFilter((void*)0x3000);
+    TEST_ASSERT(old_filter == 0, "SetUnhandledExceptionFilter (initial)");
+    
+    void* new_filter = SetUnhandledExceptionFilter(0);
+    TEST_ASSERT(new_filter == (void*)0x3000, "SetUnhandledExceptionFilter (clear)");
+}
+
+/**
+ * Test DLL loader memory loading functions
+ */
+static void test_dll_loader_memory(void) {
+    vga_write("\n=== Testing DLL Loader Memory Functions ===\n");
+    
+    /* Test dll_get_image_base on stub DLL */
+    HMODULE hMod = dll_load("test.dll");
+    TEST_ASSERT(hMod != 0, "dll_load (stub)");
+    
+    /* Test dll_get_image_base - should be NULL for stub */
+    void* base = dll_get_image_base(hMod);
+    TEST_ASSERT(base == 0, "dll_get_image_base (stub has no PE)");
+    
+    /* Test dll_get_entry_point - should be NULL for stub */
+    void* entry = dll_get_entry_point(hMod);
+    TEST_ASSERT(entry == 0, "dll_get_entry_point (stub has no PE)");
+    
+    /* Cleanup */
+    dll_free(hMod);
+}
+
+/**
  * Run all WinAPI tests
  */
 void run_winapi_tests(void) {
@@ -319,6 +369,8 @@ void run_winapi_tests(void) {
     test_winapi_strings();
     test_winapi_modules();
     test_winapi_console();
+    test_winapi_exception_handling();
+    test_dll_loader_memory();
     
     vga_write("\n=== WinAPI Test Results ===\n");
     vga_write("Tests passed: ");
