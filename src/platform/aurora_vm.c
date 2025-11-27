@@ -22,9 +22,11 @@ static int vm_int_to_str(int value, char *buffer, int base, int is_signed) {
     int neg = 0;
     unsigned int uval;
     
+    /* Handle signed negative values, with special case for INT_MIN */
     if (is_signed && value < 0) {
         neg = 1;
-        uval = (unsigned int)(-value);
+        /* Cast to unsigned first to avoid UB when negating INT_MIN */
+        uval = (unsigned int)(-(value + 1)) + 1;
     } else {
         uval = (unsigned int)value;
     }
@@ -76,6 +78,21 @@ static int vm_format_r_type(char *buffer, size_t size, const char *op, int rd, i
     return pos;
 }
 
+/* Format 2-register instruction: "OPCODE rd, rs" */
+static int vm_format_2reg(char *buffer, size_t size, const char *op, int rd, int rs) {
+    int pos = 0;
+    pos += vm_strcpy_ret_len(buffer + pos, op, size - pos);
+    buffer[pos++] = ' ';
+    buffer[pos++] = 'r';
+    pos += vm_int_to_str(rd, buffer + pos, 10, 0);
+    buffer[pos++] = ',';
+    buffer[pos++] = ' ';
+    buffer[pos++] = 'r';
+    pos += vm_int_to_str(rs, buffer + pos, 10, 0);
+    buffer[pos] = '\0';
+    return pos;
+}
+
 /* Format I-type instruction: "OPCODE rd, imm" */
 static int vm_format_i_type(char *buffer, size_t size, const char *op, int rd, int imm) {
     int pos = 0;
@@ -86,6 +103,16 @@ static int vm_format_i_type(char *buffer, size_t size, const char *op, int rd, i
     buffer[pos++] = ',';
     buffer[pos++] = ' ';
     pos += vm_int_to_str(imm, buffer + pos, 10, 1);
+    buffer[pos] = '\0';
+    return pos;
+}
+
+/* Format unknown instruction: "UNKNOWN (0xXXXXXXXX)" */
+static int vm_format_unknown(char *buffer, size_t size, uint32_t instruction) {
+    int pos = 0;
+    pos += vm_strcpy_ret_len(buffer + pos, "UNKNOWN (0x", size - pos);
+    pos += vm_int_to_str((int)instruction, buffer + pos, 16, 0);
+    buffer[pos++] = ')';
     buffer[pos] = '\0';
     return pos;
 }
@@ -1369,7 +1396,7 @@ int aurora_vm_disassemble(uint32_t instruction, char *buffer, size_t buffer_size
             break;
         case AURORA_OP_NEG:
             decode_r_type(instruction, &rd, &rs1, &rs2);
-            written = vm_format_i_type(buffer, buffer_size, "NEG", rd, rs1);
+            written = vm_format_2reg(buffer, buffer_size, "NEG", rd, rs1);
             break;
         case AURORA_OP_AND:
             decode_r_type(instruction, &rd, &rs1, &rs2);
@@ -1385,7 +1412,7 @@ int aurora_vm_disassemble(uint32_t instruction, char *buffer, size_t buffer_size
             break;
         case AURORA_OP_NOT:
             decode_r_type(instruction, &rd, &rs1, &rs2);
-            written = vm_format_i_type(buffer, buffer_size, "NOT", rd, rs1);
+            written = vm_format_2reg(buffer, buffer_size, "NOT", rd, rs1);
             break;
         case AURORA_OP_SHL:
             decode_r_type(instruction, &rd, &rs1, &rs2);
@@ -1417,15 +1444,15 @@ int aurora_vm_disassemble(uint32_t instruction, char *buffer, size_t buffer_size
             break;
         case AURORA_OP_MOVE:
             decode_r_type(instruction, &rd, &rs1, &rs2);
-            written = vm_format_i_type(buffer, buffer_size, "MOVE", rd, rs1);
+            written = vm_format_2reg(buffer, buffer_size, "MOVE", rd, rs1);
             break;
         case AURORA_OP_CMP:
             decode_r_type(instruction, &rd, &rs1, &rs2);
-            written = vm_format_i_type(buffer, buffer_size, "CMP", rs1, rs2);
+            written = vm_format_2reg(buffer, buffer_size, "CMP", rs1, rs2);
             break;
         case AURORA_OP_TEST:
             decode_r_type(instruction, &rd, &rs1, &rs2);
-            written = vm_format_i_type(buffer, buffer_size, "TEST", rs1, rs2);
+            written = vm_format_2reg(buffer, buffer_size, "TEST", rs1, rs2);
             break;
         case AURORA_OP_SLT:
             decode_r_type(instruction, &rd, &rs1, &rs2);
@@ -1477,7 +1504,7 @@ int aurora_vm_disassemble(uint32_t instruction, char *buffer, size_t buffer_size
             written = vm_strcpy_ret_len(buffer, "HALT", buffer_size);
             break;
         default:
-            written = vm_strcpy_ret_len(buffer, "UNKNOWN", buffer_size);
+            written = vm_format_unknown(buffer, buffer_size, instruction);
             break;
     }
     
