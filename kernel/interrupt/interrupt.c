@@ -5,6 +5,8 @@
  */
 
 #include "interrupt.h"
+#include "../../filesystem/vfs/vfs.h"
+#include "../process/process.h"
 #include <stddef.h>
 
 /* IDT with 256 entries */
@@ -102,6 +104,11 @@ void interrupt_dispatch(uint8_t num) {
 #define SYSCALL_WAIT    6
 #define SYSCALL_EXEC    7
 #define SYSCALL_YIELD   8
+#define SYSCALL_SEEK    9
+#define SYSCALL_MKDIR   10
+#define SYSCALL_RMDIR   11
+#define SYSCALL_UNLINK  12
+#define SYSCALL_CREATE  13
 
 /**
  * Initialize system call interface
@@ -112,49 +119,76 @@ void syscall_init(void) {
 }
 
 /**
- * System call handler
+ * System call handler - implements real functionality using VFS and process management
  */
 int syscall_handler(uint32_t syscall_num, uint32_t arg1, uint32_t arg2, uint32_t arg3) {
-    (void)arg1;
-    (void)arg2;
-    (void)arg3;
-    
     switch (syscall_num) {
         case SYSCALL_EXIT:
             /* Exit process */
+            process_terminate(arg1);
             return 0;
             
         case SYSCALL_FORK:
-            /* Fork process */
-            return -1; /* Not implemented */
+            /* Fork process - not fully implemented in simple scheduler */
+            return -1;
             
         case SYSCALL_READ:
             /* Read from file descriptor */
-            return -1; /* Not implemented */
+            /* arg1 = fd, arg2 = buffer, arg3 = size */
+            return vfs_read((int)arg1, (void*)arg2, (size_t)arg3);
             
         case SYSCALL_WRITE:
             /* Write to file descriptor */
-            return -1; /* Not implemented */
+            /* arg1 = fd, arg2 = buffer, arg3 = size */
+            return vfs_write((int)arg1, (const void*)arg2, (size_t)arg3);
             
         case SYSCALL_OPEN:
             /* Open file */
-            return -1; /* Not implemented */
+            /* arg1 = path, arg2 = flags */
+            return vfs_open((const char*)arg1, (int)arg2);
             
         case SYSCALL_CLOSE:
             /* Close file descriptor */
-            return -1; /* Not implemented */
+            /* arg1 = fd */
+            return vfs_close((int)arg1);
             
         case SYSCALL_WAIT:
-            /* Wait for child process */
-            return -1; /* Not implemented */
+            /* Wait for child process - not implemented */
+            return -1;
             
         case SYSCALL_EXEC:
-            /* Execute program */
-            return -1; /* Not implemented */
+            /* Execute program - not implemented */
+            return -1;
             
         case SYSCALL_YIELD:
             /* Yield CPU */
+            process_yield();
             return 0;
+            
+        case SYSCALL_SEEK:
+            /* Seek in file */
+            /* arg1 = fd, arg2 = offset, arg3 = whence */
+            return vfs_seek((int)arg1, (long)arg2, (int)arg3);
+            
+        case SYSCALL_MKDIR:
+            /* Create directory */
+            /* arg1 = path */
+            return vfs_mkdir((const char*)arg1);
+            
+        case SYSCALL_RMDIR:
+            /* Remove directory */
+            /* arg1 = path */
+            return vfs_rmdir((const char*)arg1);
+            
+        case SYSCALL_UNLINK:
+            /* Unlink file */
+            /* arg1 = path */
+            return vfs_unlink((const char*)arg1);
+            
+        case SYSCALL_CREATE:
+            /* Create file */
+            /* arg1 = path */
+            return vfs_create((const char*)arg1);
             
         default:
             return -1; /* Unknown system call */

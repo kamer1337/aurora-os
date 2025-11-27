@@ -70,6 +70,9 @@ void arch64_enable_feature(const char* feature);
 uint64_t arch64_read_msr(uint32_t msr);
 void arch64_write_msr(uint32_t msr, uint64_t value);
 
+/* Syscall/sysret configuration */
+void arch64_syscall_init(uint64_t handler_addr);
+
 /* 64-bit specific system calls */
 arch_ptr_t arch64_syscall(arch_ptr_t syscall_number, arch_ptr_t arg1, 
                           arch_ptr_t arg2, arch_ptr_t arg3);
