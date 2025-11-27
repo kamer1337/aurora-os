@@ -225,9 +225,12 @@ void WINAPI DebugBreak(void);
 
 /* Exception Handling */
 LPVOID WINAPI AddVectoredExceptionHandler(DWORD First, void* Handler);
+LPVOID WINAPI AddVectoredContinueHandler(DWORD First, void* Handler);
 DWORD WINAPI RemoveVectoredExceptionHandler(LPVOID Handle);
+DWORD WINAPI RemoveVectoredContinueHandler(LPVOID Handle);
 void WINAPI RaiseException(DWORD dwExceptionCode, DWORD dwExceptionFlags,
                            DWORD nNumberOfArguments, const DWORD* lpArguments);
+LPVOID WINAPI SetUnhandledExceptionFilter(void* lpTopLevelExceptionFilter);
 
 /* Miscellaneous */
 void WINAPI GetStartupInfoA(LPSTARTUPINFOA lpStartupInfo);

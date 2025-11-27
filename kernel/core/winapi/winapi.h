@@ -39,6 +39,8 @@ typedef char* LPSTR;
 typedef const char* LPCSTR;
 typedef uint16_t* LPWSTR;
 typedef const uint16_t* LPCWSTR;
+typedef int16_t SHORT;
+typedef uint16_t ATOM;
 
 /* Boolean values */
 #define TRUE  1
@@ -129,6 +131,10 @@ typedef const uint16_t* LPCWSTR;
 #define ERROR_IO_PENDING        997
 #define ERROR_NOACCESS          998
 #define ERROR_INVALID_FLAGS     1004
+#define ERROR_CLASS_ALREADY_EXISTS 1410
+#define ERROR_CANNOT_FIND_WND_CLASS 1407
+#define ERROR_INVALID_WINDOW_HANDLE 1400
+#define ERROR_CLIPBOARD_NOT_OPEN 1418
 
 /* Heap allocation flags */
 #define HEAP_NO_SERIALIZE       0x00000001

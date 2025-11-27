@@ -30,19 +30,42 @@ typedef struct {
 void dll_loader_init(void);
 
 /**
- * Load a DLL into memory
+ * Load a DLL into memory from VFS or create stub
  * @param dll_name Name of the DLL to load
  * @return Handle to loaded DLL or NULL on failure
  */
 HMODULE dll_load(const char* dll_name);
 
 /**
- * Get procedure address from DLL
+ * Load a DLL from memory buffer
+ * @param dll_name Name to assign to the DLL
+ * @param data Pointer to PE file data
+ * @param size Size of PE file data
+ * @return Handle to loaded DLL or NULL on failure
+ */
+HMODULE dll_load_from_memory(const char* dll_name, const void* data, uint32_t size);
+
+/**
+ * Get procedure address from DLL (uses export table)
  * @param module Handle to DLL
  * @param proc_name Name of procedure to find
  * @return Pointer to procedure or NULL if not found
  */
 void* dll_get_proc_address(HMODULE module, const char* proc_name);
+
+/**
+ * Get DLL image base address
+ * @param module Handle to DLL
+ * @return Image base address or NULL
+ */
+void* dll_get_image_base(HMODULE module);
+
+/**
+ * Get DLL entry point
+ * @param module Handle to DLL
+ * @return Entry point address or NULL
+ */
+void* dll_get_entry_point(HMODULE module);
 
 /**
  * Free a loaded DLL
