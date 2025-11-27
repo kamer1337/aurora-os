@@ -177,9 +177,21 @@ static void* dll_get_export_address(pe_image_t* image, const char* func_name) {
         return NULL;
     }
     
+    /* Validate export directory RVA is within image */
+    if (export_dir->VirtualAddress >= image->image_size) {
+        return NULL;
+    }
+    
     /* Get export directory structure */
     pe_export_directory_t* exports = (pe_export_directory_t*)
         ((uint8_t*)image->image_base + export_dir->VirtualAddress);
+    
+    /* Validate address table RVAs */
+    if (exports->AddressOfFunctions >= image->image_size ||
+        exports->AddressOfNames >= image->image_size ||
+        exports->AddressOfNameOrdinals >= image->image_size) {
+        return NULL;
+    }
     
     /* Get address tables */
     uint32_t* functions = (uint32_t*)
@@ -191,12 +203,28 @@ static void* dll_get_export_address(pe_image_t* image, const char* func_name) {
     
     /* Search for function by name */
     for (uint32_t i = 0; i < exports->NumberOfNames; i++) {
+        /* Validate name RVA */
+        if (names[i] >= image->image_size) {
+            continue;
+        }
+        
         const char* name = (const char*)
             ((uint8_t*)image->image_base + names[i]);
         
         if (dll_strcmp(name, func_name) == 0) {
             uint16_t ordinal = ordinals[i];
+            
+            /* Validate ordinal */
+            if (ordinal >= exports->NumberOfFunctions) {
+                return NULL;
+            }
+            
             uint32_t func_rva = functions[ordinal];
+            
+            /* Validate function RVA is within image */
+            if (func_rva >= image->image_size) {
+                return NULL;
+            }
             
             /* Check for forwarder (function RVA within export section) */
             if (func_rva >= export_dir->VirtualAddress &&
@@ -217,6 +245,12 @@ static void* dll_get_export_address(pe_image_t* image, const char* func_name) {
         uint16_t ordinal = (uint16_t)(uintptr_t)func_name - (uint16_t)exports->Base;
         if (ordinal < exports->NumberOfFunctions) {
             uint32_t func_rva = functions[ordinal];
+            
+            /* Validate function RVA is within image */
+            if (func_rva >= image->image_size) {
+                return NULL;
+            }
+            
             return (uint8_t*)image->image_base + func_rva;
         }
     }
@@ -238,12 +272,23 @@ static int dll_resolve_pe_imports(pe_image_t* image) {
         return 0; /* No imports */
     }
     
+    /* Validate import directory RVA */
+    if (import_dir->VirtualAddress >= image->image_size) {
+        return -1;
+    }
+    
     /* Get import descriptors */
     pe_import_descriptor_t* import_desc = (pe_import_descriptor_t*)
         ((uint8_t*)image->image_base + import_dir->VirtualAddress);
     
     /* Iterate through import descriptors */
     while (import_desc->NameRVA != 0) {
+        /* Validate name RVA */
+        if (import_desc->NameRVA >= image->image_size) {
+            import_desc++;
+            continue;
+        }
+        
         const char* dll_name = (const char*)
             ((uint8_t*)image->image_base + import_desc->NameRVA);
         
@@ -260,10 +305,21 @@ static int dll_resolve_pe_imports(pe_image_t* image) {
             return -1;
         }
         
+        /* Determine ILT and IAT RVAs */
+        uint32_t ilt_rva = import_desc->ImportLookupTableRVA ? 
+                           import_desc->ImportLookupTableRVA : 
+                           import_desc->ImportAddressTableRVA;
+        uint32_t iat_rva = import_desc->ImportAddressTableRVA;
+        
+        /* Validate RVAs */
+        if (ilt_rva >= image->image_size || iat_rva >= image->image_size) {
+            import_desc++;
+            continue;
+        }
+        
         /* Get import lookup table and import address table */
-        uint32_t* ilt = (uint32_t*)((uint8_t*)image->image_base + 
-            (import_desc->ImportLookupTableRVA ? import_desc->ImportLookupTableRVA : import_desc->ImportAddressTableRVA));
-        uint32_t* iat = (uint32_t*)((uint8_t*)image->image_base + import_desc->ImportAddressTableRVA);
+        uint32_t* ilt = (uint32_t*)((uint8_t*)image->image_base + ilt_rva);
+        uint32_t* iat = (uint32_t*)((uint8_t*)image->image_base + iat_rva);
         
         /* Resolve each import */
         while (*ilt != 0) {
@@ -274,15 +330,18 @@ static int dll_resolve_pe_imports(pe_image_t* image) {
                 uint16_t ordinal = (uint16_t)(*ilt & 0xFFFF);
                 func_addr = dll_get_proc_address(dep_module, (const char*)(uintptr_t)ordinal);
             } else {
-                /* Import by name */
-                const char* func_name = (const char*)
-                    ((uint8_t*)image->image_base + (*ilt & 0x7FFFFFFF) + 2); /* Skip hint */
-                func_addr = dll_get_proc_address(dep_module, func_name);
-                
-                if (!func_addr) {
-                    vga_write("DLL Loader: Import not found: ");
-                    vga_write(func_name);
-                    vga_write("\n");
+                /* Import by name - validate RVA first */
+                uint32_t hint_name_rva = (*ilt & 0x7FFFFFFF);
+                if (hint_name_rva + 2 < image->image_size) {
+                    const char* func_name = (const char*)
+                        ((uint8_t*)image->image_base + hint_name_rva + 2); /* Skip hint */
+                    func_addr = dll_get_proc_address(dep_module, func_name);
+                    
+                    if (!func_addr) {
+                        vga_write("DLL Loader: Import not found: ");
+                        vga_write(func_name);
+                        vga_write("\n");
+                    }
                 }
             }
             

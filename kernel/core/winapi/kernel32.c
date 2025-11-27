@@ -3188,8 +3188,15 @@ static int dispatch_to_veh_handlers(PEXCEPTION_POINTERS exception_info, int firs
     /* Call handlers marked as 'first' */
     for (int i = 0; i < MAX_VEH_HANDLERS; i++) {
         if (g_veh_handlers[i].in_use && g_veh_handlers[i].first) {
+            /* Validate handler pointer - basic sanity check */
+            void* handler_ptr = g_veh_handlers[i].handler;
+            if (!handler_ptr || (uintptr_t)handler_ptr < 0x1000) {
+                /* Invalid handler address - skip */
+                continue;
+            }
+            
             typedef LONG (*VEH_HANDLER)(PEXCEPTION_POINTERS);
-            VEH_HANDLER handler = (VEH_HANDLER)g_veh_handlers[i].handler;
+            VEH_HANDLER handler = (VEH_HANDLER)handler_ptr;
             LONG result = handler(exception_info);
             if (result == EXCEPTION_CONTINUE_EXECUTION) {
                 return 1;  /* Exception handled */
@@ -3204,8 +3211,15 @@ static int dispatch_to_veh_handlers(PEXCEPTION_POINTERS exception_info, int firs
     /* Call handlers marked as 'last' */
     for (int i = 0; i < MAX_VEH_HANDLERS; i++) {
         if (g_veh_handlers[i].in_use && !g_veh_handlers[i].first) {
+            /* Validate handler pointer - basic sanity check */
+            void* handler_ptr = g_veh_handlers[i].handler;
+            if (!handler_ptr || (uintptr_t)handler_ptr < 0x1000) {
+                /* Invalid handler address - skip */
+                continue;
+            }
+            
             typedef LONG (*VEH_HANDLER)(PEXCEPTION_POINTERS);
-            VEH_HANDLER handler = (VEH_HANDLER)g_veh_handlers[i].handler;
+            VEH_HANDLER handler = (VEH_HANDLER)handler_ptr;
             LONG result = handler(exception_info);
             if (result == EXCEPTION_CONTINUE_EXECUTION) {
                 return 1;  /* Exception handled */

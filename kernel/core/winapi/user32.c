@@ -60,6 +60,9 @@ static void* g_clipboard_data = NULL;
 static UINT g_clipboard_format = 0;
 static int g_clipboard_open = 0;
 
+/* Window handle base offset */
+#define WINDOW_HANDLE_BASE 0x1000
+
 /* String helpers */
 static int u32_strlen(const char* s) {
     int len = 0;
@@ -136,7 +139,7 @@ static window_entry_t* alloc_window(void) {
     for (int i = 0; i < MAX_WINDOWS; i++) {
         if (!g_windows[i].in_use) {
             g_windows[i].in_use = 1;
-            g_windows[i].hwnd = (HWND)(uintptr_t)(0x1000 + i);
+            g_windows[i].hwnd = (HWND)(uintptr_t)(WINDOW_HANDLE_BASE + i);
             return &g_windows[i];
         }
     }
@@ -885,10 +888,12 @@ BOOL WINAPI EmptyClipboard(void) {
         return FALSE;
     }
     
-    if (g_clipboard_data) {
-        kfree(g_clipboard_data);
-        g_clipboard_data = NULL;
-    }
+    /* Note: We don't free the data here because the caller owns the memory.
+     * The SetClipboardData documentation specifies that after calling 
+     * SetClipboardData, the system owns the memory handle. However, in our
+     * implementation we just clear the reference since we can't guarantee
+     * the allocation method used by the caller. */
+    g_clipboard_data = NULL;
     g_clipboard_format = 0;
     
     winapi_set_last_error(ERROR_SUCCESS);
