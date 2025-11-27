@@ -430,7 +430,9 @@ int network_bridge_forward(int bridge_id, int src_port, const uint8_t* packet, u
             }
         }
         bridge->flooded++;
-        bridge->total_tx += bridge->port_count - 1;
+        if (bridge->port_count > 1) {
+            bridge->total_tx += bridge->port_count - 1;
+        }
     } else {
         /* Lookup destination MAC */
         int mac_idx = find_mac_entry(bridge, eth->dst_mac);
@@ -455,7 +457,9 @@ int network_bridge_forward(int bridge_id, int src_port, const uint8_t* packet, u
                 }
             }
             bridge->flooded++;
-            bridge->total_tx += bridge->port_count - 1;
+            if (bridge->port_count > 1) {
+                bridge->total_tx += bridge->port_count - 1;
+            }
         }
     }
     

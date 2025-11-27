@@ -504,14 +504,13 @@ bool linux_boot_is_bzimage(const uint8_t* image, uint32_t size) {
  */
 uint32_t boot_crc32(const uint8_t* data, uint32_t len) {
     uint32_t crc = 0xFFFFFFFF;
-    static const uint32_t crc_table[256] = {
-        0x00000000, 0x77073096, 0xEE0E612C, 0x990951BA, /* ... truncated for brevity */
-        /* Full CRC32 table would be here */
-    };
     
-    /* Simple CRC32 implementation */
+    /* Simple byte-by-byte CRC32 calculation (polynomial 0xEDB88320) */
     for (uint32_t i = 0; i < len; i++) {
-        crc = (crc >> 8) ^ crc_table[(crc ^ data[i]) & 0xFF];
+        crc ^= data[i];
+        for (int j = 0; j < 8; j++) {
+            crc = (crc >> 1) ^ (0xEDB88320 & (-(crc & 1)));
+        }
     }
     
     return crc ^ 0xFFFFFFFF;

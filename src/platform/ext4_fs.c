@@ -275,8 +275,8 @@ typedef struct {
     bool open;
     uint32_t mount_id;
     uint32_t inode;
-    uint32_t position;
-    uint32_t size;
+    uint64_t position;
+    uint64_t size;
     uint16_t mode;
     uint32_t flags;
 } ext4_file_t;
@@ -572,9 +572,9 @@ int32_t ext4_read(int fd, void* buffer, uint32_t size) {
     }
     
     /* Calculate bytes to read */
-    uint32_t remaining = file->size - file->position;
-    if (size > remaining) {
-        size = remaining;
+    uint64_t remaining = file->size - file->position;
+    if ((uint64_t)size > remaining) {
+        size = (uint32_t)remaining;
     }
     
     if (size == 0) {
@@ -633,16 +633,16 @@ int32_t ext4_seek(int fd, int32_t offset, int whence) {
         return -1;
     }
     
-    int32_t new_pos;
+    int64_t new_pos;
     switch (whence) {
         case 0: /* SEEK_SET */
             new_pos = offset;
             break;
         case 1: /* SEEK_CUR */
-            new_pos = file->position + offset;
+            new_pos = (int64_t)file->position + offset;
             break;
         case 2: /* SEEK_END */
-            new_pos = file->size + offset;
+            new_pos = (int64_t)file->size + offset;
             break;
         default:
             return -1;
@@ -652,8 +652,8 @@ int32_t ext4_seek(int fd, int32_t offset, int whence) {
         return -1;
     }
     
-    file->position = (uint32_t)new_pos;
-    return (int32_t)file->position;
+    file->position = (uint64_t)new_pos;
+    return (int32_t)file->position; /* Return lower 32 bits for compatibility */
 }
 
 /**
