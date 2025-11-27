@@ -233,12 +233,8 @@ typedef HANDLE* PHANDLE;
 #define VER_PLATFORM_WIN32_NT 2
 
 /* Additional pointer types */
-typedef DWORD* LPDWORD;
-typedef WORD* LPWORD;
 typedef BYTE* LPBYTE;
-typedef LONG* LPLONG;
 typedef int* LPINT;
-typedef BOOL* LPBOOL;
 
 /* Handle type for heap */
 typedef HANDLE HHEAP;

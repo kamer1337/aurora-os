@@ -302,6 +302,202 @@ static void test_winapi_console(void) {
 }
 
 /**
+ * Test synchronization primitives
+ */
+static void test_winapi_sync(void) {
+    vga_write("\n=== Testing WinAPI Synchronization ===\n");
+    
+    /* Test Critical Section */
+    CRITICAL_SECTION cs;
+    InitializeCriticalSection(&cs);
+    TEST_ASSERT(cs.LockCount == -1, "InitializeCriticalSection");
+    
+    EnterCriticalSection(&cs);
+    TEST_ASSERT(cs.RecursionCount == 1, "EnterCriticalSection");
+    
+    /* Test re-entry */
+    EnterCriticalSection(&cs);
+    TEST_ASSERT(cs.RecursionCount == 2, "Re-enter CriticalSection");
+    
+    LeaveCriticalSection(&cs);
+    TEST_ASSERT(cs.RecursionCount == 1, "LeaveCriticalSection");
+    
+    LeaveCriticalSection(&cs);
+    TEST_ASSERT(cs.LockCount == -1, "LeaveCriticalSection (unlocked)");
+    
+    DeleteCriticalSection(&cs);
+    TEST_ASSERT(1, "DeleteCriticalSection");
+    
+    /* Test Event */
+    HANDLE hEvent = CreateEventA(NULL, TRUE, FALSE, "TestEvent");
+    TEST_ASSERT(hEvent != NULL, "CreateEventA");
+    
+    BOOL setResult = SetEvent(hEvent);
+    TEST_ASSERT(setResult == TRUE, "SetEvent");
+    
+    BOOL resetResult = ResetEvent(hEvent);
+    TEST_ASSERT(resetResult == TRUE, "ResetEvent");
+    
+    CloseHandle(hEvent);
+    
+    /* Test Mutex */
+    HANDLE hMutex = CreateMutexA(NULL, FALSE, "TestMutex");
+    TEST_ASSERT(hMutex != NULL, "CreateMutexA");
+    
+    DWORD waitResult = WaitForSingleObject(hMutex, 0);
+    TEST_ASSERT(waitResult == WAIT_OBJECT_0, "WaitForSingleObject (mutex)");
+    
+    BOOL relResult = ReleaseMutex(hMutex);
+    TEST_ASSERT(relResult == TRUE, "ReleaseMutex");
+    
+    CloseHandle(hMutex);
+    
+    /* Test Semaphore */
+    HANDLE hSem = CreateSemaphoreA(NULL, 2, 10, "TestSemaphore");
+    TEST_ASSERT(hSem != NULL, "CreateSemaphoreA");
+    
+    LONG prevCount = 0;
+    BOOL semRelResult = ReleaseSemaphore(hSem, 1, &prevCount);
+    TEST_ASSERT(semRelResult == TRUE && prevCount == 2, "ReleaseSemaphore");
+    
+    CloseHandle(hSem);
+    
+    /* Test Interlocked functions */
+    LONG testValue = 5;
+    LONG incResult = InterlockedIncrement(&testValue);
+    TEST_ASSERT(incResult == 6 && testValue == 6, "InterlockedIncrement");
+    
+    LONG decResult = InterlockedDecrement(&testValue);
+    TEST_ASSERT(decResult == 5 && testValue == 5, "InterlockedDecrement");
+    
+    LONG exchResult = InterlockedExchange(&testValue, 10);
+    TEST_ASSERT(exchResult == 5 && testValue == 10, "InterlockedExchange");
+    
+    LONG cmpResult = InterlockedCompareExchange(&testValue, 20, 10);
+    TEST_ASSERT(cmpResult == 10 && testValue == 20, "InterlockedCompareExchange");
+}
+
+/**
+ * Test environment functions
+ */
+static void test_winapi_env(void) {
+    vga_write("\n=== Testing WinAPI Environment Functions ===\n");
+    
+    char buffer[256];
+    
+    /* Test GetEnvironmentVariableA */
+    DWORD result = GetEnvironmentVariableA("PATH", buffer, 256);
+    TEST_ASSERT(result > 0, "GetEnvironmentVariableA (PATH)");
+    
+    /* Test SetEnvironmentVariableA */
+    BOOL setResult = SetEnvironmentVariableA("TESTVAR", "testvalue");
+    TEST_ASSERT(setResult == TRUE, "SetEnvironmentVariableA");
+    
+    /* Verify the set variable */
+    result = GetEnvironmentVariableA("TESTVAR", buffer, 256);
+    TEST_ASSERT(result > 0, "GetEnvironmentVariableA (TESTVAR)");
+    
+    /* Test GetCommandLineA */
+    LPSTR cmdline = GetCommandLineA();
+    TEST_ASSERT(cmdline != NULL, "GetCommandLineA");
+}
+
+/**
+ * Test TLS functions
+ */
+static void test_winapi_tls(void) {
+    vga_write("\n=== Testing WinAPI TLS Functions ===\n");
+    
+    /* Test TlsAlloc */
+    DWORD index = TlsAlloc();
+    TEST_ASSERT(index != 0xFFFFFFFF, "TlsAlloc");
+    
+    /* Test TlsSetValue */
+    LPVOID testValue = (LPVOID)0x12345678;
+    BOOL setResult = TlsSetValue(index, testValue);
+    TEST_ASSERT(setResult == TRUE, "TlsSetValue");
+    
+    /* Test TlsGetValue */
+    LPVOID getValue = TlsGetValue(index);
+    TEST_ASSERT(getValue == testValue, "TlsGetValue");
+    
+    /* Test TlsFree */
+    BOOL freeResult = TlsFree(index);
+    TEST_ASSERT(freeResult == TRUE, "TlsFree");
+}
+
+/**
+ * Test heap functions
+ */
+static void test_winapi_heap(void) {
+    vga_write("\n=== Testing WinAPI Heap Functions ===\n");
+    
+    /* Test GetProcessHeap */
+    HANDLE hHeap = GetProcessHeap();
+    TEST_ASSERT(hHeap != NULL, "GetProcessHeap");
+    
+    /* Test HeapCreate */
+    HANDLE hNewHeap = HeapCreate(0, 4096, 0);
+    TEST_ASSERT(hNewHeap != NULL, "HeapCreate");
+    
+    /* Test HeapAlloc */
+    LPVOID ptr = HeapAlloc(hNewHeap, HEAP_ZERO_MEMORY, 256);
+    TEST_ASSERT(ptr != NULL, "HeapAlloc");
+    
+    /* Verify zero memory */
+    unsigned char* bytes = (unsigned char*)ptr;
+    int isZeroed = 1;
+    for (int i = 0; i < 256; i++) {
+        if (bytes[i] != 0) { isZeroed = 0; break; }
+    }
+    TEST_ASSERT(isZeroed, "HeapAlloc (HEAP_ZERO_MEMORY)");
+    
+    /* Test HeapFree */
+    BOOL freeResult = HeapFree(hNewHeap, 0, ptr);
+    TEST_ASSERT(freeResult == TRUE, "HeapFree");
+    
+    /* Test HeapDestroy */
+    BOOL destroyResult = HeapDestroy(hNewHeap);
+    TEST_ASSERT(destroyResult == TRUE, "HeapDestroy");
+}
+
+/**
+ * Test system information functions
+ */
+static void test_winapi_sysinfo(void) {
+    vga_write("\n=== Testing WinAPI System Info ===\n");
+    
+    /* Test GetSystemInfo */
+    SYSTEM_INFO si;
+    GetSystemInfo(&si);
+    TEST_ASSERT(si.dwPageSize == 4096, "GetSystemInfo (PageSize)");
+    TEST_ASSERT(si.dwNumberOfProcessors >= 1, "GetSystemInfo (Processors)");
+    
+    /* Test GetTickCount */
+    DWORD tick1 = GetTickCount();
+    DWORD tick2 = GetTickCount();
+    TEST_ASSERT(tick2 >= tick1, "GetTickCount");
+    
+    /* Test GetVersionExA */
+    OSVERSIONINFOA ver;
+    ver.dwOSVersionInfoSize = sizeof(OSVERSIONINFOA);
+    BOOL verResult = GetVersionExA(&ver);
+    TEST_ASSERT(verResult == TRUE, "GetVersionExA");
+    TEST_ASSERT(ver.dwMajorVersion >= 6, "GetVersionExA (Version)");
+    
+    /* Test GetSystemDirectoryA */
+    char sysDir[MAX_PATH];
+    UINT sysDirLen = GetSystemDirectoryA(sysDir, MAX_PATH);
+    TEST_ASSERT(sysDirLen > 0, "GetSystemDirectoryA");
+    
+    /* Test GetComputerNameA */
+    char compName[256];
+    DWORD compNameSize = 256;
+    BOOL compResult = GetComputerNameA(compName, &compNameSize);
+    TEST_ASSERT(compResult == TRUE, "GetComputerNameA");
+}
+
+/**
  * Run all WinAPI tests
  */
 void run_winapi_tests(void) {
@@ -319,6 +515,11 @@ void run_winapi_tests(void) {
     test_winapi_strings();
     test_winapi_modules();
     test_winapi_console();
+    test_winapi_sync();
+    test_winapi_env();
+    test_winapi_tls();
+    test_winapi_heap();
+    test_winapi_sysinfo();
     
     vga_write("\n=== WinAPI Test Results ===\n");
     vga_write("Tests passed: ");
