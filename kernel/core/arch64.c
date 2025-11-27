@@ -400,20 +400,78 @@ void arch64_write_msr(uint32_t msr, uint64_t value) {
     __asm__ volatile("wrmsr" : : "a"(low), "d"(high), "c"(msr));
 }
 
+/* MSR addresses for syscall configuration */
+#define MSR_STAR    0xC0000081  /* Segment selector MSR */
+#define MSR_LSTAR   0xC0000082  /* 64-bit syscall handler address */
+#define MSR_CSTAR   0xC0000083  /* 32-bit compatibility mode syscall */
+#define MSR_SFMASK  0xC0000084  /* Syscall flag mask */
+
+/* Flag to track if syscall instruction is properly configured */
+static int syscall_configured = 0;
+
 /**
- * 64-bit system call handler
+ * Configure syscall/sysret instruction support
+ * This must be called before using arch64_syscall with hardware syscall
+ * handler_addr: Address of the syscall handler function
+ */
+void arch64_syscall_init(uint64_t handler_addr) {
+    if (!handler_addr) {
+        syscall_configured = 0;
+        return;
+    }
+    
+    /* Set up STAR MSR: Ring 0 and Ring 3 segment selectors */
+    /* Kernel CS is at 0x08, User CS is at 0x18 (with +16 for 64-bit) */
+    uint64_t star = ((uint64_t)0x0008 << 32) | ((uint64_t)0x0018 << 48);
+    arch64_write_msr(MSR_STAR, star);
+    
+    /* Set up LSTAR MSR: 64-bit syscall handler address */
+    arch64_write_msr(MSR_LSTAR, handler_addr);
+    
+    /* Set up SFMASK: Clear interrupt flag on syscall */
+    arch64_write_msr(MSR_SFMASK, 0x200);  /* Clear IF (bit 9) */
+    
+    /* Enable syscall/sysret via EFER MSR */
+    uint64_t efer = arch64_read_msr(0xC0000080);
+    efer |= 1;  /* Set SCE (bit 0) - Syscall Enable */
+    arch64_write_msr(0xC0000080, efer);
+    
+    syscall_configured = 1;
+}
+
+/**
+ * 64-bit system call
+ * 
+ * This function can use either:
+ * 1. The syscall instruction (if arch64_syscall_init was called with valid handler)
+ * 2. Software interrupt fallback (int 0x80)
+ * 
+ * Note: For the syscall instruction to work, the following MSRs must be configured:
+ * - STAR (0xC0000081): Contains segment selectors
+ * - LSTAR (0xC0000082): Contains the syscall handler entry point
+ * - SFMASK (0xC0000084): Contains flags to clear on syscall
  */
 arch_ptr_t arch64_syscall(arch_ptr_t syscall_number, arch_ptr_t arg1,
                           arch_ptr_t arg2, arch_ptr_t arg3) {
     arch_ptr_t result;
     
-    /* Use syscall instruction for 64-bit system calls */
-    __asm__ volatile(
-        "syscall"
-        : "=a"(result)
-        : "a"(syscall_number), "D"(arg1), "S"(arg2), "d"(arg3)
-        : "rcx", "r11", "memory"
-    );
+    if (syscall_configured) {
+        /* Use hardware syscall instruction */
+        __asm__ volatile(
+            "syscall"
+            : "=a"(result)
+            : "a"(syscall_number), "D"(arg1), "S"(arg2), "d"(arg3)
+            : "rcx", "r11", "memory"
+        );
+    } else {
+        /* Fallback to software interrupt */
+        __asm__ volatile(
+            "int $0x80"
+            : "=a"(result)
+            : "a"(syscall_number), "b"(arg1), "c"(arg2), "d"(arg3)
+            : "memory"
+        );
+    }
     
     return result;
 }

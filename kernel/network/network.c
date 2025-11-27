@@ -35,6 +35,9 @@ typedef struct {
 
 static socket_recv_buffer_t socket_recv_buffers[MAX_SOCKETS];
 
+/* Last received packet source IP - used for reply routing */
+static uint32_t last_source_ip = 0;
+
 /* TCP state definitions */
 #define TCP_STATE_CLOSED      0
 #define TCP_STATE_LISTEN      1
@@ -393,6 +396,9 @@ void ip_receive_packet(net_interface_t* iface, ip_header_t* ip, uint32_t length)
         return; /* Checksum failed */
     }
     
+    /* Save source IP for reply routing */
+    last_source_ip = ip->src_ip;
+    
     /* Get payload */
     uint8_t* payload = (uint8_t*)ip + sizeof(ip_header_t);
     uint32_t payload_len = length - sizeof(ip_header_t);
@@ -529,11 +535,9 @@ void icmp_receive(net_interface_t* iface, icmp_header_t* icmp, uint32_t length) 
                 /* Calculate checksum */
                 reply.checksum = ip_checksum(&reply, sizeof(icmp_header_t));
                 
-                /* Get source IP from the IP header that was processed earlier */
-                /* Since we don't have direct access, use the interface's IP as dest */
-                /* In real implementation, source IP would be tracked */
-                if (default_interface) {
-                    ip_send_packet(iface, iface->gateway, PROTO_ICMP, 
+                /* Send reply to the source IP (saved from IP header processing) */
+                if (last_source_ip != 0) {
+                    ip_send_packet(iface, last_source_ip, PROTO_ICMP, 
                                    (uint8_t*)&reply, sizeof(icmp_header_t));
                 }
             }
@@ -644,6 +648,58 @@ void tcp_init(void) {
 }
 
 /**
+ * TCP pseudo-header for checksum calculation (RFC 793)
+ */
+typedef struct {
+    uint32_t src_ip;
+    uint32_t dest_ip;
+    uint8_t reserved;
+    uint8_t protocol;
+    uint16_t tcp_length;
+} __attribute__((packed)) tcp_pseudo_header_t;
+
+/**
+ * Calculate TCP checksum including pseudo-header
+ */
+static uint16_t tcp_checksum(uint32_t src_ip, uint32_t dest_ip, 
+                             uint8_t* tcp_segment, uint32_t tcp_length) {
+    uint32_t sum = 0;
+    
+    /* Add pseudo-header */
+    tcp_pseudo_header_t pseudo;
+    pseudo.src_ip = src_ip;
+    pseudo.dest_ip = dest_ip;
+    pseudo.reserved = 0;
+    pseudo.protocol = PROTO_TCP;
+    pseudo.tcp_length = ((tcp_length >> 8) & 0xFF) | ((tcp_length << 8) & 0xFF00); /* Network byte order */
+    
+    uint16_t* ptr = (uint16_t*)&pseudo;
+    for (uint32_t i = 0; i < sizeof(tcp_pseudo_header_t) / 2; i++) {
+        sum += ptr[i];
+    }
+    
+    /* Add TCP segment */
+    ptr = (uint16_t*)tcp_segment;
+    uint32_t remaining = tcp_length;
+    while (remaining > 1) {
+        sum += *ptr++;
+        remaining -= 2;
+    }
+    
+    /* Add remaining byte if odd length */
+    if (remaining == 1) {
+        sum += *(uint8_t*)ptr;
+    }
+    
+    /* Fold 32-bit sum to 16 bits */
+    while (sum >> 16) {
+        sum = (sum & 0xFFFF) + (sum >> 16);
+    }
+    
+    return ~((uint16_t)sum);
+}
+
+/**
  * Send TCP segment
  */
 static int tcp_send_segment(net_interface_t* iface, socket_t* sock, uint8_t flags,
@@ -679,8 +735,8 @@ static int tcp_send_segment(net_interface_t* iface, socket_t* sock, uint8_t flag
         }
     }
     
-    /* Calculate TCP checksum (simplified - should include pseudo-header) */
-    tcp->checksum = ip_checksum(packet, packet_len);
+    /* Calculate TCP checksum with pseudo-header */
+    tcp->checksum = tcp_checksum(iface->ip_addr, sock->remote_ip, packet, packet_len);
     
     /* Send via IP layer */
     int result = ip_send_packet(iface, sock->remote_ip, PROTO_TCP, packet, packet_len);
@@ -691,6 +747,8 @@ static int tcp_send_segment(net_interface_t* iface, socket_t* sock, uint8_t flag
 
 /**
  * TCP connect - initiate 3-way handshake
+ * Note: This is a non-blocking implementation that starts the handshake.
+ * The connection state is updated when SYN-ACK is received in tcp_receive.
  */
 int tcp_connect(socket_t* sock) {
     if (!sock || !default_interface) {
@@ -719,12 +777,12 @@ int tcp_connect(socket_t* sock) {
         return -1;
     }
     
-    /* In a real implementation, would wait for SYN-ACK */
-    /* For now, assume connection succeeds */
+    /* Increment sequence number for SYN */
     conn->local_seq++;
-    conn->state = TCP_STATE_ESTABLISHED;
-    sock->state = TCP_STATE_ESTABLISHED;
     
+    /* Connection is now in SYN_SENT state, waiting for SYN-ACK */
+    /* The state will be updated to ESTABLISHED when tcp_receive gets SYN-ACK */
+    /* For now, return success indicating handshake has started */
     return 0;
 }
 

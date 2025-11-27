@@ -287,7 +287,7 @@ static void restore_context(process_t* process) {
     __asm__ volatile("movl %0, %%ecx" : : "m"(ctx->ecx));
     __asm__ volatile("movl %0, %%ebx" : : "m"(ctx->ebx));
     __asm__ volatile("movl %0, %%ebp" : : "m"(ctx->ebp));
-    /* Note: eax, esp restored last as they're needed for return */
+    __asm__ volatile("movl %0, %%eax" : : "m"(ctx->eax));
 }
 
 /**
@@ -309,13 +309,16 @@ static void switch_context(process_t* from, process_t* to) {
     current_process = to;
     to->state = PROCESS_RUNNING;
     
-    /* Check if this is a new process (first time running) */
+    /* Restore stack pointer from process control block */
     if (to->stack_ptr) {
-        /* Restore context of new process */
-        restore_context(to);
-        
-        /* Restore stack pointer from process control block */
         __asm__ volatile("movl %0, %%esp" : : "m"(to->stack_ptr));
+        
+        /* Restore context of previously-run process */
+        /* For new processes, the context was initialized at creation time */
+        int idx = get_process_index(to);
+        if (idx >= 0 && process_contexts[idx].esp != 0) {
+            restore_context(to);
+        }
     }
 }
 
