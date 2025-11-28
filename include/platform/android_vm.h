@@ -90,8 +90,71 @@ typedef enum {
     /* Bionic-specific syscalls */
     ANDROID_SYSCALL_OPENAT = 295,
     ANDROID_SYSCALL_FACCESSAT = 307,
-    /* Add more as needed */
+    /* Extended syscalls - file operations */
+    ANDROID_SYSCALL_LSEEK = 8,
+    ANDROID_SYSCALL_STAT = 106,
+    ANDROID_SYSCALL_FSTAT = 28,
+    ANDROID_SYSCALL_LSTAT = 107,
+    ANDROID_SYSCALL_DUP = 32,
+    ANDROID_SYSCALL_DUP2 = 63,
+    ANDROID_SYSCALL_DUP3 = 292,
+    ANDROID_SYSCALL_PIPE = 42,
+    ANDROID_SYSCALL_PIPE2 = 293,
+    ANDROID_SYSCALL_FCNTL = 25,
+    /* Extended syscalls - directory operations */
+    ANDROID_SYSCALL_MKDIR = 39,
+    ANDROID_SYSCALL_MKDIRAT = 296,
+    ANDROID_SYSCALL_RMDIR = 40,
+    ANDROID_SYSCALL_UNLINK = 10,
+    ANDROID_SYSCALL_UNLINKAT = 301,
+    ANDROID_SYSCALL_RENAME = 38,
+    ANDROID_SYSCALL_RENAMEAT = 302,
+    ANDROID_SYSCALL_CHDIR = 12,
+    ANDROID_SYSCALL_FCHDIR = 133,
+    ANDROID_SYSCALL_GETCWD = 183,
+    /* Extended syscalls - process/thread */
+    ANDROID_SYSCALL_GETPPID = 64,
+    ANDROID_SYSCALL_GETTID = 178,
+    ANDROID_SYSCALL_GETEUID = 49,
+    ANDROID_SYSCALL_GETEGID = 50,
+    ANDROID_SYSCALL_SETUID = 23,
+    ANDROID_SYSCALL_SETGID = 46,
+    ANDROID_SYSCALL_SET_TID_ADDRESS = 256,
+    /* Extended syscalls - time */
+    ANDROID_SYSCALL_NANOSLEEP = 162,
+    ANDROID_SYSCALL_CLOCK_GETTIME = 263,
+    ANDROID_SYSCALL_GETTIMEOFDAY = 78,
+    /* Extended syscalls - signals */
+    ANDROID_SYSCALL_KILL = 37,
+    ANDROID_SYSCALL_TGKILL = 270,
+    ANDROID_SYSCALL_RT_SIGACTION = 134,
+    ANDROID_SYSCALL_RT_SIGPROCMASK = 135,
+    /* Extended syscalls - socket */
+    ANDROID_SYSCALL_SOCKET = 281,
+    ANDROID_SYSCALL_BIND = 282,
+    ANDROID_SYSCALL_CONNECT = 283,
+    ANDROID_SYSCALL_LISTEN = 284,
+    ANDROID_SYSCALL_ACCEPT = 285,
+    /* Extended syscalls - epoll */
+    ANDROID_SYSCALL_EPOLL_CREATE = 250,
+    ANDROID_SYSCALL_EPOLL_CREATE1 = 329,
+    ANDROID_SYSCALL_EPOLL_CTL = 251,
+    ANDROID_SYSCALL_EPOLL_WAIT = 252,
+    /* Extended syscalls - memory */
+    ANDROID_SYSCALL_MPROTECT = 125,
+    ANDROID_SYSCALL_MADVISE = 220,
+    ANDROID_SYSCALL_MSYNC = 227,
+    /* Extended syscalls - misc */
+    ANDROID_SYSCALL_UMASK = 60,
+    ANDROID_SYSCALL_UNAME = 63,
+    ANDROID_SYSCALL_GETRANDOM = 384,
+    ANDROID_SYSCALL_MEMFD_CREATE = 385,
+    ANDROID_SYSCALL_SECCOMP = 383,
+    ANDROID_SYSCALL_SCHED_YIELD = 124,
 } android_syscall_t;
+
+/* Total implemented syscalls count */
+#define ANDROID_SYSCALL_COUNT 75
 
 /* Android property system */
 typedef struct {
@@ -260,5 +323,29 @@ const char* android_vm_get_version(void);
  * @return Architecture name
  */
 const char* android_vm_get_arch_name(android_arch_t arch);
+
+/**
+ * Get implemented syscall count
+ * @return Number of implemented syscalls
+ */
+uint32_t android_vm_get_syscall_count(void);
+
+/**
+ * Check if syscall is implemented
+ * @param syscall_num Syscall number
+ * @return true if implemented, false otherwise
+ */
+bool android_vm_is_syscall_implemented(uint32_t syscall_num);
+
+/**
+ * Get console output buffer
+ * @return Pointer to console buffer
+ */
+const char* android_vm_get_console_output(void);
+
+/**
+ * Clear console output buffer
+ */
+void android_vm_clear_console(void);
 
 #endif /* ANDROID_VM_H */

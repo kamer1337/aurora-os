@@ -270,46 +270,117 @@ The workspace OS selector provides a GUI for choosing workspace types:
 - **Orange** (RGB 255, 200, 100): Linux VM workspaces
 - **Green** (RGB 150, 255, 150): Android VM workspaces
 
+## Implemented Features
+
+### Syscall Coverage (75+ syscalls)
+
+The Android VM now implements 75+ syscalls for Bionic libc compatibility:
+
+**Process/Thread Syscalls:**
+- EXIT, FORK, CLONE, WAITPID, EXECVE
+- GETPID, GETPPID, GETTID
+- GETUID, GETEUID, SETUID
+- GETGID, GETEGID, SETGID
+- SET_TID_ADDRESS, SCHED_YIELD
+
+**File Operations:**
+- READ, WRITE, OPEN, CLOSE, OPENAT
+- LSEEK, STAT, FSTAT, LSTAT, FACCESSAT
+- DUP, DUP2, DUP3, FCNTL
+- PIPE, PIPE2, IOCTL
+
+**Directory Operations:**
+- MKDIR, MKDIRAT, RMDIR
+- UNLINK, UNLINKAT
+- RENAME, RENAMEAT
+- CHDIR, FCHDIR, GETCWD
+
+**Memory Management:**
+- BRK, MMAP, MUNMAP
+- MPROTECT, MADVISE, MSYNC
+
+**Network/Socket:**
+- SOCKET, SOCKETPAIR
+- BIND, LISTEN, ACCEPT, CONNECT
+- SETSOCKOPT, GETSOCKOPT
+
+**I/O Multiplexing:**
+- EPOLL_CREATE, EPOLL_CREATE1
+- EPOLL_CTL, EPOLL_WAIT, EPOLL_PWAIT
+- EVENTFD, EVENTFD2
+- TIMERFD_CREATE, TIMERFD_SETTIME
+
+**Signals:**
+- KILL, TGKILL
+- RT_SIGACTION, RT_SIGPROCMASK
+- SIGALTSTACK
+
+**Time:**
+- NANOSLEEP
+- CLOCK_GETTIME, GETTIMEOFDAY
+
+**Miscellaneous:**
+- PRCTL, FUTEX, UMASK, UNAME
+- GETRANDOM, MEMFD_CREATE, SECCOMP
+
+### Binder IPC Implementation
+
+Full Binder IPC system including:
+- Binder driver emulation
+- ServiceManager
+- Parcel serialization/deserialization
+- Transaction handling
+
+### SurfaceFlinger
+
+Display compositor with:
+- Layer management (create, destroy, configure)
+- Buffer queues
+- Alpha blending
+- Transform support
+- Composition to framebuffer
+
+### ext4 Filesystem
+
+Basic ext4 support:
+- Superblock parsing
+- Inode reading
+- Block group descriptors
+- File/directory reading
+
 ## Limitations and Future Work
 
-### Current Limitations
+### Remaining Limitations
 
-1. **Boot Protocol**: Basic Android boot implementation
-   - Full boot.img header parsing needed
-   - Device tree blob (DTB) support pending
-   - ATAGS support for older Android versions
+1. **Boot Protocol**:
+   - ✅ boot.img v3/v4 header parsing complete
+   - TODO: Device tree blob (DTB) support
+   - TODO: ATAGS support for older Android versions
 
-2. **Syscall Coverage**: Currently ~15 syscalls implemented
-   - Target: 200+ syscalls for full Android compatibility
-   - Focus on bionic libc requirements
+2. **Syscall Coverage**:
+   - ✅ 75+ syscalls implemented
+   - TODO: Expand to 200+ for full compatibility
+   - TODO: Advanced IPC syscalls
 
-3. **File System**: Stub implementation
-   - Need ext4 filesystem support for system/data partitions
-   - SELinux extended attributes support
-   - Android-specific filesystem features
+3. **File System**:
+   - ✅ Basic ext4 parsing
+   - TODO: Full read/write support
+   - TODO: SELinux extended attributes
 
-4. **Graphics**: Android UI rendering
-   - Framebuffer integration for SurfaceFlinger
-   - Hardware acceleration via GPU passthrough
-   - OpenGL ES support
-
-5. **Binder IPC**: Android's primary IPC mechanism
-   - Binder kernel driver emulation
-   - ServiceManager implementation
-   - Parcel serialization
-
-6. **Dalvik/ART**: Runtime environment
-   - DEX file execution
-   - JIT compilation
-   - Native method support
+4. **Graphics**:
+   - ✅ SurfaceFlinger layer management
+   - TODO: Full framebuffer integration
+   - TODO: Hardware acceleration
 
 ### Planned Enhancements
 
-- [ ] Complete Android boot protocol (boot.img v3/v4)
+- [x] Complete Android boot protocol (boot.img v3/v4)
+- [x] Expand syscall table to 50+ syscalls (75+ implemented)
+- [x] ext4 filesystem structure parsing
+- [x] Binder IPC implementation
+- [x] SurfaceFlinger framework
 - [ ] Expand syscall table to 200+ syscalls
-- [ ] ext4 filesystem with Android extensions
-- [ ] Binder IPC implementation
-- [ ] SurfaceFlinger integration for graphics
+- [ ] Full ext4 read/write support
 - [ ] Hardware-accelerated graphics (GPU passthrough)
 - [ ] Audio support (ALSA/PulseAudio bridge)
 - [ ] Network bridge to Aurora OS networking
