@@ -15,8 +15,9 @@
 #define RAMDISK_MAX_FILES 128
 #define RAMDISK_BLOCK_SIZE 512
 #define RAMDISK_MAX_BLOCKS 2048
+#define RAMDISK_MAX_SUBDIRS 32
 
-/* Ramdisk inode structure */
+/* Ramdisk inode structure with permissions support */
 typedef struct ramdisk_inode {
     uint32_t ino;
     file_type_t type;
@@ -24,6 +25,17 @@ typedef struct ramdisk_inode {
     uint32_t blocks;
     uint32_t block_list[32]; /* Direct blocks */
     uint8_t used;
+    /* Permission fields */
+    uint16_t mode;           /* Unix-style permission bits */
+    uint16_t uid;            /* Owner user ID */
+    uint16_t gid;            /* Owner group ID */
+    uint32_t parent_ino;     /* Parent directory inode */
+    uint32_t atime;          /* Last access time */
+    uint32_t mtime;          /* Last modification time */
+    uint32_t ctime;          /* Creation time */
+    /* Directory children (for directories only) */
+    uint32_t children[64];   /* Child inode numbers */
+    uint32_t child_count;    /* Number of children */
 } ramdisk_inode_t;
 
 /* Ramdisk superblock */

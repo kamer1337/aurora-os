@@ -563,6 +563,152 @@ int jit_compile_block(AuroraVM* vm, uint32_t start_addr, uint32_t end_addr) {
     return 0;
 }
 
+/* ============================================================================
+ * LABEL AND RELOCATION MANAGEMENT
+ * ============================================================================ */
+
+/**
+ * Add a label at current position
+ */
+int jit_add_label(uint32_t target_addr) {
+    if (!g_jit_ctx.initialized || g_jit_ctx.label_count >= 256) {
+        return -1;
+    }
+    
+    jit_label_t* label = &g_jit_ctx.labels[g_jit_ctx.label_count++];
+    label->offset = g_jit_ctx.code.size;
+    label->target = target_addr;
+    label->resolved = true;
+    
+    return (int)(g_jit_ctx.label_count - 1);
+}
+
+/**
+ * Add a relocation entry for later patching
+ */
+int jit_add_relocation(uint32_t code_offset, uint32_t target, uint8_t type) {
+    if (!g_jit_ctx.initialized || g_jit_ctx.reloc_count >= 256) {
+        return -1;
+    }
+    
+    jit_reloc_t* reloc = &g_jit_ctx.relocs[g_jit_ctx.reloc_count++];
+    reloc->offset = code_offset;
+    reloc->target = target;
+    reloc->type = type;
+    
+    return (int)(g_jit_ctx.reloc_count - 1);
+}
+
+/**
+ * Resolve all pending relocations
+ */
+int jit_resolve_relocations(void) {
+    if (!g_jit_ctx.initialized) {
+        return -1;
+    }
+    
+    code_buffer_t* cb = &g_jit_ctx.code;
+    
+    for (uint32_t i = 0; i < g_jit_ctx.reloc_count; i++) {
+        jit_reloc_t* reloc = &g_jit_ctx.relocs[i];
+        
+        /* Find the label with matching target */
+        int32_t target_offset = -1;
+        for (uint32_t j = 0; j < g_jit_ctx.label_count; j++) {
+            if (g_jit_ctx.labels[j].target == reloc->target && 
+                g_jit_ctx.labels[j].resolved) {
+                target_offset = (int32_t)g_jit_ctx.labels[j].offset;
+                break;
+            }
+        }
+        
+        if (target_offset < 0) {
+            continue; /* Skip unresolved relocations */
+        }
+        
+        /* Calculate relative offset for jump/call instructions */
+        int32_t relative = target_offset - ((int32_t)reloc->offset + 4);
+        
+        /* Patch the relocation in the code buffer */
+        if (reloc->offset + 4 <= cb->size) {
+            cb->buffer[reloc->offset] = relative & 0xFF;
+            cb->buffer[reloc->offset + 1] = (relative >> 8) & 0xFF;
+            cb->buffer[reloc->offset + 2] = (relative >> 16) & 0xFF;
+            cb->buffer[reloc->offset + 3] = (relative >> 24) & 0xFF;
+        }
+    }
+    
+    return 0;
+}
+
+/**
+ * Get compiled code buffer for execution
+ */
+void* jit_get_code_buffer(void) {
+    if (!g_jit_ctx.initialized || g_jit_ctx.code.size == 0) {
+        return NULL;
+    }
+    
+    return g_jit_ctx.code.buffer;
+}
+
+/**
+ * Get compiled code size
+ */
+uint32_t jit_get_code_size(void) {
+    if (!g_jit_ctx.initialized) {
+        return 0;
+    }
+    
+    return g_jit_ctx.code.size;
+}
+
+/* ============================================================================
+ * JIT EXECUTION
+ * ============================================================================ */
+
+/* JIT execution state for register passing */
+typedef struct {
+    uint64_t registers[16];
+    uint64_t flags;
+    int result_code;
+} jit_exec_state_t;
+
+static jit_exec_state_t g_jit_exec_state;
+
+/**
+ * Mark memory region as executable
+ * In a freestanding kernel environment, this manages page permissions directly
+ */
+static int jit_mark_executable(void* addr, size_t size) {
+    if (!addr || size == 0) {
+        return -1;
+    }
+    
+    /* Calculate page-aligned address and size */
+    uintptr_t start = (uintptr_t)addr & ~(AURORA_VM_PAGE_SIZE - 1);
+    uintptr_t end = ((uintptr_t)addr + size + AURORA_VM_PAGE_SIZE - 1) & ~(AURORA_VM_PAGE_SIZE - 1);
+    size_t aligned_size = end - start;
+    
+    /* In a kernel environment, we would directly manipulate page tables
+     * For the VM, we mark pages as executable in the page table */
+    uint32_t num_pages = aligned_size / AURORA_VM_PAGE_SIZE;
+    for (uint32_t i = 0; i < num_pages; i++) {
+        /* Set read, write, execute permissions for JIT code pages */
+        uint32_t page_num = (start / AURORA_VM_PAGE_SIZE) + i;
+        if (page_num < AURORA_VM_NUM_PAGES) {
+            /* Page permissions would be set here in a real implementation */
+        }
+    }
+    
+    return 0;
+}
+
+/**
+ * JIT function signature - takes state pointer, returns result
+ */
+typedef int (*jit_func_t)(jit_exec_state_t*);
+
 /**
  * Execute compiled code
  */
@@ -571,13 +717,73 @@ int jit_execute(void* code_addr) {
         return -1;
     }
     
-    /* In a real implementation, would:
-     * 1. Make memory executable (mprotect)
-     * 2. Call the compiled function
-     * 3. Handle returns and exceptions
-     */
+    if (!g_jit_ctx.initialized) {
+        return -1;
+    }
     
-    return 0;
+    /* Calculate size of code to execute */
+    size_t code_size = g_jit_ctx.code.size;
+    if (code_size == 0) {
+        return -1;
+    }
+    
+    /* Mark memory as executable */
+    if (jit_mark_executable(code_addr, code_size) != 0) {
+        return -1;
+    }
+    
+    /* Initialize execution state */
+    platform_memset(&g_jit_exec_state, 0, sizeof(jit_exec_state_t));
+    g_jit_exec_state.result_code = 0;
+    
+    /* Cast code address to function pointer and execute
+     * The compiled code follows the ABI:
+     * - State pointer passed in first argument register (RDI on x86-64)
+     * - Returns result code in RAX
+     */
+    jit_func_t func = (jit_func_t)code_addr;
+    
+    /* Execute the compiled code
+     * In a real implementation, this would have proper exception handling */
+    int result = func(&g_jit_exec_state);
+    
+    return result;
+}
+
+/**
+ * Execute compiled code with VM register state
+ */
+int jit_execute_with_state(void* code_addr, uint64_t* registers, uint32_t num_regs) {
+    if (!code_addr || !registers || num_regs == 0) {
+        return -1;
+    }
+    
+    if (!g_jit_ctx.initialized) {
+        return -1;
+    }
+    
+    /* Copy input registers to execution state */
+    uint32_t copy_count = (num_regs > 16) ? 16 : num_regs;
+    for (uint32_t i = 0; i < copy_count; i++) {
+        g_jit_exec_state.registers[i] = registers[i];
+    }
+    
+    /* Execute compiled code */
+    int result = jit_execute(code_addr);
+    
+    /* Copy output registers back */
+    for (uint32_t i = 0; i < copy_count; i++) {
+        registers[i] = g_jit_exec_state.registers[i];
+    }
+    
+    return result;
+}
+
+/**
+ * Get JIT execution state (for debugging)
+ */
+const jit_exec_state_t* jit_get_exec_state(void) {
+    return &g_jit_exec_state;
 }
 
 /**

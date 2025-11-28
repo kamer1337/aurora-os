@@ -22,11 +22,36 @@
 #define O_CREAT     0x0100
 #define O_APPEND    0x0200
 #define O_TRUNC     0x0400
+#define O_EXCL      0x0800
 
 /* Seek whence values */
 #define SEEK_SET    0
 #define SEEK_CUR    1
 #define SEEK_END    2
+
+/* Access permission check modes for vfs_access */
+#define F_OK        0  /* Check existence */
+#define R_OK        4  /* Check read permission */
+#define W_OK        2  /* Check write permission */
+#define X_OK        1  /* Check execute permission */
+
+/* File permission bits (Unix-style) */
+#define S_IRUSR     0x0100  /* Owner read */
+#define S_IWUSR     0x0080  /* Owner write */
+#define S_IXUSR     0x0040  /* Owner execute */
+#define S_IRGRP     0x0020  /* Group read */
+#define S_IWGRP     0x0010  /* Group write */
+#define S_IXGRP     0x0008  /* Group execute */
+#define S_IROTH     0x0004  /* Others read */
+#define S_IWOTH     0x0002  /* Others write */
+#define S_IXOTH     0x0001  /* Others execute */
+
+/* Default permissions */
+#define S_IRWXU     (S_IRUSR | S_IWUSR | S_IXUSR)
+#define S_IRWXG     (S_IRGRP | S_IWGRP | S_IXGRP)
+#define S_IRWXO     (S_IROTH | S_IWOTH | S_IXOTH)
+#define DEFAULT_FILE_MODE   (S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH)
+#define DEFAULT_DIR_MODE    (S_IRWXU | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH)
 
 /* File types */
 typedef enum {
@@ -43,13 +68,20 @@ typedef struct fs_type {
     struct fs_type* next;
 } fs_type_t;
 
-/* inode structure */
+/* inode structure with permissions */
 typedef struct inode {
     uint32_t ino;
     file_type_t type;
     uint32_t size;
     uint32_t links;
     uint32_t blocks;
+    uint16_t mode;         /* Permission bits */
+    uint16_t uid;          /* Owner user ID */
+    uint16_t gid;          /* Owner group ID */
+    uint32_t atime;        /* Last access time */
+    uint32_t mtime;        /* Last modification time */
+    uint32_t ctime;        /* Creation time */
+    uint32_t parent_ino;   /* Parent directory inode */
     void* fs_data;
 } inode_t;
 
@@ -81,6 +113,11 @@ typedef struct fs_ops {
     int (*create)(const char* path, file_type_t type);
     int (*unlink)(const char* path);
     int (*readdir)(inode_t* dir, dirent_t* entry, uint32_t index);
+    int (*mkdir)(const char* path, uint16_t mode);
+    int (*rmdir)(const char* path);
+    int (*chmod)(const char* path, uint16_t mode);
+    int (*chown)(const char* path, uint16_t uid, uint16_t gid);
+    int (*rename)(const char* oldpath, const char* newpath);
 } fs_ops_t;
 
 /* Directory entry structure */
@@ -105,13 +142,30 @@ int vfs_seek(int fd, long offset, int whence);
 
 /* Directory operations */
 int vfs_mkdir(const char* path);
+int vfs_mkdir_mode(const char* path, uint16_t mode);
 int vfs_rmdir(const char* path);
 int vfs_readdir(int fd, dirent_t* entry);
+int vfs_opendir(const char* path);
+int vfs_closedir(int dirfd);
 
 /* File/directory operations */
 int vfs_create(const char* path);
+int vfs_create_mode(const char* path, uint16_t mode);
 int vfs_unlink(const char* path);
 int vfs_stat(const char* path, inode_t* stat);
+int vfs_rename(const char* oldpath, const char* newpath);
+
+/* Permission operations */
+int vfs_chmod(const char* path, uint16_t mode);
+int vfs_chown(const char* path, uint16_t uid, uint16_t gid);
+int vfs_access(const char* path, int mode);
+
+/* Path manipulation utilities */
+int vfs_getcwd(char* buffer, size_t size);
+int vfs_chdir(const char* path);
+int vfs_basename(const char* path, char* buffer, size_t size);
+int vfs_dirname(const char* path, char* buffer, size_t size);
+int vfs_realpath(const char* path, char* resolved_path, size_t size);
 
 /* Cache management functions */
 int vfs_cache_file(const char* path);
