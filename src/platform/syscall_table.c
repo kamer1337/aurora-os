@@ -860,13 +860,22 @@ static int32_t sys_lseek_impl(void* vm, uint32_t* args) {
     
     switch (whence) {
         case 0:  /* SEEK_SET */
+            if (offset < 0) return -22;  /* EINVAL - negative offset for SEEK_SET */
             g_fds[fd].offset = (uint32_t)offset;
             break;
         case 1:  /* SEEK_CUR */
-            g_fds[fd].offset = (uint32_t)((int32_t)g_fds[fd].offset + offset);
+            {
+                int64_t new_offset = (int64_t)g_fds[fd].offset + offset;
+                if (new_offset < 0) return -22;  /* EINVAL - would result in negative position */
+                g_fds[fd].offset = (uint32_t)new_offset;
+            }
             break;
         case 2:  /* SEEK_END */
-            g_fds[fd].offset = (uint32_t)((int32_t)g_fds[fd].size + offset);
+            {
+                int64_t new_offset = (int64_t)g_fds[fd].size + offset;
+                if (new_offset < 0) return -22;  /* EINVAL - would result in negative position */
+                g_fds[fd].offset = (uint32_t)new_offset;
+            }
             break;
         default:
             return -22;  /* EINVAL */
