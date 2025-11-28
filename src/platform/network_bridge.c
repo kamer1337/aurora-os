@@ -574,3 +574,545 @@ void network_bridge_age_macs(int bridge_id) {
 const char* network_bridge_get_version(void) {
     return "1.0.0-aurora-bridge";
 }
+
+/* ============================================================================
+ * VLAN SUPPORT
+ * ============================================================================ */
+
+#define MAX_VLANS 4096
+#define VLAN_TAG_SIZE 4
+
+/* 802.1Q VLAN tag */
+typedef struct __attribute__((packed)) {
+    uint16_t tpid;      /* Tag Protocol ID (0x8100) */
+    uint16_t tci;       /* Tag Control Information (PCP, DEI, VID) */
+} vlan_tag_t;
+
+/* VLAN configuration per port */
+typedef struct {
+    bool enabled;
+    uint16_t pvid;              /* Port VLAN ID */
+    bool untagged;              /* Untagged port */
+    uint64_t vlan_bitmap[64];   /* Bitmap of allowed VLANs (4096 bits) */
+} port_vlan_config_t;
+
+static port_vlan_config_t g_port_vlan_config[MAX_BRIDGES][NET_BRIDGE_MAX_PORTS];
+
+/**
+ * Set VLAN ID bit in bitmap
+ */
+static void vlan_bitmap_set(uint64_t* bitmap, uint16_t vlan_id) {
+    if (vlan_id < MAX_VLANS) {
+        bitmap[vlan_id / 64] |= (1ULL << (vlan_id % 64));
+    }
+}
+
+/**
+ * Clear VLAN ID bit in bitmap
+ */
+static void vlan_bitmap_clear(uint64_t* bitmap, uint16_t vlan_id) {
+    if (vlan_id < MAX_VLANS) {
+        bitmap[vlan_id / 64] &= ~(1ULL << (vlan_id % 64));
+    }
+}
+
+/**
+ * Check if VLAN ID is set in bitmap
+ */
+static bool vlan_bitmap_isset(const uint64_t* bitmap, uint16_t vlan_id) {
+    if (vlan_id >= MAX_VLANS) return false;
+    return (bitmap[vlan_id / 64] & (1ULL << (vlan_id % 64))) != 0;
+}
+
+/**
+ * Enable VLAN on bridge port
+ */
+int network_bridge_enable_vlan(int bridge_id, int port_id, uint16_t pvid, bool untagged) {
+    if (bridge_id < 0 || bridge_id >= MAX_BRIDGES ||
+        port_id < 0 || port_id >= NET_BRIDGE_MAX_PORTS) {
+        return -1;
+    }
+    
+    if (!g_bridges[bridge_id].active || !g_bridges[bridge_id].ports[port_id].active) {
+        return -1;
+    }
+    
+    port_vlan_config_t* cfg = &g_port_vlan_config[bridge_id][port_id];
+    cfg->enabled = true;
+    cfg->pvid = pvid;
+    cfg->untagged = untagged;
+    
+    /* Allow the PVID by default */
+    vlan_bitmap_set(cfg->vlan_bitmap, pvid);
+    
+    return 0;
+}
+
+/**
+ * Disable VLAN on bridge port
+ */
+int network_bridge_disable_vlan(int bridge_id, int port_id) {
+    if (bridge_id < 0 || bridge_id >= MAX_BRIDGES ||
+        port_id < 0 || port_id >= NET_BRIDGE_MAX_PORTS) {
+        return -1;
+    }
+    
+    port_vlan_config_t* cfg = &g_port_vlan_config[bridge_id][port_id];
+    cfg->enabled = false;
+    
+    return 0;
+}
+
+/**
+ * Add VLAN to port
+ */
+int network_bridge_add_vlan(int bridge_id, int port_id, uint16_t vlan_id) {
+    if (bridge_id < 0 || bridge_id >= MAX_BRIDGES ||
+        port_id < 0 || port_id >= NET_BRIDGE_MAX_PORTS ||
+        vlan_id >= MAX_VLANS) {
+        return -1;
+    }
+    
+    port_vlan_config_t* cfg = &g_port_vlan_config[bridge_id][port_id];
+    if (!cfg->enabled) {
+        return -1;
+    }
+    
+    vlan_bitmap_set(cfg->vlan_bitmap, vlan_id);
+    return 0;
+}
+
+/**
+ * Remove VLAN from port
+ */
+int network_bridge_remove_vlan(int bridge_id, int port_id, uint16_t vlan_id) {
+    if (bridge_id < 0 || bridge_id >= MAX_BRIDGES ||
+        port_id < 0 || port_id >= NET_BRIDGE_MAX_PORTS ||
+        vlan_id >= MAX_VLANS) {
+        return -1;
+    }
+    
+    port_vlan_config_t* cfg = &g_port_vlan_config[bridge_id][port_id];
+    if (!cfg->enabled) {
+        return -1;
+    }
+    
+    vlan_bitmap_clear(cfg->vlan_bitmap, vlan_id);
+    return 0;
+}
+
+/**
+ * Check if VLAN is allowed on port
+ */
+bool network_bridge_is_vlan_allowed(int bridge_id, int port_id, uint16_t vlan_id) {
+    if (bridge_id < 0 || bridge_id >= MAX_BRIDGES ||
+        port_id < 0 || port_id >= NET_BRIDGE_MAX_PORTS) {
+        return false;
+    }
+    
+    port_vlan_config_t* cfg = &g_port_vlan_config[bridge_id][port_id];
+    if (!cfg->enabled) {
+        return true;  /* No VLAN filtering */
+    }
+    
+    return vlan_bitmap_isset(cfg->vlan_bitmap, vlan_id);
+}
+
+/**
+ * Get VLAN ID from packet
+ */
+uint16_t network_bridge_get_vlan_id(const uint8_t* packet, uint32_t length) {
+    if (length < sizeof(eth_header_t) + VLAN_TAG_SIZE) {
+        return 0;
+    }
+    
+    const eth_header_t* eth = (const eth_header_t*)packet;
+    
+    /* Check for VLAN tag (0x8100) */
+    if (eth->ethertype == 0x0081) {  /* Network byte order */
+        const vlan_tag_t* vlan = (const vlan_tag_t*)(packet + sizeof(eth_header_t));
+        return (vlan->tci >> 4) & 0x0FFF;  /* Extract VID */
+    }
+    
+    return 0;  /* No VLAN tag */
+}
+
+/* ============================================================================
+ * NAT SUPPORT
+ * ============================================================================ */
+
+#define NAT_TABLE_SIZE 256
+
+/* NAT entry */
+typedef struct {
+    bool active;
+    uint32_t internal_ip;
+    uint16_t internal_port;
+    uint32_t external_ip;
+    uint16_t external_port;
+    uint8_t protocol;   /* 6=TCP, 17=UDP */
+    uint32_t timeout;
+    uint64_t packets;
+    uint64_t bytes;
+} nat_entry_t;
+
+/* NAT table */
+typedef struct {
+    bool enabled;
+    uint32_t external_ip;       /* WAN IP address */
+    uint32_t internal_network;  /* LAN network */
+    uint32_t internal_mask;     /* LAN netmask */
+    nat_entry_t entries[NAT_TABLE_SIZE];
+    uint32_t entry_count;
+    uint16_t next_port;         /* Next available NAT port */
+} nat_table_t;
+
+static nat_table_t g_nat_table = {0};
+
+/**
+ * Initialize NAT
+ */
+int network_nat_init(uint32_t external_ip, uint32_t internal_network, uint32_t internal_mask) {
+    platform_memset(&g_nat_table, 0, sizeof(nat_table_t));
+    
+    g_nat_table.external_ip = external_ip;
+    g_nat_table.internal_network = internal_network;
+    g_nat_table.internal_mask = internal_mask;
+    g_nat_table.next_port = 10000;
+    g_nat_table.enabled = true;
+    
+    return 0;
+}
+
+/**
+ * Find NAT entry by internal endpoint
+ */
+static int nat_find_by_internal(uint32_t ip, uint16_t port, uint8_t protocol) {
+    for (uint32_t i = 0; i < NAT_TABLE_SIZE; i++) {
+        if (g_nat_table.entries[i].active &&
+            g_nat_table.entries[i].internal_ip == ip &&
+            g_nat_table.entries[i].internal_port == port &&
+            g_nat_table.entries[i].protocol == protocol) {
+            return (int)i;
+        }
+    }
+    return -1;
+}
+
+/**
+ * Find NAT entry by external port
+ */
+static int nat_find_by_external(uint16_t port, uint8_t protocol) {
+    for (uint32_t i = 0; i < NAT_TABLE_SIZE; i++) {
+        if (g_nat_table.entries[i].active &&
+            g_nat_table.entries[i].external_port == port &&
+            g_nat_table.entries[i].protocol == protocol) {
+            return (int)i;
+        }
+    }
+    return -1;
+}
+
+/**
+ * Create NAT entry
+ */
+static int nat_create_entry(uint32_t internal_ip, uint16_t internal_port, uint8_t protocol) {
+    /* Find free slot */
+    int idx = -1;
+    for (uint32_t i = 0; i < NAT_TABLE_SIZE; i++) {
+        if (!g_nat_table.entries[i].active) {
+            idx = (int)i;
+            break;
+        }
+    }
+    
+    if (idx < 0) {
+        return -1;  /* Table full */
+    }
+    
+    nat_entry_t* entry = &g_nat_table.entries[idx];
+    entry->active = true;
+    entry->internal_ip = internal_ip;
+    entry->internal_port = internal_port;
+    entry->external_ip = g_nat_table.external_ip;
+    entry->external_port = g_nat_table.next_port++;
+    entry->protocol = protocol;
+    entry->timeout = 300;  /* 5 minute default timeout */
+    entry->packets = 0;
+    entry->bytes = 0;
+    
+    g_nat_table.entry_count++;
+    
+    /* Wrap around port number */
+    if (g_nat_table.next_port > 65000) {
+        g_nat_table.next_port = 10000;
+    }
+    
+    return idx;
+}
+
+/**
+ * Perform outbound NAT translation
+ */
+int network_nat_translate_outbound(uint8_t* packet, uint32_t* length,
+                                    uint32_t src_ip, uint16_t src_port,
+                                    uint8_t protocol) {
+    if (!g_nat_table.enabled || !packet || !length) {
+        return -1;
+    }
+    
+    /* Check if source is from internal network */
+    if ((src_ip & g_nat_table.internal_mask) != g_nat_table.internal_network) {
+        return 0;  /* Not internal, no NAT needed */
+    }
+    
+    /* Find or create NAT entry */
+    int idx = nat_find_by_internal(src_ip, src_port, protocol);
+    if (idx < 0) {
+        idx = nat_create_entry(src_ip, src_port, protocol);
+        if (idx < 0) {
+            return -1;  /* Failed to create entry */
+        }
+    }
+    
+    nat_entry_t* entry = &g_nat_table.entries[idx];
+    entry->packets++;
+    entry->bytes += *length;
+    entry->timeout = 300;  /* Reset timeout */
+    
+    /* NAT translation would modify IP header here */
+    /* For simplicity, we just return the external port */
+    
+    return (int)entry->external_port;
+}
+
+/**
+ * Perform inbound NAT translation
+ */
+int network_nat_translate_inbound(uint8_t* packet, uint32_t* length,
+                                   uint16_t dst_port, uint8_t protocol,
+                                   uint32_t* internal_ip, uint16_t* internal_port) {
+    if (!g_nat_table.enabled || !packet || !length) {
+        return -1;
+    }
+    
+    int idx = nat_find_by_external(dst_port, protocol);
+    if (idx < 0) {
+        return -1;  /* No matching NAT entry */
+    }
+    
+    nat_entry_t* entry = &g_nat_table.entries[idx];
+    entry->packets++;
+    entry->bytes += *length;
+    entry->timeout = 300;
+    
+    if (internal_ip) *internal_ip = entry->internal_ip;
+    if (internal_port) *internal_port = entry->internal_port;
+    
+    return 0;
+}
+
+/**
+ * Age NAT entries
+ */
+void network_nat_age_entries(void) {
+    for (uint32_t i = 0; i < NAT_TABLE_SIZE; i++) {
+        if (g_nat_table.entries[i].active) {
+            if (g_nat_table.entries[i].timeout > 0) {
+                g_nat_table.entries[i].timeout--;
+            } else {
+                g_nat_table.entries[i].active = false;
+                g_nat_table.entry_count--;
+            }
+        }
+    }
+}
+
+/**
+ * Get NAT statistics
+ */
+int network_nat_get_stats(uint32_t* entry_count, uint64_t* total_packets, uint64_t* total_bytes) {
+    if (!g_nat_table.enabled) {
+        return -1;
+    }
+    
+    uint64_t packets = 0, bytes = 0;
+    
+    for (uint32_t i = 0; i < NAT_TABLE_SIZE; i++) {
+        if (g_nat_table.entries[i].active) {
+            packets += g_nat_table.entries[i].packets;
+            bytes += g_nat_table.entries[i].bytes;
+        }
+    }
+    
+    if (entry_count) *entry_count = g_nat_table.entry_count;
+    if (total_packets) *total_packets = packets;
+    if (total_bytes) *total_bytes = bytes;
+    
+    return 0;
+}
+
+/**
+ * Disable NAT
+ */
+void network_nat_shutdown(void) {
+    g_nat_table.enabled = false;
+    platform_memset(&g_nat_table, 0, sizeof(nat_table_t));
+}
+
+/* ============================================================================
+ * DHCP SERVER FOR VMs
+ * ============================================================================ */
+
+#define DHCP_POOL_SIZE 64
+
+typedef struct {
+    uint32_t ip;
+    uint8_t mac[6];
+    uint32_t lease_time;
+    bool assigned;
+} dhcp_lease_t;
+
+typedef struct {
+    bool enabled;
+    uint32_t server_ip;
+    uint32_t pool_start;
+    uint32_t pool_end;
+    uint32_t netmask;
+    uint32_t gateway;
+    uint32_t dns;
+    uint32_t lease_duration;
+    dhcp_lease_t leases[DHCP_POOL_SIZE];
+} dhcp_server_t;
+
+static dhcp_server_t g_dhcp_server = {0};
+
+/**
+ * Initialize DHCP server for VMs
+ */
+int network_dhcp_init(uint32_t server_ip, uint32_t pool_start, uint32_t pool_end,
+                       uint32_t netmask, uint32_t gateway, uint32_t dns) {
+    platform_memset(&g_dhcp_server, 0, sizeof(dhcp_server_t));
+    
+    g_dhcp_server.enabled = true;
+    g_dhcp_server.server_ip = server_ip;
+    g_dhcp_server.pool_start = pool_start;
+    g_dhcp_server.pool_end = pool_end;
+    g_dhcp_server.netmask = netmask;
+    g_dhcp_server.gateway = gateway;
+    g_dhcp_server.dns = dns;
+    g_dhcp_server.lease_duration = 86400;  /* 24 hours */
+    
+    return 0;
+}
+
+/**
+ * Find existing lease for MAC
+ */
+static dhcp_lease_t* dhcp_find_lease_by_mac(const uint8_t* mac) {
+    for (int i = 0; i < DHCP_POOL_SIZE; i++) {
+        if (g_dhcp_server.leases[i].assigned && 
+            mac_equal(g_dhcp_server.leases[i].mac, mac)) {
+            return &g_dhcp_server.leases[i];
+        }
+    }
+    return NULL;
+}
+
+/**
+ * Allocate IP from DHCP pool
+ */
+int network_dhcp_allocate(const uint8_t* mac, uint32_t* ip) {
+    if (!g_dhcp_server.enabled || !mac || !ip) {
+        return -1;
+    }
+    
+    /* Check for existing lease */
+    dhcp_lease_t* lease = dhcp_find_lease_by_mac(mac);
+    if (lease) {
+        lease->lease_time = g_dhcp_server.lease_duration;
+        *ip = lease->ip;
+        return 0;
+    }
+    
+    /* Find free IP in pool */
+    for (uint32_t addr = g_dhcp_server.pool_start; addr <= g_dhcp_server.pool_end; addr++) {
+        bool in_use = false;
+        for (int i = 0; i < DHCP_POOL_SIZE; i++) {
+            if (g_dhcp_server.leases[i].assigned && g_dhcp_server.leases[i].ip == addr) {
+                in_use = true;
+                break;
+            }
+        }
+        
+        if (!in_use) {
+            /* Find free lease slot */
+            for (int i = 0; i < DHCP_POOL_SIZE; i++) {
+                if (!g_dhcp_server.leases[i].assigned) {
+                    g_dhcp_server.leases[i].assigned = true;
+                    g_dhcp_server.leases[i].ip = addr;
+                    mac_copy(g_dhcp_server.leases[i].mac, mac);
+                    g_dhcp_server.leases[i].lease_time = g_dhcp_server.lease_duration;
+                    *ip = addr;
+                    return 0;
+                }
+            }
+        }
+    }
+    
+    return -1;  /* Pool exhausted */
+}
+
+/**
+ * Release DHCP lease
+ */
+int network_dhcp_release(const uint8_t* mac) {
+    if (!g_dhcp_server.enabled || !mac) {
+        return -1;
+    }
+    
+    dhcp_lease_t* lease = dhcp_find_lease_by_mac(mac);
+    if (lease) {
+        lease->assigned = false;
+        return 0;
+    }
+    
+    return -1;
+}
+
+/**
+ * Get DHCP configuration for VM
+ */
+int network_dhcp_get_config(uint32_t* netmask, uint32_t* gateway, uint32_t* dns) {
+    if (!g_dhcp_server.enabled) {
+        return -1;
+    }
+    
+    if (netmask) *netmask = g_dhcp_server.netmask;
+    if (gateway) *gateway = g_dhcp_server.gateway;
+    if (dns) *dns = g_dhcp_server.dns;
+    
+    return 0;
+}
+
+/**
+ * Age DHCP leases
+ */
+void network_dhcp_age_leases(void) {
+    for (int i = 0; i < DHCP_POOL_SIZE; i++) {
+        if (g_dhcp_server.leases[i].assigned) {
+            if (g_dhcp_server.leases[i].lease_time > 0) {
+                g_dhcp_server.leases[i].lease_time--;
+            } else {
+                g_dhcp_server.leases[i].assigned = false;
+            }
+        }
+    }
+}
+
+/**
+ * Shutdown DHCP server
+ */
+void network_dhcp_shutdown(void) {
+    g_dhcp_server.enabled = false;
+}
