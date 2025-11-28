@@ -60,6 +60,7 @@ typedef struct {
     DWORD attributes;
     uint8_t* buffer;      /* In-memory file buffer for ramdisk simulation */
     DWORD buffer_size;
+    int vfs_fd;           /* VFS file descriptor, -1 if not using VFS */
 } file_data_t;
 
 /* Event handle data */
@@ -130,9 +131,6 @@ static DWORD g_next_process_id = 2;
 static DWORD g_next_thread_id = 2;
 static DWORD g_process_exit_code = 0;
 
-/* System tick counter (updated by timer) */
-static volatile DWORD g_tick_count = 0;
-
 /* Environment variables storage */
 #define MAX_ENV_VARS 64
 #define MAX_ENV_NAME 128
@@ -175,14 +173,6 @@ static STARTUPINFOA g_startup_info = {0};
 /* ============================================================================
  * Internal Helper Functions
  * ============================================================================ */
-
-/* Handle to VFS file descriptor mapping */
-#define MAX_FILE_HANDLES 64
-static struct {
-    HANDLE handle;
-    int vfs_fd;
-    int in_use;
-} file_handle_table[MAX_FILE_HANDLES];
 
 /* String helper functions */
 static int k32_strlen(const char* s) {
@@ -1157,38 +1147,74 @@ HANDLE WINAPI CreateFileA(LPCSTR lpFileName, DWORD dwDesiredAccess, DWORD dwShar
     file->share_mode = dwShareMode;
     file->position = 0;
     file->attributes = dwFlagsAndAttributes & 0xFFFF;
+    file->vfs_fd = -1;
     
-    /* For ramdisk simulation, allocate buffer for new files */
+    /* Try to use VFS first */
+    int vfs_flags = 0;
+    if (dwDesiredAccess & GENERIC_READ) vfs_flags |= O_RDONLY;
+    if (dwDesiredAccess & GENERIC_WRITE) vfs_flags |= O_WRONLY;
+    if ((dwDesiredAccess & GENERIC_READ) && (dwDesiredAccess & GENERIC_WRITE)) vfs_flags = O_RDWR;
+    
     switch (dwCreationDisposition) {
         case CREATE_NEW:
         case CREATE_ALWAYS:
-        case OPEN_ALWAYS:
-            file->buffer_size = 4096;  /* Initial 4KB buffer */
-            file->buffer = (uint8_t*)kmalloc(file->buffer_size);
-            if (!file->buffer) {
-                kfree(file);
-                winapi_set_last_error(ERROR_NOT_ENOUGH_MEMORY);
-                return INVALID_HANDLE_VALUE;
-            }
-            k32_memset(file->buffer, 0, file->buffer_size);
-            file->size = 0;
+            vfs_flags |= O_CREAT;
+            if (dwCreationDisposition == CREATE_ALWAYS) vfs_flags |= O_TRUNC;
             break;
-            
-        case OPEN_EXISTING:
+        case OPEN_ALWAYS:
+            vfs_flags |= O_CREAT;
+            break;
         case TRUNCATE_EXISTING:
-            /* File not found in ramdisk - would need VFS integration */
-            kfree(file);
-            winapi_set_last_error(ERROR_FILE_NOT_FOUND);
-            return INVALID_HANDLE_VALUE;
-            
+            vfs_flags |= O_TRUNC;
+            break;
+        case OPEN_EXISTING:
         default:
-            kfree(file);
-            winapi_set_last_error(ERROR_INVALID_PARAMETER);
-            return INVALID_HANDLE_VALUE;
+            break;
+    }
+    
+    /* Try VFS open */
+    int vfs_fd = vfs_open(lpFileName, vfs_flags);
+    if (vfs_fd >= 0) {
+        file->vfs_fd = vfs_fd;
+    } else if (vfs_flags & O_CREAT) {
+        /* Try creating the file */
+        if (vfs_create(lpFileName) == 0) {
+            vfs_fd = vfs_open(lpFileName, vfs_flags & ~O_CREAT);
+            if (vfs_fd >= 0) {
+                file->vfs_fd = vfs_fd;
+            }
+        }
+    }
+    
+    /* If VFS failed, use ramdisk simulation for new files */
+    if (file->vfs_fd < 0) {
+        switch (dwCreationDisposition) {
+            case CREATE_NEW:
+            case CREATE_ALWAYS:
+            case OPEN_ALWAYS:
+                file->buffer_size = 4096;  /* Initial 4KB buffer */
+                file->buffer = (uint8_t*)kmalloc(file->buffer_size);
+                if (!file->buffer) {
+                    kfree(file);
+                    winapi_set_last_error(ERROR_NOT_ENOUGH_MEMORY);
+                    return INVALID_HANDLE_VALUE;
+                }
+                k32_memset(file->buffer, 0, file->buffer_size);
+                file->size = 0;
+                break;
+                
+            case OPEN_EXISTING:
+            case TRUNCATE_EXISTING:
+            default:
+                kfree(file);
+                winapi_set_last_error(ERROR_FILE_NOT_FOUND);
+                return INVALID_HANDLE_VALUE;
+        }
     }
     
     HANDLE hFile = alloc_handle(HANDLE_TYPE_FILE, file);
     if (hFile == INVALID_HANDLE_VALUE) {
+        if (file->vfs_fd >= 0) vfs_close(file->vfs_fd);
         if (file->buffer) kfree(file->buffer);
         kfree(file);
         winapi_set_last_error(ERROR_NOT_ENOUGH_MEMORY);
@@ -1237,17 +1263,28 @@ BOOL WINAPI ReadFile(HANDLE hFile, LPVOID lpBuffer, DWORD nNumberOfBytesToRead,
         return FALSE;
     }
     
-    /* Calculate bytes to read */
-    DWORD bytes_available = (file->position < file->size) ? (file->size - file->position) : 0;
-    DWORD bytes_to_read = (nNumberOfBytesToRead < bytes_available) ? nNumberOfBytesToRead : bytes_available;
+    DWORD bytes_read = 0;
     
-    if (bytes_to_read > 0 && file->buffer) {
-        k32_memcpy(lpBuffer, file->buffer + file->position, bytes_to_read);
-        file->position += bytes_to_read;
+    /* Use VFS if available */
+    if (file->vfs_fd >= 0) {
+        int result = vfs_read(file->vfs_fd, lpBuffer, nNumberOfBytesToRead);
+        if (result >= 0) {
+            bytes_read = (DWORD)result;
+        }
+    } else if (file->buffer) {
+        /* Read from ramdisk buffer */
+        DWORD bytes_available = (file->position < file->size) ? (file->size - file->position) : 0;
+        DWORD bytes_to_read = (nNumberOfBytesToRead < bytes_available) ? nNumberOfBytesToRead : bytes_available;
+        
+        if (bytes_to_read > 0) {
+            k32_memcpy(lpBuffer, file->buffer + file->position, bytes_to_read);
+            file->position += bytes_to_read;
+            bytes_read = bytes_to_read;
+        }
     }
     
     if (lpNumberOfBytesRead) {
-        *lpNumberOfBytesRead = bytes_to_read;
+        *lpNumberOfBytesRead = bytes_read;
     }
     
     winapi_set_last_error(ERROR_SUCCESS);
@@ -1301,35 +1338,48 @@ BOOL WINAPI WriteFile(HANDLE hFile, LPCVOID lpBuffer, DWORD nNumberOfBytesToWrit
         return FALSE;
     }
     
-    /* Expand buffer if needed */
-    DWORD new_end = file->position + nNumberOfBytesToWrite;
-    if (new_end > file->buffer_size) {
-        DWORD new_size = ((new_end + 4095) / 4096) * 4096;  /* Round up to 4KB */
-        uint8_t* new_buffer = (uint8_t*)kmalloc(new_size);
-        if (!new_buffer) {
-            winapi_set_last_error(ERROR_NOT_ENOUGH_MEMORY);
-            return FALSE;
-        }
-        if (file->buffer && file->size > 0) {
-            k32_memcpy(new_buffer, file->buffer, file->size);
-        }
-        if (file->buffer) {
-            kfree(file->buffer);
-        }
-        file->buffer = new_buffer;
-        file->buffer_size = new_size;
-    }
+    DWORD bytes_written = 0;
     
-    /* Write data */
-    k32_memcpy(file->buffer + file->position, lpBuffer, nNumberOfBytesToWrite);
-    file->position += nNumberOfBytesToWrite;
-    
-    if (file->position > file->size) {
-        file->size = file->position;
+    /* Use VFS if available */
+    if (file->vfs_fd >= 0) {
+        int result = vfs_write(file->vfs_fd, lpBuffer, nNumberOfBytesToWrite);
+        if (result >= 0) {
+            bytes_written = (DWORD)result;
+        }
+    } else {
+        /* Write to ramdisk buffer */
+        /* Expand buffer if needed */
+        DWORD new_end = file->position + nNumberOfBytesToWrite;
+        if (new_end > file->buffer_size) {
+            DWORD new_size = ((new_end + 4095) / 4096) * 4096;  /* Round up to 4KB */
+            uint8_t* new_buffer = (uint8_t*)kmalloc(new_size);
+            if (!new_buffer) {
+                winapi_set_last_error(ERROR_NOT_ENOUGH_MEMORY);
+                return FALSE;
+            }
+            if (file->buffer && file->size > 0) {
+                k32_memcpy(new_buffer, file->buffer, file->size);
+            }
+            if (file->buffer) {
+                kfree(file->buffer);
+            }
+            file->buffer = new_buffer;
+            file->buffer_size = new_size;
+        }
+        
+        /* Write data */
+        k32_memcpy(file->buffer + file->position, lpBuffer, nNumberOfBytesToWrite);
+        file->position += nNumberOfBytesToWrite;
+        
+        if (file->position > file->size) {
+            file->size = file->position;
+        }
+        
+        bytes_written = nNumberOfBytesToWrite;
     }
     
     if (lpNumberOfBytesWritten) {
-        *lpNumberOfBytesWritten = nNumberOfBytesToWrite;
+        *lpNumberOfBytesWritten = bytes_written;
     }
     
     winapi_set_last_error(ERROR_SUCCESS);
@@ -1361,9 +1411,14 @@ BOOL WINAPI CloseHandle(HANDLE hObject) {
     /* Special cleanup for file handles */
     if (entry->type == HANDLE_TYPE_FILE) {
         file_data_t* file = (file_data_t*)entry->data;
-        if (file && file->buffer) {
-            kfree(file->buffer);
-            file->buffer = NULL;
+        if (file) {
+            if (file->vfs_fd >= 0) {
+                vfs_close(file->vfs_fd);
+            }
+            if (file->buffer) {
+                kfree(file->buffer);
+                file->buffer = NULL;
+            }
         }
     }
     
@@ -1416,7 +1471,7 @@ BOOL WINAPI GetFileSizeEx(HANDLE hFile, void* lpFileSize) {
 
 DWORD WINAPI SetFilePointer(HANDLE hFile, LONG lDistanceToMove,
                             LPLONG lpDistanceToMoveHigh, DWORD dwMoveMethod) {
-    (void)lpDistanceToMoveHigh;
+    (void)lpDistanceToMoveHigh;  /* High word not supported */
     
     handle_entry_t* entry = get_handle_entry(hFile);
     if (!entry || entry->type != HANDLE_TYPE_FILE) {
@@ -1452,6 +1507,12 @@ DWORD WINAPI SetFilePointer(HANDLE hFile, LONG lDistanceToMove,
     }
     
     file->position = (DWORD)new_pos;
+    
+    /* Also update VFS position if using VFS */
+    if (file->vfs_fd >= 0) {
+        vfs_seek(file->vfs_fd, new_pos, SEEK_SET);
+    }
+    
     winapi_set_last_error(ERROR_SUCCESS);
     return file->position;
 }
@@ -1493,10 +1554,19 @@ BOOL WINAPI FlushFileBuffers(HANDLE hFile) {
 }
 
 BOOL WINAPI DeleteFileA(LPCSTR lpFileName) {
-    (void)lpFileName;
-    /* File deletion not implemented for ramdisk */
-    winapi_set_last_error(ERROR_FILE_NOT_FOUND);
-    return FALSE;
+    if (!lpFileName) {
+        winapi_set_last_error(ERROR_INVALID_PARAMETER);
+        return FALSE;
+    }
+    
+    int result = vfs_unlink(lpFileName);
+    if (result < 0) {
+        winapi_set_last_error(ERROR_FILE_NOT_FOUND);
+        return FALSE;
+    }
+    
+    winapi_set_last_error(ERROR_SUCCESS);
+    return TRUE;
 }
 
 BOOL WINAPI CopyFileA(LPCSTR lpExistingFileName, LPCSTR lpNewFileName, BOOL bFailIfExists) {
@@ -1639,16 +1709,24 @@ BOOL WINAPI UnlockFile(HANDLE hFile, DWORD dwFileOffsetLow, DWORD dwFileOffsetHi
  * ============================================================================ */
 
 BOOL WINAPI CreateDirectoryA(LPCSTR lpPathName, LPSECURITY_ATTRIBUTES lpSecurityAttributes) {
-    (void)lpPathName;
     (void)lpSecurityAttributes;
-    winapi_set_last_error(ERROR_SUCCESS);
-    return TRUE;
+    if (!lpPathName) {
+        winapi_set_last_error(ERROR_INVALID_PARAMETER);
+        return FALSE;
+    }
+    int result = vfs_mkdir(lpPathName);
+    winapi_set_last_error(result == 0 ? ERROR_SUCCESS : ERROR_PATH_NOT_FOUND);
+    return result == 0;
 }
 
 BOOL WINAPI RemoveDirectoryA(LPCSTR lpPathName) {
-    (void)lpPathName;
-    winapi_set_last_error(ERROR_SUCCESS);
-    return TRUE;
+    if (!lpPathName) {
+        winapi_set_last_error(ERROR_INVALID_PARAMETER);
+        return FALSE;
+    }
+    int result = vfs_rmdir(lpPathName);
+    winapi_set_last_error(result == 0 ? ERROR_SUCCESS : ERROR_PATH_NOT_FOUND);
+    return result == 0;
 }
 
 DWORD WINAPI GetCurrentDirectoryA(DWORD nBufferLength, LPSTR lpBuffer) {

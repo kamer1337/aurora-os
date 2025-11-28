@@ -211,8 +211,255 @@ int pe_resolve_imports(pe_image_t* image) {
         vga_write(dll_name);
         vga_write("\n");
         
+        /* Get Import Lookup Table (ILT) and Import Address Table (IAT) */
+        uint32_t* ilt = (uint32_t*)((uint8_t*)image->image_base + import_desc->ImportLookupTableRVA);
+        uint32_t* iat = (uint32_t*)((uint8_t*)image->image_base + import_desc->ImportAddressTableRVA);
+        
+        /* If ILT is not present, use IAT */
+        if (import_desc->ImportLookupTableRVA == 0) {
+            ilt = iat;
+        }
+        
+        /* Iterate through import entries */
+        while (*ilt != 0) {
+            if (*ilt & IMAGE_ORDINAL_FLAG32) {
+                /* Import by ordinal */
+                uint16_t ordinal = (uint16_t)(*ilt & 0xFFFF);
+                vga_write("  Import by ordinal: ");
+                vga_write_dec(ordinal);
+                vga_write("\n");
+                /* TODO: Look up function by ordinal from DLL */
+            } else {
+                /* Import by name */
+                pe_import_by_name_t* hint_name = (pe_import_by_name_t*)
+                    ((uint8_t*)image->image_base + (*ilt & 0x7FFFFFFF));
+                vga_write("  Import by name: ");
+                vga_write(hint_name->Name);
+                vga_write("\n");
+                /* TODO: Look up function by name from DLL */
+            }
+            
+            ilt++;
+            iat++;
+        }
+        
         import_desc++;
     }
     
     return 0;
+}
+
+/**
+ * Process base relocations for PE image
+ */
+int pe_apply_relocations(pe_image_t* image, int32_t delta) {
+    if (!image || !image->image_base || !image->data_directories) {
+        return -1;
+    }
+    
+    /* No delta means no relocations needed */
+    if (delta == 0) {
+        return 0;
+    }
+    
+    /* Get relocation directory */
+    pe_data_directory_t* reloc_dir = &image->data_directories[PE_DIRECTORY_BASERELOC];
+    if (reloc_dir->VirtualAddress == 0 || reloc_dir->Size == 0) {
+        /* No relocations - image must be loaded at preferred base */
+        vga_write("PE Loader: No base relocations available\n");
+        return -1;
+    }
+    
+    /* Process relocation blocks */
+    uint8_t* reloc_data = (uint8_t*)image->image_base + reloc_dir->VirtualAddress;
+    uint8_t* reloc_end = reloc_data + reloc_dir->Size;
+    
+    while (reloc_data < reloc_end) {
+        pe_base_reloc_block_t* block = (pe_base_reloc_block_t*)reloc_data;
+        
+        if (block->SizeOfBlock == 0) {
+            break;
+        }
+        
+        /* Get base address for this block */
+        uint8_t* page_base = (uint8_t*)image->image_base + block->VirtualAddress;
+        
+        /* Number of relocation entries in this block */
+        uint32_t num_entries = (block->SizeOfBlock - sizeof(pe_base_reloc_block_t)) / sizeof(uint16_t);
+        uint16_t* entries = (uint16_t*)(block + 1);
+        
+        /* Process each relocation entry */
+        for (uint32_t i = 0; i < num_entries; i++) {
+            uint16_t entry = entries[i];
+            uint8_t type = (entry >> 12) & 0xF;
+            uint16_t offset = entry & 0xFFF;
+            
+            switch (type) {
+                case IMAGE_REL_BASED_ABSOLUTE:
+                    /* No relocation needed (padding) */
+                    break;
+                    
+                case IMAGE_REL_BASED_HIGH:
+                    /* Add high 16 bits of delta */
+                    *(uint16_t*)(page_base + offset) += (uint16_t)(delta >> 16);
+                    break;
+                    
+                case IMAGE_REL_BASED_LOW:
+                    /* Add low 16 bits of delta */
+                    *(uint16_t*)(page_base + offset) += (uint16_t)(delta & 0xFFFF);
+                    break;
+                    
+                case IMAGE_REL_BASED_HIGHLOW:
+                    /* Add full 32-bit delta */
+                    *(uint32_t*)(page_base + offset) += delta;
+                    break;
+                    
+                case IMAGE_REL_BASED_DIR64:
+                    /* 64-bit relocation (not supported in 32-bit) */
+                    vga_write("PE Loader: Unsupported 64-bit relocation\n");
+                    break;
+                    
+                default:
+                    vga_write("PE Loader: Unknown relocation type\n");
+                    break;
+            }
+        }
+        
+        /* Move to next block */
+        reloc_data += block->SizeOfBlock;
+    }
+    
+    vga_write("PE Loader: Base relocations applied\n");
+    return 0;
+}
+
+/**
+ * Get export address from PE image by name
+ */
+void* pe_get_export_by_name(pe_image_t* image, const char* name) {
+    if (!image || !image->image_base || !image->data_directories || !name) {
+        return NULL;
+    }
+    
+    /* Get export directory */
+    pe_data_directory_t* export_dir = &image->data_directories[PE_DIRECTORY_EXPORT];
+    if (export_dir->VirtualAddress == 0 || export_dir->Size == 0) {
+        return NULL;
+    }
+    
+    pe_export_directory_t* exports = (pe_export_directory_t*)
+        ((uint8_t*)image->image_base + export_dir->VirtualAddress);
+    
+    /* Get export tables */
+    uint32_t* functions = (uint32_t*)((uint8_t*)image->image_base + exports->AddressOfFunctions);
+    uint32_t* names = (uint32_t*)((uint8_t*)image->image_base + exports->AddressOfNames);
+    uint16_t* ordinals = (uint16_t*)((uint8_t*)image->image_base + exports->AddressOfNameOrdinals);
+    
+    /* Search for the name */
+    for (uint32_t i = 0; i < exports->NumberOfNames; i++) {
+        const char* export_name = (const char*)((uint8_t*)image->image_base + names[i]);
+        
+        if (pe_strcmp(name, export_name) == 0) {
+            /* Found the export - get the function address */
+            uint16_t ordinal = ordinals[i];
+            uint32_t func_rva = functions[ordinal];
+            
+            /* Check for forwarded export */
+            if (func_rva >= export_dir->VirtualAddress &&
+                func_rva < export_dir->VirtualAddress + export_dir->Size) {
+                /* This is a forwarded export - not supported yet */
+                vga_write("PE Loader: Forwarded exports not supported\n");
+                return NULL;
+            }
+            
+            return (uint8_t*)image->image_base + func_rva;
+        }
+    }
+    
+    return NULL;
+}
+
+/**
+ * Get export address from PE image by ordinal
+ */
+void* pe_get_export_by_ordinal(pe_image_t* image, uint16_t ordinal) {
+    if (!image || !image->image_base || !image->data_directories) {
+        return NULL;
+    }
+    
+    /* Get export directory */
+    pe_data_directory_t* export_dir = &image->data_directories[PE_DIRECTORY_EXPORT];
+    if (export_dir->VirtualAddress == 0 || export_dir->Size == 0) {
+        return NULL;
+    }
+    
+    pe_export_directory_t* exports = (pe_export_directory_t*)
+        ((uint8_t*)image->image_base + export_dir->VirtualAddress);
+    
+    /* Adjust ordinal by base */
+    uint32_t index = ordinal - exports->Base;
+    
+    if (index >= exports->NumberOfFunctions) {
+        return NULL;
+    }
+    
+    /* Get function address */
+    uint32_t* functions = (uint32_t*)((uint8_t*)image->image_base + exports->AddressOfFunctions);
+    uint32_t func_rva = functions[index];
+    
+    if (func_rva == 0) {
+        return NULL;
+    }
+    
+    /* Check for forwarded export */
+    if (func_rva >= export_dir->VirtualAddress &&
+        func_rva < export_dir->VirtualAddress + export_dir->Size) {
+        vga_write("PE Loader: Forwarded exports not supported\n");
+        return NULL;
+    }
+    
+    return (uint8_t*)image->image_base + func_rva;
+}
+
+/**
+ * Get number of exports in PE image
+ */
+uint32_t pe_get_export_count(pe_image_t* image) {
+    if (!image || !image->image_base || !image->data_directories) {
+        return 0;
+    }
+    
+    pe_data_directory_t* export_dir = &image->data_directories[PE_DIRECTORY_EXPORT];
+    if (export_dir->VirtualAddress == 0 || export_dir->Size == 0) {
+        return 0;
+    }
+    
+    pe_export_directory_t* exports = (pe_export_directory_t*)
+        ((uint8_t*)image->image_base + export_dir->VirtualAddress);
+    
+    return exports->NumberOfNames;
+}
+
+/**
+ * Get export name by index
+ */
+const char* pe_get_export_name(pe_image_t* image, uint32_t index) {
+    if (!image || !image->image_base || !image->data_directories) {
+        return NULL;
+    }
+    
+    pe_data_directory_t* export_dir = &image->data_directories[PE_DIRECTORY_EXPORT];
+    if (export_dir->VirtualAddress == 0 || export_dir->Size == 0) {
+        return NULL;
+    }
+    
+    pe_export_directory_t* exports = (pe_export_directory_t*)
+        ((uint8_t*)image->image_base + export_dir->VirtualAddress);
+    
+    if (index >= exports->NumberOfNames) {
+        return NULL;
+    }
+    
+    uint32_t* names = (uint32_t*)((uint8_t*)image->image_base + exports->AddressOfNames);
+    return (const char*)((uint8_t*)image->image_base + names[index]);
 }
