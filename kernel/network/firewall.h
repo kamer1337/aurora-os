@@ -84,6 +84,7 @@ void firewall_ml_init(void);
 int firewall_ml_analyze_packet(const uint8_t* packet_data, uint32_t length);
 uint8_t firewall_ml_get_threat_level(void);
 void firewall_ml_update_model(void);
+void firewall_ml_mark_false_positive(void);
 #endif
 
 /* Statistics */

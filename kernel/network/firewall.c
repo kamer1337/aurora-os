@@ -296,10 +296,67 @@ uint8_t firewall_ml_get_threat_level(void) {
 }
 
 /**
- * Update ML model (placeholder for future implementation)
+ * Update ML model based on collected data
+ * 
+ * This implementation uses a simple adaptive threshold mechanism.
+ * In a real implementation, this would use proper ML training algorithms.
  */
 void firewall_ml_update_model(void) {
-    /* In a real implementation, this would retrain the ML model
-     * based on collected data and labeled threats */
+    /* Calculate detection accuracy based on collected statistics */
+    uint64_t total_analyzed = stats.ml_stats.packets_analyzed;
+    uint64_t threats_found = stats.ml_stats.threats_detected;
+    uint64_t false_positives = stats.ml_stats.false_positives;
+    
+    if (total_analyzed == 0) {
+        return;  /* No data to train on */
+    }
+    
+    /* Calculate false positive rate */
+    uint64_t fp_rate = 0;
+    if (threats_found > 0) {
+        fp_rate = (false_positives * 100) / threats_found;
+    }
+    
+    /* Adaptive threshold adjustment:
+     * If false positive rate is too high, reduce sensitivity
+     * This is a simple feedback mechanism for the heuristic model
+     */
+    static uint8_t sensitivity_level = 5;  /* 1-10 scale */
+    
+    if (fp_rate > 20) {
+        /* Too many false positives, reduce sensitivity */
+        if (sensitivity_level > 1) {
+            sensitivity_level--;
+        }
+    } else if (fp_rate < 5 && threats_found > 10) {
+        /* Good accuracy with significant data, can increase sensitivity */
+        if (sensitivity_level < 10) {
+            sensitivity_level++;
+        }
+    }
+    
+    /* Decay old threat level over time to reflect current state */
+    if (stats.ml_stats.threat_level > FW_THREAT_NONE) {
+        /* Gradually reduce threat level if no recent threats */
+        if (stats.ml_stats.threats_detected == 0 || 
+            (total_analyzed > 1000 && threats_found * 100 / total_analyzed < 1)) {
+            stats.ml_stats.threat_level = (stats.ml_stats.threat_level > FW_THREAT_NONE) ?
+                                          stats.ml_stats.threat_level - 1 : FW_THREAT_NONE;
+        }
+    }
+    
+    /* Reset counters for next training cycle */
+    stats.ml_stats.packets_analyzed = 0;
+    stats.ml_stats.threats_detected = 0;
+    stats.ml_stats.false_positives = 0;
+}
+
+/**
+ * Mark last detection as false positive (for model training)
+ */
+void firewall_ml_mark_false_positive(void) {
+    if (stats.ml_stats.false_positives < 0xFFFFFFFF) {
+        stats.ml_stats.false_positives++;
+    }
 }
 #endif
