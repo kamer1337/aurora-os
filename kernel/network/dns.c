@@ -704,6 +704,9 @@ int dns_reverse_lookup(uint32_t ip, char* hostname, uint32_t hostname_size) {
         return -1;
     }
     
+    /* Safe to use recv_len as uint32_t since we verified it's positive */
+    uint32_t response_len = (uint32_t)recv_len;
+    
     resolver.responses_received++;
     
     /* Parse response header */
@@ -720,9 +723,9 @@ int dns_reverse_lookup(uint32_t ip, char* hostname, uint32_t hostname_size) {
     uint32_t resp_pos = sizeof(dns_header_t);
     uint16_t qd_count = ntohs(resp_header->qd_count);
     
-    for (uint16_t i = 0; i < qd_count && resp_pos < (uint32_t)recv_len; i++) {
+    for (uint16_t i = 0; i < qd_count && resp_pos < response_len; i++) {
         /* Skip name */
-        while (resp_pos < (uint32_t)recv_len && response[resp_pos] != 0) {
+        while (resp_pos < response_len && response[resp_pos] != 0) {
             if ((response[resp_pos] & 0xC0) == 0xC0) {
                 resp_pos += 2;
                 break;
@@ -736,18 +739,18 @@ int dns_reverse_lookup(uint32_t ip, char* hostname, uint32_t hostname_size) {
     /* Parse answer section for PTR record */
     uint16_t an_count = ntohs(resp_header->an_count);
     
-    for (uint16_t i = 0; i < an_count && resp_pos < (uint32_t)recv_len; i++) {
+    for (uint16_t i = 0; i < an_count && resp_pos < response_len; i++) {
         /* Skip name (possibly compressed) */
         if ((response[resp_pos] & 0xC0) == 0xC0) {
             resp_pos += 2;
         } else {
-            while (resp_pos < (uint32_t)recv_len && response[resp_pos] != 0) {
+            while (resp_pos < response_len && response[resp_pos] != 0) {
                 resp_pos += response[resp_pos] + 1;
             }
             if (response[resp_pos] == 0) resp_pos++;
         }
         
-        if (resp_pos + sizeof(dns_rr_t) > (uint32_t)recv_len) {
+        if (resp_pos + sizeof(dns_rr_t) > response_len) {
             break;
         }
         
@@ -759,7 +762,7 @@ int dns_reverse_lookup(uint32_t ip, char* hostname, uint32_t hostname_size) {
         
         if (type == DNS_TYPE_PTR && rdlength > 0) {
             /* Found PTR record - decode the hostname */
-            int decoded = decode_hostname(response, (uint32_t)recv_len, resp_pos, hostname, hostname_size);
+            int decoded = decode_hostname(response, response_len, resp_pos, hostname, hostname_size);
             if (decoded > 0) {
                 return 0;  /* Success */
             }

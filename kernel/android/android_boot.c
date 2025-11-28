@@ -1000,18 +1000,22 @@ int android_boot_load_from_device(const char* device_name,
     
     /* Find boot partition (type 0x83 for Linux or specific Android type) */
     storage_partition_t* boot_part = NULL;
+    int use_bootable_default = (!partition_name || str_len(partition_name) == 0);
+    
     for (int i = 0; i < num_parts; i++) {
-        /* Check for bootable partition or match partition name */
-        if (partitions[i].bootable || 
-            (partition_name && str_len(partition_name) == 0)) {
+        /* If partition_name specified, we would match by name (not implemented in partition table) */
+        /* Otherwise, use bootable flag or partition type */
+        if (use_bootable_default) {
             /* Use first bootable partition */
-            boot_part = &partitions[i];
-            break;
-        }
-        /* Android boot partition typically type 0x83 or 0x0C */
-        if (partitions[i].type == 0x83 || partitions[i].type == 0x0C) {
-            boot_part = &partitions[i];
-            break;
+            if (partitions[i].bootable) {
+                boot_part = &partitions[i];
+                break;
+            }
+            /* Android boot partition typically type 0x83 (Linux) or 0x0C (FAT32) */
+            if (partitions[i].type == 0x83 || partitions[i].type == 0x0C) {
+                boot_part = &partitions[i];
+                break;
+            }
         }
     }
     

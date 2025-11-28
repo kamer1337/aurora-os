@@ -228,13 +228,15 @@ int net_config_save(void) {
     header.checksum = calculate_checksum(&global_config, sizeof(net_config_t));
     
     /* Write header */
-    if (vfs_write(fd, &header, sizeof(header)) != (int)sizeof(header)) {
+    int header_size = (int)sizeof(header);
+    if (vfs_write(fd, &header, sizeof(header)) != header_size) {
         result = -2;  /* Write header failed */
         goto cleanup;
     }
     
     /* Write configuration data */
-    if (vfs_write(fd, &global_config, sizeof(net_config_t)) != (int)sizeof(net_config_t)) {
+    int config_size = (int)sizeof(net_config_t);
+    if (vfs_write(fd, &global_config, sizeof(net_config_t)) != config_size) {
         result = -3;  /* Write data failed */
         goto cleanup;
     }

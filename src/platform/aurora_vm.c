@@ -1868,17 +1868,30 @@ void aurora_vm_jit_enable(AuroraVM *vm, bool enabled) {
     }
 }
 
-/* 
+/**
  * Generate native x86 code for a basic block of Aurora VM instructions.
- * This is a simplified JIT that generates native code for common patterns.
  * 
- * Register mapping:
- *   EAX - scratch / return value
- *   EBX - VM memory base pointer (preserved)
- *   ECX - scratch
- *   EDX - scratch
- *   ESI - VM registers base pointer (preserved)
- *   EDI - scratch
+ * This is a simplified JIT compiler that generates native x86 code for common
+ * instruction patterns including arithmetic, load immediate, and control flow.
+ * 
+ * @param vm           Pointer to the Aurora VM instance
+ * @param start_addr   Starting address of the basic block in VM memory (for debugging)
+ * @param instructions Array of decoded Aurora VM instructions to compile
+ * @param num_instr    Number of instructions in the array
+ * @param native_buf   Buffer to write generated native code into
+ * @param buf_size     Size of the native code buffer in bytes
+ * 
+ * @return Number of bytes of native code generated, or -1 on error
+ * 
+ * Register mapping for generated x86 code:
+ *   EAX - Scratch register for arithmetic operations
+ *   ESI - Base pointer to VM registers array (preserved across calls)
+ *   EDI - Scratch register for address calculation
+ *   EBX - Reserved (preserved)
+ *   ECX - Scratch
+ *   EDX - Scratch
+ * 
+ * Supported instructions: ADD, SUB, LOADI, HALT (and others fall through to interpreter)
  */
 static int jit_generate_native(AuroraVM *vm, uint32_t start_addr, uint32_t *instructions, 
                                 uint32_t num_instr, uint8_t *native_buf, uint32_t buf_size) {
@@ -1948,15 +1961,18 @@ static int jit_generate_native(AuroraVM *vm, uint32_t start_addr, uint32_t *inst
                 break;
                 
             case AURORA_OP_LOADI:
-                /* mov dword [esi + rd*4], imm */
-                native_buf[pos++] = 0xc7;
-                native_buf[pos++] = 0x44;
-                native_buf[pos++] = 0x86;
-                native_buf[pos++] = rd * 4;
-                native_buf[pos++] = imm & 0xFF;
-                native_buf[pos++] = (imm >> 8) & 0xFF;
-                native_buf[pos++] = (imm < 0) ? 0xFF : 0x00;
-                native_buf[pos++] = (imm < 0) ? 0xFF : 0x00;
+                /* mov dword [esi + rd*4], imm (sign-extended from 16 to 32 bits) */
+                {
+                    int32_t sign_ext_imm = (int32_t)imm;  /* Proper sign extension */
+                    native_buf[pos++] = 0xc7;
+                    native_buf[pos++] = 0x44;
+                    native_buf[pos++] = 0x86;
+                    native_buf[pos++] = rd * 4;
+                    native_buf[pos++] = sign_ext_imm & 0xFF;
+                    native_buf[pos++] = (sign_ext_imm >> 8) & 0xFF;
+                    native_buf[pos++] = (sign_ext_imm >> 16) & 0xFF;
+                    native_buf[pos++] = (sign_ext_imm >> 24) & 0xFF;
+                }
                 break;
                 
             case AURORA_OP_HALT:
@@ -2001,7 +2017,11 @@ int aurora_vm_jit_compile_block(AuroraVM *vm, uint32_t addr) {
     uint32_t instructions[64];
     uint32_t scan_addr = addr;
     
-    while (scan_addr < AURORA_VM_MEMORY_SIZE - 4 && instr_count < 64) {
+    /* Validate memory bounds - AURORA_VM_MEMORY_SIZE must be at least 4 */
+    if (AURORA_VM_MEMORY_SIZE < 4) return -1;
+    const uint32_t max_scan_addr = AURORA_VM_MEMORY_SIZE - 4;
+    
+    while (scan_addr <= max_scan_addr && instr_count < 64) {
         uint32_t instr = 0;
         instr |= vm->memory[scan_addr] << 24;
         instr |= vm->memory[scan_addr + 1] << 16;
