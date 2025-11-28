@@ -40,6 +40,7 @@ typedef const char* LPCSTR;
 typedef uint16_t* LPWSTR;
 typedef const uint16_t* LPCWSTR;
 typedef LONG* LPLONG;
+typedef LONG* PLONG;
 typedef DWORD* LPDWORD;
 typedef WORD* LPWORD;
 typedef int* LPBOOL;
