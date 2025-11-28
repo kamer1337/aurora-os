@@ -664,10 +664,111 @@ int dns_reverse_lookup(uint32_t ip, char* hostname, uint32_t hostname_size) {
     
     uint32_t query_len = sizeof(dns_header_t) + (uint32_t)name_len + sizeof(dns_question_t);
     
-    /* Send query and receive response (simplified - would use actual socket) */
-    /* For now, return stub result */
-    (void)query_len;
-    dns_strcpy(hostname, "unknown", hostname_size);
+    /* Send DNS query to primary DNS server */
+    uint8_t response[512];
+    int recv_len = -1;
     
+    socket_t* sock = socket_create(PROTO_UDP);
+    if (!sock) {
+        dns_strcpy(hostname, "unknown", hostname_size);
+        return -1;
+    }
+    
+    socket_bind(sock, 0);
+    if (socket_connect(sock, resolver.primary_dns, DNS_PORT) >= 0) {
+        resolver.queries_sent++;
+        if (socket_send(sock, query, query_len) >= 0) {
+            recv_len = socket_receive(sock, response, sizeof(response));
+        }
+    }
+    socket_close(sock);
+    
+    /* Try secondary DNS if primary failed */
+    if (recv_len < (int)sizeof(dns_header_t) && resolver.secondary_dns != 0) {
+        sock = socket_create(PROTO_UDP);
+        if (sock) {
+            socket_bind(sock, 0);
+            if (socket_connect(sock, resolver.secondary_dns, DNS_PORT) >= 0) {
+                resolver.queries_sent++;
+                if (socket_send(sock, query, query_len) >= 0) {
+                    recv_len = socket_receive(sock, response, sizeof(response));
+                }
+            }
+            socket_close(sock);
+        }
+    }
+    
+    if (recv_len < (int)sizeof(dns_header_t)) {
+        dns_strcpy(hostname, "unknown", hostname_size);
+        resolver.errors++;
+        return -1;
+    }
+    
+    resolver.responses_received++;
+    
+    /* Parse response header */
+    dns_header_t* resp_header = (dns_header_t*)response;
+    uint16_t flags = ntohs(resp_header->flags);
+    uint8_t rcode = flags & 0x0F;
+    
+    if (rcode != DNS_RCODE_OK) {
+        dns_strcpy(hostname, "unknown", hostname_size);
+        return -1;
+    }
+    
+    /* Skip question section */
+    uint32_t resp_pos = sizeof(dns_header_t);
+    uint16_t qd_count = ntohs(resp_header->qd_count);
+    
+    for (uint16_t i = 0; i < qd_count && resp_pos < (uint32_t)recv_len; i++) {
+        /* Skip name */
+        while (resp_pos < (uint32_t)recv_len && response[resp_pos] != 0) {
+            if ((response[resp_pos] & 0xC0) == 0xC0) {
+                resp_pos += 2;
+                break;
+            }
+            resp_pos += response[resp_pos] + 1;
+        }
+        if (response[resp_pos] == 0) resp_pos++;
+        resp_pos += 4; /* Skip QTYPE and QCLASS */
+    }
+    
+    /* Parse answer section for PTR record */
+    uint16_t an_count = ntohs(resp_header->an_count);
+    
+    for (uint16_t i = 0; i < an_count && resp_pos < (uint32_t)recv_len; i++) {
+        /* Skip name (possibly compressed) */
+        if ((response[resp_pos] & 0xC0) == 0xC0) {
+            resp_pos += 2;
+        } else {
+            while (resp_pos < (uint32_t)recv_len && response[resp_pos] != 0) {
+                resp_pos += response[resp_pos] + 1;
+            }
+            if (response[resp_pos] == 0) resp_pos++;
+        }
+        
+        if (resp_pos + sizeof(dns_rr_t) > (uint32_t)recv_len) {
+            break;
+        }
+        
+        dns_rr_t* rr = (dns_rr_t*)&response[resp_pos];
+        uint16_t type = ntohs(rr->type);
+        uint16_t rdlength = ntohs(rr->rdlength);
+        
+        resp_pos += 10; /* Skip RR header */
+        
+        if (type == DNS_TYPE_PTR && rdlength > 0) {
+            /* Found PTR record - decode the hostname */
+            int decoded = decode_hostname(response, (uint32_t)recv_len, resp_pos, hostname, hostname_size);
+            if (decoded > 0) {
+                return 0;  /* Success */
+            }
+        }
+        
+        resp_pos += rdlength;
+    }
+    
+    /* No PTR record found */
+    dns_strcpy(hostname, "unknown", hostname_size);
     return 0;
 }

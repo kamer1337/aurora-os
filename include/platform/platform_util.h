@@ -3,7 +3,10 @@
  * @brief Platform utility functions - standard library dependencies
  * 
  * Provides standard C library functions for freestanding environment
- * using kernel memory allocator and optimized implementations
+ * using kernel memory allocator and optimized implementations.
+ * 
+ * For standalone builds (tests), define AURORA_STANDALONE to use
+ * standard library malloc/free instead of kernel allocator.
  */
 
 #ifndef PLATFORM_UTIL_H
@@ -11,6 +14,28 @@
 
 #include <stdint.h>
 #include <stddef.h>
+
+#ifdef AURORA_STANDALONE
+/* Standalone build: use standard library */
+#include <stdlib.h>
+#include <string.h>
+
+/**
+ * Memory allocation using standard library
+ */
+static inline void* platform_malloc(size_t size) {
+    return malloc(size);
+}
+
+/**
+ * Memory deallocation using standard library
+ */
+static inline void platform_free(void* ptr) {
+    free(ptr);
+}
+
+#else
+/* Kernel build: use kernel allocator */
 #include "../../kernel/memory/memory.h"
 
 /**
@@ -26,6 +51,8 @@ static inline void* platform_malloc(size_t size) {
 static inline void platform_free(void* ptr) {
     kfree(ptr);
 }
+
+#endif /* AURORA_STANDALONE */
 
 /**
  * Set memory to a value

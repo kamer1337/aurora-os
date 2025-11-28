@@ -4,7 +4,33 @@
 
 #include "network_config.h"
 #include "network.h"
+#include "../../filesystem/vfs/vfs.h"
 #include <stddef.h>
+
+/* Network configuration file path */
+#define NET_CONFIG_PATH "/etc/network.conf"
+
+/* Configuration file magic number for validation */
+#define NET_CONFIG_MAGIC 0x4E455443  /* "NETC" */
+
+/* Configuration file header */
+typedef struct {
+    uint32_t magic;
+    uint32_t version;
+    uint32_t checksum;
+    uint32_t data_size;
+} net_config_header_t;
+
+/* Calculate simple checksum for validation */
+static uint32_t calculate_checksum(const void* data, size_t size) {
+    const uint8_t* bytes = (const uint8_t*)data;
+    uint32_t sum = 0;
+    for (size_t i = 0; i < size; i++) {
+        sum += bytes[i];
+        sum = (sum << 3) | (sum >> 29);  /* Rotate left by 3 */
+    }
+    return sum;
+}
 
 /* Global network configuration */
 static net_config_t global_config = {
@@ -179,19 +205,101 @@ int net_config_apply(void) {
 }
 
 /**
- * Save configuration to persistent storage
+ * Save configuration to persistent storage using VFS
  */
 int net_config_save(void) {
-    /* In real implementation, would write to file system */
-    /* For now, this is a placeholder */
-    return 0;
+    net_config_header_t header;
+    int fd;
+    int result = 0;
+    
+    /* Ensure /etc directory exists */
+    vfs_mkdir("/etc");
+    
+    /* Open file for writing, create if not exists, truncate if exists */
+    fd = vfs_open(NET_CONFIG_PATH, O_WRONLY | O_CREAT | O_TRUNC);
+    if (fd < 0) {
+        return -1;  /* Failed to open file */
+    }
+    
+    /* Prepare header */
+    header.magic = NET_CONFIG_MAGIC;
+    header.version = 1;
+    header.data_size = sizeof(net_config_t);
+    header.checksum = calculate_checksum(&global_config, sizeof(net_config_t));
+    
+    /* Write header */
+    if (vfs_write(fd, &header, sizeof(header)) != (int)sizeof(header)) {
+        result = -2;  /* Write header failed */
+        goto cleanup;
+    }
+    
+    /* Write configuration data */
+    if (vfs_write(fd, &global_config, sizeof(net_config_t)) != (int)sizeof(net_config_t)) {
+        result = -3;  /* Write data failed */
+        goto cleanup;
+    }
+    
+cleanup:
+    vfs_close(fd);
+    return result;
 }
 
 /**
- * Load configuration from persistent storage
+ * Load configuration from persistent storage using VFS
  */
 int net_config_load(void) {
-    /* In real implementation, would read from file system */
-    /* For now, this is a placeholder */
-    return 0;
+    net_config_header_t header;
+    net_config_t loaded_config;
+    int fd;
+    int result = 0;
+    
+    /* Open file for reading */
+    fd = vfs_open(NET_CONFIG_PATH, O_RDONLY);
+    if (fd < 0) {
+        /* File doesn't exist, use defaults - this is not an error */
+        return 0;
+    }
+    
+    /* Read header */
+    if (vfs_read(fd, &header, sizeof(header)) != (int)sizeof(header)) {
+        result = -1;  /* Read header failed */
+        goto cleanup;
+    }
+    
+    /* Validate magic number */
+    if (header.magic != NET_CONFIG_MAGIC) {
+        result = -2;  /* Invalid file format */
+        goto cleanup;
+    }
+    
+    /* Validate version */
+    if (header.version != 1) {
+        result = -3;  /* Unsupported version */
+        goto cleanup;
+    }
+    
+    /* Validate data size */
+    if (header.data_size != sizeof(net_config_t)) {
+        result = -4;  /* Data size mismatch */
+        goto cleanup;
+    }
+    
+    /* Read configuration data */
+    if (vfs_read(fd, &loaded_config, sizeof(net_config_t)) != (int)sizeof(net_config_t)) {
+        result = -5;  /* Read data failed */
+        goto cleanup;
+    }
+    
+    /* Validate checksum */
+    if (header.checksum != calculate_checksum(&loaded_config, sizeof(net_config_t))) {
+        result = -6;  /* Checksum mismatch */
+        goto cleanup;
+    }
+    
+    /* Copy loaded configuration to global config */
+    global_config = loaded_config;
+    
+cleanup:
+    vfs_close(fd);
+    return result;
 }
