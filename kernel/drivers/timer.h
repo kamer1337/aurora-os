@@ -25,4 +25,10 @@ uint32_t timer_get_ticks(void);
 void timer_wait(uint32_t ticks);
 void timer_sleep(uint32_t milliseconds);
 
+/* Time tracking functions */
+uint32_t timer_get_seconds(void);
+uint32_t timer_get_minutes(void);
+uint32_t timer_get_hours(void);
+void timer_get_time_string(char* buffer, uint32_t buffer_size);
+
 #endif /* AURORA_TIMER_H */

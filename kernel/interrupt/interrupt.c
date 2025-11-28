@@ -152,13 +152,21 @@ int syscall_handler(uint32_t syscall_num, uint32_t arg1, uint32_t arg2, uint32_t
             /* arg1 = fd */
             return vfs_close((int)arg1);
             
-        case SYSCALL_WAIT:
-            /* Wait for child process - not implemented */
-            return -1;
+        case SYSCALL_WAIT: {
+            /* Wait for child process */
+            /* arg1 = pid (0 = any child), arg2 = status pointer */
+            int32_t status;
+            int32_t result = process_wait(arg1, &status);
+            if (result >= 0 && arg2 != 0) {
+                *((int32_t*)arg2) = status;
+            }
+            return result;
+        }
             
         case SYSCALL_EXEC:
-            /* Execute program - not implemented */
-            return -1;
+            /* Execute program */
+            /* arg1 = path, arg2 = argv */
+            return process_exec((const char*)arg1, (char* const*)arg2);
             
         case SYSCALL_YIELD:
             /* Yield CPU */

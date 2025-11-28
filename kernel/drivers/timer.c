@@ -68,3 +68,64 @@ void timer_sleep(uint32_t milliseconds) {
     uint32_t ticks = (milliseconds * timer_frequency) / 1000;
     timer_wait(ticks);
 }
+
+/**
+ * Get seconds since boot (wrapped to 0-59)
+ */
+uint32_t timer_get_seconds(void) {
+    if (timer_frequency == 0) {
+        return 0;
+    }
+    return (timer_ticks / timer_frequency) % 60;
+}
+
+/**
+ * Get minutes since boot (wrapped to 0-59)
+ */
+uint32_t timer_get_minutes(void) {
+    if (timer_frequency == 0) {
+        return 0;
+    }
+    return (timer_ticks / (timer_frequency * 60)) % 60;
+}
+
+/**
+ * Get hours since boot (wrapped to 0-23 in 12-hour format with offset)
+ */
+uint32_t timer_get_hours(void) {
+    if (timer_frequency == 0) {
+        return 12;  /* Default to 12:00 */
+    }
+    /* Start at 12:00 and wrap at 24 hours */
+    return (12 + (timer_ticks / (timer_frequency * 3600))) % 24;
+}
+
+/**
+ * Get time as formatted string (HH:MM AM/PM)
+ */
+void timer_get_time_string(char* buffer, uint32_t buffer_size) {
+    if (!buffer || buffer_size < 9) {
+        return;
+    }
+    
+    uint32_t hours = timer_get_hours();
+    uint32_t minutes = timer_get_minutes();
+    
+    /* Convert to 12-hour format */
+    const char* period = (hours >= 12) ? "PM" : "AM";
+    uint32_t display_hours = hours % 12;
+    if (display_hours == 0) {
+        display_hours = 12;
+    }
+    
+    /* Format: "HH:MM AM" */
+    buffer[0] = '0' + (display_hours / 10);
+    buffer[1] = '0' + (display_hours % 10);
+    buffer[2] = ':';
+    buffer[3] = '0' + (minutes / 10);
+    buffer[4] = '0' + (minutes % 10);
+    buffer[5] = ' ';
+    buffer[6] = period[0];
+    buffer[7] = period[1];
+    buffer[8] = '\0';
+}
