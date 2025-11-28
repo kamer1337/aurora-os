@@ -26,6 +26,20 @@
 /* Quantum encryption block size */
 #define QCRYPTO_BLOCK_SIZE 16
 
+/* Crystal-Kyber parameters */
+#define KYBER_N 256
+#define KYBER_Q 3329
+#define KYBER_K 3
+#define KYBER_ETA1 2
+#define KYBER_ETA2 2
+
+/* SIMD acceleration flags */
+#define SIMD_NONE    0
+#define SIMD_SSE2    (1 << 0)
+#define SIMD_AVX     (1 << 1)
+#define SIMD_AVX2    (1 << 2)
+#define SIMD_AVX512  (1 << 3)
+
 /**
  * Quantum Key Structure
  * Represents a quantum-generated cryptographic key
@@ -38,6 +52,45 @@ typedef struct {
 } quantum_key_t;
 
 /**
+ * Kyber polynomial (NTT domain)
+ */
+typedef struct {
+    int16_t coeffs[KYBER_N];
+} kyber_poly_t;
+
+/**
+ * Kyber public key
+ */
+typedef struct {
+    kyber_poly_t pk_poly[KYBER_K];
+    uint8_t seed[32];
+} kyber_pubkey_t;
+
+/**
+ * Kyber secret key
+ */
+typedef struct {
+    kyber_poly_t sk_poly[KYBER_K];
+} kyber_seckey_t;
+
+/**
+ * Kyber ciphertext
+ */
+typedef struct {
+    kyber_poly_t ct_poly[KYBER_K];
+    kyber_poly_t v;
+} kyber_ciphertext_t;
+
+/**
+ * Hardware acceleration context
+ */
+typedef struct {
+    uint32_t simd_flags;
+    uint8_t hw_accel_enabled;
+    uint64_t simd_operations;
+} hw_accel_ctx_t;
+
+/**
  * Quantum Encryption Context
  * Maintains state for encryption/decryption operations
  */
@@ -45,6 +98,7 @@ typedef struct {
     quantum_key_t current_key;
     uint32_t operations_count;
     uint8_t is_initialized;
+    hw_accel_ctx_t hw_ctx;
 } quantum_crypto_ctx_t;
 
 /* Initialization and cleanup */
@@ -78,5 +132,27 @@ int quantum_verify_integrity(const uint8_t* data, size_t length, const uint8_t* 
 /* Password Hashing Functions */
 int quantum_hash_password(const char* password, uint8_t* hash_out, size_t hash_size);
 int quantum_verify_password(const char* password, const uint8_t* stored_hash, size_t hash_size);
+
+/* Hardware acceleration functions */
+int hw_accel_init(hw_accel_ctx_t* ctx);
+int hw_accel_detect_simd(void);
+void hw_accel_cleanup(hw_accel_ctx_t* ctx);
+
+/* SIMD-accelerated Crystal-Kyber operations */
+int kyber_keygen(kyber_pubkey_t* pk, kyber_seckey_t* sk);
+int kyber_encaps(const kyber_pubkey_t* pk, uint8_t* shared_secret, kyber_ciphertext_t* ct);
+int kyber_decaps(const kyber_seckey_t* sk, const kyber_ciphertext_t* ct, uint8_t* shared_secret);
+
+/* SIMD-accelerated polynomial operations */
+void poly_ntt_simd(kyber_poly_t* p, uint32_t simd_flags);
+void poly_invntt_simd(kyber_poly_t* p, uint32_t simd_flags);
+void poly_add_simd(kyber_poly_t* r, const kyber_poly_t* a, const kyber_poly_t* b, uint32_t simd_flags);
+void poly_sub_simd(kyber_poly_t* r, const kyber_poly_t* a, const kyber_poly_t* b, uint32_t simd_flags);
+void poly_mul_simd(kyber_poly_t* r, const kyber_poly_t* a, const kyber_poly_t* b, uint32_t simd_flags);
+void poly_reduce_simd(kyber_poly_t* p, uint32_t simd_flags);
+
+/* Vectorized modular arithmetic */
+int16_t barrett_reduce(int16_t a);
+int16_t montgomery_reduce(int32_t a);
 
 #endif /* AURORA_QUANTUM_CRYPTO_H */
