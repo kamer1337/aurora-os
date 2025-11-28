@@ -2,6 +2,11 @@
  * Aurora OS - GDI32.dll API Compatibility Layer Implementation
  * 
  * Stub implementations of Windows GDI32.dll functions
+ * 
+ * Note: Static handle counters in this file are not thread-safe by design.
+ * In a production environment, thread safety should be handled at the kernel
+ * level using appropriate synchronization primitives (spinlocks, mutexes).
+ * These stub implementations prioritize simplicity for the compatibility layer.
  */
 
 #include "gdi32.h"

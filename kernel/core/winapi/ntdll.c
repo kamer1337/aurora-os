@@ -2,6 +2,12 @@
  * Aurora OS - NTDLL.dll API Compatibility Layer Implementation
  * 
  * Stub implementations of Windows NTDLL.dll (Native API) functions
+ * 
+ * Note: Static handle counters and state variables in this file are not 
+ * thread-safe by design. In a production environment, thread safety should 
+ * be handled at the kernel level using appropriate synchronization primitives 
+ * (spinlocks, mutexes). These stub implementations prioritize simplicity 
+ * for the compatibility layer.
  */
 
 #include "ntdll.h"
