@@ -18,6 +18,7 @@ static uint8_t block_bitmap[RAMDISK_MAX_BLOCKS / 8];
 #define MAX_FILENAME 64
 typedef struct ramdisk_file {
     uint32_t inode_num;
+    uint32_t parent_ino;     /* Parent directory inode */
     char name[MAX_FILENAME];
     uint8_t used;
 } ramdisk_file_t;
@@ -33,6 +34,11 @@ static int ramdisk_unlink(const char* path);
 static int ramdisk_read(inode_t* inode, void* buffer, size_t size, uint32_t offset);
 static int ramdisk_write(inode_t* inode, const void* buffer, size_t size, uint32_t offset);
 static int ramdisk_readdir(inode_t* dir, dirent_t* entry, uint32_t index);
+static int ramdisk_mkdir(const char* path, uint16_t mode);
+static int ramdisk_rmdir(const char* path);
+static int ramdisk_chmod(const char* path, uint16_t mode);
+static int ramdisk_chown(const char* path, uint16_t uid, uint16_t gid);
+static int ramdisk_rename(const char* oldpath, const char* newpath);
 
 /* File operations */
 static file_ops_t ramdisk_file_ops = {
@@ -42,14 +48,19 @@ static file_ops_t ramdisk_file_ops = {
     .write = ramdisk_write
 };
 
-/* File system operations */
+/* File system operations with extended support */
 static fs_ops_t ramdisk_ops = {
     .mount = ramdisk_mount,
     .unmount = ramdisk_unmount,
     .lookup = ramdisk_lookup,
     .create = ramdisk_create_file,
     .unlink = ramdisk_unlink,
-    .readdir = ramdisk_readdir
+    .readdir = ramdisk_readdir,
+    .mkdir = ramdisk_mkdir,
+    .rmdir = ramdisk_rmdir,
+    .chmod = ramdisk_chmod,
+    .chown = ramdisk_chown,
+    .rename = ramdisk_rename
 };
 
 /**
@@ -94,15 +105,26 @@ void ramdisk_init(void) {
     superblock.total_inodes = RAMDISK_MAX_FILES;
     superblock.free_inodes = RAMDISK_MAX_FILES;
     
-    /* Initialize inodes */
+    /* Initialize inodes with permission fields */
     for (int i = 0; i < RAMDISK_MAX_FILES; i++) {
         inodes[i].used = 0;
         inodes[i].ino = i;
         inodes[i].type = FILE_TYPE_REGULAR;
         inodes[i].size = 0;
         inodes[i].blocks = 0;
+        inodes[i].mode = DEFAULT_FILE_MODE;
+        inodes[i].uid = 0;
+        inodes[i].gid = 0;
+        inodes[i].parent_ino = 0;
+        inodes[i].atime = 0;
+        inodes[i].mtime = 0;
+        inodes[i].ctime = 0;
+        inodes[i].child_count = 0;
         for (int j = 0; j < 32; j++) {
             inodes[i].block_list[j] = 0;
+        }
+        for (int j = 0; j < 64; j++) {
+            inodes[i].children[j] = 0;
         }
     }
     
@@ -115,6 +137,7 @@ void ramdisk_init(void) {
     for (int i = 0; i < RAMDISK_MAX_FILES; i++) {
         file_table[i].used = 0;
         file_table[i].inode_num = 0;
+        file_table[i].parent_ino = 0;
         for (int j = 0; j < MAX_FILENAME; j++) {
             file_table[i].name[j] = 0;
         }
@@ -252,6 +275,11 @@ static int ramdisk_mount(const char* device) {
         inodes[0].type = FILE_TYPE_DIRECTORY;
         inodes[0].size = 0;
         inodes[0].blocks = 0;
+        inodes[0].mode = DEFAULT_DIR_MODE;
+        inodes[0].uid = 0;
+        inodes[0].gid = 0;
+        inodes[0].parent_ino = 0; /* Root's parent is itself */
+        inodes[0].child_count = 0;
         superblock.free_inodes--;
     }
     
@@ -279,16 +307,79 @@ static inode_t* ramdisk_lookup(const char* path) {
         return NULL;
     }
     
-    /* Convert ramdisk inode to generic inode */
+    /* Convert ramdisk inode to generic inode with all fields */
     static inode_t inode;
     inode.ino = rd_inode->ino;
     inode.type = rd_inode->type;
     inode.size = rd_inode->size;
     inode.links = 1;
     inode.blocks = rd_inode->blocks;
+    inode.mode = rd_inode->mode;
+    inode.uid = rd_inode->uid;
+    inode.gid = rd_inode->gid;
+    inode.atime = rd_inode->atime;
+    inode.mtime = rd_inode->mtime;
+    inode.ctime = rd_inode->ctime;
+    inode.parent_ino = rd_inode->parent_ino;
     inode.fs_data = rd_inode;
     
     return &inode;
+}
+
+/**
+ * Helper: Find parent directory for a path
+ */
+static ramdisk_inode_t* find_parent_directory(const char* path, char* child_name, size_t child_name_size) {
+    if (!path || !child_name || child_name_size == 0) {
+        return NULL;
+    }
+    
+    /* Skip leading slash */
+    if (path[0] == '/') {
+        path++;
+    }
+    
+    /* Find last slash to separate parent from child */
+    size_t len = 0;
+    size_t last_slash = 0;
+    int has_slash = 0;
+    
+    while (path[len]) {
+        if (path[len] == '/') {
+            last_slash = len;
+            has_slash = 1;
+        }
+        len++;
+    }
+    
+    if (!has_slash) {
+        /* No subdirectory, parent is root */
+        size_t i = 0;
+        while (path[i] && i < child_name_size - 1) {
+            child_name[i] = path[i];
+            i++;
+        }
+        child_name[i] = '\0';
+        return &inodes[0]; /* Root directory */
+    }
+    
+    /* Extract child name */
+    size_t child_start = last_slash + 1;
+    size_t j = 0;
+    while (path[child_start + j] && j < child_name_size - 1) {
+        child_name[j] = path[child_start + j];
+        j++;
+    }
+    child_name[j] = '\0';
+    
+    /* Look up parent directory path */
+    char parent_path[MAX_FILENAME];
+    for (size_t i = 0; i < last_slash && i < MAX_FILENAME - 1; i++) {
+        parent_path[i] = path[i];
+    }
+    parent_path[last_slash] = '\0';
+    
+    return find_inode_by_path(parent_path);
 }
 
 /**
@@ -309,16 +400,28 @@ static int ramdisk_create_file(const char* path, file_type_t type) {
         return -1; /* File exists */
     }
     
+    /* Find parent directory */
+    char child_name[MAX_FILENAME];
+    ramdisk_inode_t* parent = find_parent_directory(path, child_name, MAX_FILENAME);
+    if (!parent || parent->type != FILE_TYPE_DIRECTORY) {
+        return -1; /* Parent doesn't exist or is not a directory */
+    }
+    
     /* Allocate new inode */
     ramdisk_inode_t* inode = alloc_inode();
     if (!inode) {
         return -1; /* No free inodes */
     }
     
-    /* Initialize inode */
+    /* Initialize inode with permissions */
     inode->type = type;
     inode->size = 0;
     inode->blocks = 0;
+    inode->mode = (type == FILE_TYPE_DIRECTORY) ? DEFAULT_DIR_MODE : DEFAULT_FILE_MODE;
+    inode->uid = 0;
+    inode->gid = 0;
+    inode->parent_ino = parent->ino;
+    inode->child_count = 0;
     
     /* Find free file table entry */
     int file_idx = -1;
@@ -334,10 +437,16 @@ static int ramdisk_create_file(const char* path, file_type_t type) {
         return -1;
     }
     
-    /* Store file name */
+    /* Store file name and parent reference */
     file_table[file_idx].used = 1;
     file_table[file_idx].inode_num = inode->ino;
+    file_table[file_idx].parent_ino = parent->ino;
     str_copy(file_table[file_idx].name, path, MAX_FILENAME);
+    
+    /* Add to parent's children list */
+    if (parent->child_count < 64) {
+        parent->children[parent->child_count++] = inode->ino;
+    }
     
     return 0;
 }
@@ -358,6 +467,26 @@ static int ramdisk_unlink(const char* path) {
     ramdisk_inode_t* inode = find_inode_by_path(path);
     if (!inode) {
         return -1; /* File not found */
+    }
+    
+    /* Don't allow unlinking directories - use rmdir */
+    if (inode->type == FILE_TYPE_DIRECTORY) {
+        return -1;
+    }
+    
+    /* Remove from parent's children list */
+    ramdisk_inode_t* parent = &inodes[inode->parent_ino];
+    if (parent->used) {
+        for (uint32_t i = 0; i < parent->child_count; i++) {
+            if (parent->children[i] == inode->ino) {
+                /* Shift remaining children */
+                for (uint32_t j = i; j < parent->child_count - 1; j++) {
+                    parent->children[j] = parent->children[j + 1];
+                }
+                parent->child_count--;
+                break;
+            }
+        }
     }
     
     /* Remove from file table */
@@ -529,6 +658,240 @@ static int ramdisk_readdir(inode_t* dir, dirent_t* entry, uint32_t index) {
         return -1;
     }
     
-    /* For non-root directories, we don't support subdirectories yet */
+    /* For non-root directories, use the children list */
+    ramdisk_inode_t* rd_dir = (ramdisk_inode_t*)dir->fs_data;
+    if (!rd_dir || rd_dir->type != FILE_TYPE_DIRECTORY) {
+        return -1;
+    }
+    
+    if (index >= rd_dir->child_count) {
+        return -1; /* Index out of range */
+    }
+    
+    uint32_t child_ino = rd_dir->children[index];
+    if (child_ino >= RAMDISK_MAX_FILES || !inodes[child_ino].used) {
+        return -1;
+    }
+    
+    /* Find file table entry for this inode */
+    for (uint32_t i = 0; i < RAMDISK_MAX_FILES; i++) {
+        if (file_table[i].used && file_table[i].inode_num == child_ino) {
+            entry->ino = child_ino;
+            entry->type = inodes[child_ino].type;
+            
+            /* Extract just the filename (last component of path) */
+            const char* full_path = file_table[i].name;
+            const char* last_slash = NULL;
+            const char* p = full_path;
+            while (*p) {
+                if (*p == '/') last_slash = p;
+                p++;
+            }
+            
+            const char* filename = last_slash ? last_slash + 1 : full_path;
+            int j = 0;
+            while (filename[j] && j < MAX_FILENAME_LENGTH - 1) {
+                entry->name[j] = filename[j];
+                j++;
+            }
+            entry->name[j] = '\0';
+            
+            return 0;
+        }
+    }
+    
+    return -1;
+}
+
+/**
+ * Create directory with permissions
+ */
+static int ramdisk_mkdir(const char* path, uint16_t mode) {
+    if (!path) {
+        return -1;
+    }
+    
+    /* Create directory using create_file */
+    int result = ramdisk_create_file(path, FILE_TYPE_DIRECTORY);
+    if (result != 0) {
+        return result;
+    }
+    
+    /* Update mode if different from default */
+    if (mode != DEFAULT_DIR_MODE) {
+        return ramdisk_chmod(path, mode);
+    }
+    
+    return 0;
+}
+
+/**
+ * Remove directory
+ */
+static int ramdisk_rmdir(const char* path) {
+    if (!path) {
+        return -1;
+    }
+    
+    /* Skip leading slash */
+    if (path[0] == '/') {
+        path++;
+    }
+    
+    /* Can't remove root directory */
+    if (path[0] == '\0') {
+        return -1;
+    }
+    
+    ramdisk_inode_t* inode = find_inode_by_path(path);
+    if (!inode) {
+        return -1; /* Directory not found */
+    }
+    
+    /* Verify it's a directory */
+    if (inode->type != FILE_TYPE_DIRECTORY) {
+        return -1;
+    }
+    
+    /* Check if directory is empty */
+    if (inode->child_count > 0) {
+        return -1; /* Directory not empty */
+    }
+    
+    /* Remove from parent's children list */
+    ramdisk_inode_t* parent = &inodes[inode->parent_ino];
+    if (parent->used) {
+        for (uint32_t i = 0; i < parent->child_count; i++) {
+            if (parent->children[i] == inode->ino) {
+                /* Shift remaining children */
+                for (uint32_t j = i; j < parent->child_count - 1; j++) {
+                    parent->children[j] = parent->children[j + 1];
+                }
+                parent->child_count--;
+                break;
+            }
+        }
+    }
+    
+    /* Remove from file table */
+    for (int i = 0; i < RAMDISK_MAX_FILES; i++) {
+        if (file_table[i].used && str_equal(file_table[i].name, path)) {
+            file_table[i].used = 0;
+            break;
+        }
+    }
+    
+    /* Free inode */
+    free_inode(inode);
+    
+    return 0;
+}
+
+/**
+ * Change file permissions
+ */
+static int ramdisk_chmod(const char* path, uint16_t mode) {
+    if (!path) {
+        return -1;
+    }
+    
+    /* Skip leading slash */
+    if (path[0] == '/') {
+        path++;
+    }
+    
+    ramdisk_inode_t* inode = find_inode_by_path(path);
+    if (!inode) {
+        return -1;
+    }
+    
+    inode->mode = mode;
+    return 0;
+}
+
+/**
+ * Change file ownership
+ */
+static int ramdisk_chown(const char* path, uint16_t uid, uint16_t gid) {
+    if (!path) {
+        return -1;
+    }
+    
+    /* Skip leading slash */
+    if (path[0] == '/') {
+        path++;
+    }
+    
+    ramdisk_inode_t* inode = find_inode_by_path(path);
+    if (!inode) {
+        return -1;
+    }
+    
+    inode->uid = uid;
+    inode->gid = gid;
+    return 0;
+}
+
+/**
+ * Rename file or directory
+ */
+static int ramdisk_rename(const char* oldpath, const char* newpath) {
+    if (!oldpath || !newpath) {
+        return -1;
+    }
+    
+    /* Skip leading slashes */
+    if (oldpath[0] == '/') {
+        oldpath++;
+    }
+    if (newpath[0] == '/') {
+        newpath++;
+    }
+    
+    /* Check that old path exists */
+    ramdisk_inode_t* inode = find_inode_by_path(oldpath);
+    if (!inode) {
+        return -1;
+    }
+    
+    /* Check that new path doesn't exist */
+    if (find_inode_by_path(newpath)) {
+        return -1;
+    }
+    
+    /* Update file table entry with new name */
+    for (int i = 0; i < RAMDISK_MAX_FILES; i++) {
+        if (file_table[i].used && str_equal(file_table[i].name, oldpath)) {
+            str_copy(file_table[i].name, newpath, MAX_FILENAME);
+            
+            /* Update parent if necessary */
+            char child_name[MAX_FILENAME];
+            ramdisk_inode_t* new_parent = find_parent_directory(newpath, child_name, MAX_FILENAME);
+            if (new_parent && new_parent->ino != inode->parent_ino) {
+                /* Remove from old parent */
+                ramdisk_inode_t* old_parent = &inodes[inode->parent_ino];
+                for (uint32_t j = 0; j < old_parent->child_count; j++) {
+                    if (old_parent->children[j] == inode->ino) {
+                        for (uint32_t k = j; k < old_parent->child_count - 1; k++) {
+                            old_parent->children[k] = old_parent->children[k + 1];
+                        }
+                        old_parent->child_count--;
+                        break;
+                    }
+                }
+                
+                /* Add to new parent */
+                if (new_parent->child_count < 64) {
+                    new_parent->children[new_parent->child_count++] = inode->ino;
+                }
+                
+                inode->parent_ino = new_parent->ino;
+                file_table[i].parent_ino = new_parent->ino;
+            }
+            
+            return 0;
+        }
+    }
+    
     return -1;
 }
