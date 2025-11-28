@@ -122,6 +122,73 @@ static dll_info_t* dll_find_by_name(const char* name) {
 }
 
 /**
+ * Verify DLL handle is valid
+ */
+static dll_info_t* dll_validate_handle(HMODULE module) {
+    if (!module) return NULL;
+    
+    dll_info_t* dll_info = (dll_info_t*)module;
+    
+    for (int i = 0; i < MAX_LOADED_DLLS; i++) {
+        if (&dll_table[i] == dll_info && dll_info->handle != NULL) {
+            return dll_info;
+        }
+    }
+    return NULL;
+}
+
+/**
+ * Register a built-in DLL with exports
+ */
+HMODULE dll_register_builtin(const char* dll_name, dll_export_t* exports, uint32_t count) {
+    if (!dll_name) {
+        return NULL;
+    }
+    
+    if (!dll_table_initialized) {
+        dll_loader_init();
+    }
+    
+    /* Check if DLL is already registered */
+    dll_info_t* existing = dll_find_by_name(dll_name);
+    if (existing) {
+        /* Update exports if provided */
+        if (exports && count > 0) {
+            existing->exports = exports;
+            existing->export_count = count;
+        }
+        existing->ref_count++;
+        return existing->handle;
+    }
+    
+    /* Find free slot */
+    dll_info_t* dll_info = dll_find_free_slot();
+    if (!dll_info) {
+        vga_write("DLL Loader: No free slots for ");
+        vga_write(dll_name);
+        vga_write("\n");
+        return NULL;
+    }
+    
+    /* Initialize built-in DLL entry */
+    dll_memset(dll_info, 0, sizeof(dll_info_t));
+    dll_strcpy(dll_info->name, dll_name);
+    dll_info->handle = (HMODULE)dll_info;
+    dll_info->ref_count = 1;
+    dll_info->is_builtin = 1;
+    dll_info->exports = exports;
+    dll_info->export_count = count;
+    
+    vga_write("DLL Loader: Registered built-in DLL ");
+    vga_write(dll_name);
+    vga_write(" with ");
+    vga_write_dec((int)count);
+    vga_write(" exports\n");
+    
+    return dll_info->handle;
+}
+
+/**
  * Try to load PE file from VFS
  * Returns pointer to file data or NULL
  */
@@ -545,22 +612,22 @@ void* dll_get_proc_address(HMODULE module, const char* proc_name) {
         return NULL;
     }
     
-    dll_info_t* dll_info = (dll_info_t*)module;
-    
-    /* Verify this is a valid DLL handle */
-    int valid = 0;
-    for (int i = 0; i < MAX_LOADED_DLLS; i++) {
-        if (&dll_table[i] == dll_info && dll_info->handle != NULL) {
-            valid = 1;
-            break;
-        }
-    }
-    
-    if (!valid) {
+    dll_info_t* dll_info = dll_validate_handle(module);
+    if (!dll_info) {
         return NULL;
     }
     
-    /* If PE image is loaded, search export table */
+    /* Check built-in exports first */
+    if (dll_info->is_builtin && dll_info->exports) {
+        for (uint32_t i = 0; i < dll_info->export_count; i++) {
+            if (dll_info->exports[i].name && 
+                dll_strcmp(dll_info->exports[i].name, proc_name) == 0) {
+                return dll_info->exports[i].address;
+            }
+        }
+    }
+    
+    /* Check PE exports if image is loaded */
     if (dll_info->image.image_base) {
         void* addr = dll_get_export_address(&dll_info->image, proc_name);
         if (addr) {
@@ -568,9 +635,38 @@ void* dll_get_proc_address(HMODULE module, const char* proc_name) {
         }
     }
     
-    /* Log lookup for debugging */
-    vga_write("DLL Loader: Looking up ");
+    vga_write("DLL Loader: Function not found: ");
     vga_write(proc_name);
+    vga_write(" in ");
+    vga_write(dll_info->name);
+    vga_write("\n");
+    
+    return NULL;
+}
+
+/**
+ * Get procedure address from DLL by ordinal
+ */
+void* dll_get_proc_address_ordinal(HMODULE module, uint16_t ordinal) {
+    if (!module) {
+        return NULL;
+    }
+    
+    dll_info_t* dll_info = dll_validate_handle(module);
+    if (!dll_info) {
+        return NULL;
+    }
+    
+    /* Check PE exports if image is loaded */
+    if (dll_info->image.image_base) {
+        void* addr = pe_get_export_by_ordinal(&dll_info->image, ordinal);
+        if (addr) {
+            return addr;
+        }
+    }
+    
+    vga_write("DLL Loader: Ordinal not found: ");
+    vga_write_dec(ordinal);
     vga_write(" in ");
     vga_write(dll_info->name);
     vga_write("\n");
@@ -626,18 +722,8 @@ int dll_free(HMODULE module) {
         return -1;
     }
     
-    dll_info_t* dll_info = (dll_info_t*)module;
-    
-    /* Verify this is a valid DLL handle */
-    int valid = 0;
-    for (int i = 0; i < MAX_LOADED_DLLS; i++) {
-        if (&dll_table[i] == dll_info && dll_info->handle != NULL) {
-            valid = 1;
-            break;
-        }
-    }
-    
-    if (!valid) {
+    dll_info_t* dll_info = dll_validate_handle(module);
+    if (!dll_info) {
         return -1;
     }
     

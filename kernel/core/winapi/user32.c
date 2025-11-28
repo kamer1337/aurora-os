@@ -683,15 +683,6 @@ BOOL WINAPI ValidateRect(HWND hWnd, const RECT* lpRect) {
  * Drawing Functions
  * ============================================================================ */
 
-BOOL WINAPI FillRect(HDC hDC, const RECT* lprc, HANDLE hbr) {
-    (void)hDC;
-    (void)lprc;
-    (void)hbr;
-    /* Would fill rectangle with brush color */
-    winapi_set_last_error(ERROR_SUCCESS);
-    return TRUE;
-}
-
 BOOL WINAPI DrawTextA(HDC hDC, LPCSTR lpString, int nCount, LPRECT lpRect, UINT uFormat) {
     (void)hDC;
     (void)lpString;
@@ -701,24 +692,6 @@ BOOL WINAPI DrawTextA(HDC hDC, LPCSTR lpString, int nCount, LPRECT lpRect, UINT 
     /* Would draw text to DC */
     winapi_set_last_error(ERROR_SUCCESS);
     return TRUE;
-}
-
-int WINAPI SetBkMode(HDC hdc, int mode) {
-    (void)hdc;
-    (void)mode;
-    return 1;  /* Previous mode (OPAQUE) */
-}
-
-DWORD WINAPI SetBkColor(HDC hdc, DWORD crColor) {
-    (void)hdc;
-    (void)crColor;
-    return 0;  /* Previous color */
-}
-
-DWORD WINAPI SetTextColor(HDC hdc, DWORD crColor) {
-    (void)hdc;
-    (void)crColor;
-    return 0;  /* Previous color */
 }
 
 /* ============================================================================
