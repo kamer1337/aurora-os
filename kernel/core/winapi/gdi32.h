@@ -163,4 +163,208 @@ int WINAPI FrameRect(HDC hDC, const RECT* lprc, HBRUSH hbr);
 BOOL WINAPI PatBlt(HDC hdc, int nXLeft, int nYLeft, int nWidth, int nHeight, DWORD dwRop);
 int WINAPI GetDeviceCaps(HDC hdc, int nIndex);
 
+/* Additional DC functions */
+HDC WINAPI CreateCompatibleDC(HDC hdc);
+BOOL WINAPI DeleteDC(HDC hdc);
+HBITMAP WINAPI CreateCompatibleBitmap(HDC hdc, int nWidth, int nHeight);
+HBITMAP WINAPI CreateBitmap(int nWidth, int nHeight, UINT cPlanes, UINT cBitsPerPel, const void* lpvBits);
+HBITMAP WINAPI CreateDIBSection(HDC hdc, const void* lpbmi, UINT iUsage, void** ppvBits, HANDLE hSection, DWORD dwOffset);
+int WINAPI GetObjectA(HGDIOBJ hgdiobj, int cbBuffer, LPVOID lpvObject);
+int WINAPI GetDIBits(HDC hdc, HBITMAP hbmp, UINT uStartScan, UINT cScanLines, LPVOID lpvBits, void* lpbi, UINT uUsage);
+int WINAPI SetDIBits(HDC hdc, HBITMAP hbmp, UINT uStartScan, UINT cScanLines, const void* lpvBits, const void* lpbmi, UINT fuColorUse);
+
+/* Extended Blt functions */
+BOOL WINAPI StretchBlt(HDC hdcDest, int nXOriginDest, int nYOriginDest, int nWidthDest, int nHeightDest,
+                       HDC hdcSrc, int nXOriginSrc, int nYOriginSrc, int nWidthSrc, int nHeightSrc, DWORD dwRop);
+int WINAPI SetStretchBltMode(HDC hdc, int iStretchMode);
+
+/* Text drawing - Note: DrawTextA is declared in user32.h */
+BOOL WINAPI TextOutW(HDC hdc, int nXStart, int nYStart, LPCWSTR lpString, int cchString);
+BOOL WINAPI GetTextExtentPoint32W(HDC hdc, LPCWSTR lpString, int c, LPSIZE lpSize);
+
+/* Region functions */
+HRGN WINAPI CreateRectRgn(int nLeftRect, int nTopRect, int nRightRect, int nBottomRect);
+HRGN WINAPI CreateEllipticRgn(int nLeftRect, int nTopRect, int nRightRect, int nBottomRect);
+int WINAPI CombineRgn(HRGN hrgnDest, HRGN hrgnSrc1, HRGN hrgnSrc2, int fnCombineMode);
+BOOL WINAPI PtInRegion(HRGN hrgn, int X, int Y);
+int WINAPI SelectClipRgn(HDC hdc, HRGN hrgn);
+int WINAPI GetClipRgn(HDC hdc, HRGN hrgn);
+
+/* Brush functions */
+HBRUSH WINAPI CreatePatternBrush(HBITMAP hbmp);
+HBRUSH WINAPI CreateHatchBrush(int fnStyle, COLORREF clrref);
+
+/* Path functions */
+BOOL WINAPI BeginPath(HDC hdc);
+BOOL WINAPI EndPath(HDC hdc);
+BOOL WINAPI StrokePath(HDC hdc);
+BOOL WINAPI FillPath(HDC hdc);
+BOOL WINAPI StrokeAndFillPath(HDC hdc);
+
+/* Arc and curve functions */
+BOOL WINAPI Arc(HDC hdc, int nLeftRect, int nTopRect, int nRightRect, int nBottomRect,
+                int nXStartArc, int nYStartArc, int nXEndArc, int nYEndArc);
+BOOL WINAPI Pie(HDC hdc, int nLeftRect, int nTopRect, int nRightRect, int nBottomRect,
+                int nXRadial1, int nYRadial1, int nXRadial2, int nYRadial2);
+BOOL WINAPI Chord(HDC hdc, int nLeftRect, int nTopRect, int nRightRect, int nBottomRect,
+                  int nXRadial1, int nYRadial1, int nXRadial2, int nYRadial2);
+BOOL WINAPI PolyBezier(HDC hdc, const POINT* lppt, DWORD cPoints);
+BOOL WINAPI Polygon(HDC hdc, const POINT* lpPoints, int nCount);
+BOOL WINAPI Polyline(HDC hdc, const POINT* lppt, int cPoints);
+
+/* Color and palette functions */
+HPALETTE WINAPI CreatePalette(const void* lplgpl);
+HPALETTE WINAPI SelectPalette(HDC hdc, HPALETTE hpal, BOOL bForceBackground);
+UINT WINAPI RealizePalette(HDC hdc);
+COLORREF WINAPI GetNearestColor(HDC hdc, COLORREF crColor);
+
+/* Save/restore DC state */
+int WINAPI SaveDC(HDC hdc);
+BOOL WINAPI RestoreDC(HDC hdc, int nSavedDC);
+
+/* Mapping mode functions */
+int WINAPI SetMapMode(HDC hdc, int fnMapMode);
+int WINAPI GetMapMode(HDC hdc);
+BOOL WINAPI SetWindowOrgEx(HDC hdc, int X, int Y, LPPOINT lpPoint);
+BOOL WINAPI SetViewportOrgEx(HDC hdc, int X, int Y, LPPOINT lpPoint);
+
+/* Pen functions */
+HPEN WINAPI CreatePenIndirect(const void* lplgpn);
+HPEN WINAPI ExtCreatePen(DWORD dwPenStyle, DWORD dwWidth, const void* lplb, DWORD dwStyleCount, const DWORD* lpStyle);
+
+/* GDI object functions */
+DWORD WINAPI GetObjectType(HGDIOBJ h);
+HGDIOBJ WINAPI GetCurrentObject(HDC hdc, UINT uObjectType);
+
+/* Region combination modes */
+#define RGN_AND  1
+#define RGN_OR   2
+#define RGN_XOR  3
+#define RGN_DIFF 4
+#define RGN_COPY 5
+
+/* StretchBlt modes */
+#define BLACKONWHITE 1
+#define WHITEONBLACK 2
+#define COLORONCOLOR 3
+#define HALFTONE     4
+#define STRETCH_ANDSCANS    1
+#define STRETCH_ORSCANS     2
+#define STRETCH_DELETESCANS 3
+#define STRETCH_HALFTONE    4
+
+/* GDI object types */
+#define OBJ_PEN         1
+#define OBJ_BRUSH       2
+#define OBJ_DC          3
+#define OBJ_METADC      4
+#define OBJ_PAL         5
+#define OBJ_FONT        6
+#define OBJ_BITMAP      7
+#define OBJ_REGION      8
+#define OBJ_METAFILE    9
+#define OBJ_MEMDC       10
+#define OBJ_EXTPEN      11
+#define OBJ_ENHMETADC   12
+#define OBJ_ENHMETAFILE 13
+
+/* DIB color usage */
+#define DIB_RGB_COLORS  0
+#define DIB_PAL_COLORS  1
+
+/* Draw text format flags */
+#define DT_LEFT         0x00000000
+#define DT_TOP          0x00000000
+#define DT_CENTER       0x00000001
+#define DT_RIGHT        0x00000002
+#define DT_VCENTER      0x00000004
+#define DT_BOTTOM       0x00000008
+#define DT_WORDBREAK    0x00000010
+#define DT_SINGLELINE   0x00000020
+#define DT_NOCLIP       0x00000100
+#define DT_CALCRECT     0x00000400
+#define DT_NOPREFIX     0x00000800
+
+/* Hatch styles */
+#define HS_HORIZONTAL   0
+#define HS_VERTICAL     1
+#define HS_FDIAGONAL    2
+#define HS_BDIAGONAL    3
+#define HS_CROSS        4
+#define HS_DIAGCROSS    5
+
+/* Mapping modes */
+#define MM_TEXT         1
+#define MM_LOMETRIC     2
+#define MM_HIMETRIC     3
+#define MM_LOENGLISH    4
+#define MM_HIENGLISH    5
+#define MM_TWIPS        6
+#define MM_ISOTROPIC    7
+#define MM_ANISOTROPIC  8
+
+/* Pen styles - extended */
+#define PS_ENDCAP_ROUND   0x00000000
+#define PS_ENDCAP_SQUARE  0x00000100
+#define PS_ENDCAP_FLAT    0x00000200
+#define PS_JOIN_ROUND     0x00000000
+#define PS_JOIN_BEVEL     0x00001000
+#define PS_JOIN_MITER     0x00002000
+#define PS_GEOMETRIC      0x00010000
+#define PS_COSMETIC       0x00000000
+
+/* BITMAPINFOHEADER structure */
+typedef struct tagBITMAPINFOHEADER {
+    DWORD biSize;
+    LONG  biWidth;
+    LONG  biHeight;
+    WORD  biPlanes;
+    WORD  biBitCount;
+    DWORD biCompression;
+    DWORD biSizeImage;
+    LONG  biXPelsPerMeter;
+    LONG  biYPelsPerMeter;
+    DWORD biClrUsed;
+    DWORD biClrImportant;
+} BITMAPINFOHEADER, *LPBITMAPINFOHEADER;
+
+/* RGBQUAD structure */
+typedef struct tagRGBQUAD {
+    BYTE rgbBlue;
+    BYTE rgbGreen;
+    BYTE rgbRed;
+    BYTE rgbReserved;
+} RGBQUAD;
+
+/* BITMAPINFO structure */
+typedef struct tagBITMAPINFO {
+    BITMAPINFOHEADER bmiHeader;
+    RGBQUAD bmiColors[1];
+} BITMAPINFO, *LPBITMAPINFO;
+
+/* BITMAP structure */
+typedef struct tagBITMAP {
+    LONG bmType;
+    LONG bmWidth;
+    LONG bmHeight;
+    LONG bmWidthBytes;
+    WORD bmPlanes;
+    WORD bmBitsPixel;
+    LPVOID bmBits;
+} BITMAP, *LPBITMAP;
+
+/* LOGPEN structure */
+typedef struct tagLOGPEN {
+    UINT lopnStyle;
+    POINT lopnWidth;
+    COLORREF lopnColor;
+} LOGPEN, *LPLOGPEN;
+
+/* LOGBRUSH structure */
+typedef struct tagLOGBRUSH {
+    UINT lbStyle;
+    COLORREF lbColor;
+    ULONG lbHatch;
+} LOGBRUSH, *LPLOGBRUSH;
+
 #endif /* GDI32_H */
