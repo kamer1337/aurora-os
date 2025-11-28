@@ -43,3 +43,4 @@ coverage/
 
 # Screenshots - exclude temporary formats
 *.ppm
+*.bak
