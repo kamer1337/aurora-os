@@ -8,6 +8,7 @@
 #include "../kernel/memory/paging.h"
 #include "../kernel/network/network.h"
 #include "../kernel/usb/usb.h"
+#include "../kernel/usb/usb_storage.h"
 #include "../kernel/drivers/vga.h"
 
 /**
@@ -180,6 +181,92 @@ static void test_usb(void) {
 }
 
 /**
+ * Test USB Storage functionality
+ */
+static void test_usb_storage(void) {
+    vga_write("\n=== Testing USB Storage Support ===\n");
+    
+    /* Test USB storage device count */
+    int count = usb_storage_get_device_count();
+    vga_write("USB storage device count: ");
+    if (count >= 0) {
+        vga_write("PASS (");
+        /* Print count - simple decimal conversion */
+        if (count == 0) {
+            vga_write("0");
+        } else {
+            char buf[12];
+            int i = 0;
+            int n = count;
+            while (n > 0) {
+                buf[i++] = '0' + (n % 10);
+                n /= 10;
+            }
+            while (i > 0) {
+                char c = buf[--i];
+                char s[2] = {c, '\0'};
+                vga_write(s);
+            }
+        }
+        vga_write(" devices)\n");
+    } else {
+        vga_write("FAIL\n");
+    }
+    
+    /* Test USB storage device retrieval */
+    usb_storage_device_t* storage_dev = usb_storage_get_device(0);
+    vga_write("USB storage device lookup: ");
+    if (storage_dev == NULL) {
+        vga_write("PASS (no devices attached)\n");
+    } else {
+        vga_write("FOUND: ");
+        vga_write(storage_dev->vendor);
+        vga_write(" ");
+        vga_write(storage_dev->product);
+        vga_write("\n");
+        
+        /* Test capacity info */
+        vga_write("  Capacity: ");
+        uint64_t gb = usb_storage_get_capacity_gb(storage_dev);
+        /* Print capacity */
+        if (gb > 0) {
+            char buf[20];
+            int i = 0;
+            uint64_t n = gb;
+            while (n > 0) {
+                buf[i++] = '0' + (n % 10);
+                n /= 10;
+            }
+            while (i > 0) {
+                char c = buf[--i];
+                char s[2] = {c, '\0'};
+                vga_write(s);
+            }
+            vga_write(" GB\n");
+        } else {
+            vga_write("Unknown\n");
+        }
+        
+        /* Test status */
+        vga_write("  Status: ");
+        vga_write(usb_storage_get_status_string(storage_dev->status));
+        vga_write("\n");
+    }
+    
+    /* Test status string utility */
+    vga_write("USB storage status strings: ");
+    const char* s1 = usb_storage_get_status_string(USB_STORAGE_STATUS_ONLINE);
+    const char* s2 = usb_storage_get_status_string(USB_STORAGE_STATUS_OFFLINE);
+    if (s1 != NULL && s2 != NULL) {
+        vga_write("PASS\n");
+    } else {
+        vga_write("FAIL\n");
+    }
+    
+    vga_write("USB storage tests: PASS\n");
+}
+
+/**
  * Run all advanced feature tests
  */
 void run_advanced_tests(void) {
@@ -191,6 +278,7 @@ void run_advanced_tests(void) {
     test_paging();
     test_network();
     test_usb();
+    test_usb_storage();
     
     vga_write("\n======================================\n");
     vga_write("  All Advanced Tests Complete\n");

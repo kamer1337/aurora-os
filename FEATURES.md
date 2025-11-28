@@ -73,6 +73,7 @@
 - **Serial Port**: COM1 debugging and communication
 - **Timer**: PIT (Programmable Interval Timer) for scheduling
 - **USB Support**: USB 3.0/3.1 device support
+- **USB Mass Storage**: USB storage device support with SCSI Bulk-Only Transport
 - **Network**: Network device emulation with packet handling
 - **Wi-Fi**: Wireless network support
 
