@@ -40,12 +40,12 @@ To develop a modern, secure, and highly efficient operating system that surpasse
 **Graphics & Display:**
 - Full HD 1920x1080x32 resolution with RGBA color support
 - Software-rendered at ~125 FPS
-- 8 built-in themes (Default, Dark, Light, Ocean, Forest, Sunset, Purple, Custom)
+- 8 themes: Default, Dark, Light, Ocean, Forest, Sunset, Purple, and Custom (user-defined)
 
 **Desktop Components:**
 - Login/Guest screen with user authentication
 - Modular architecture: wallpaper, taskbar, start menu, context menus
-- Virtual workspaces with OS type selection (Aurora OS, Linux VM, Android VM)
+- 4 virtual workspaces, each configurable to run Aurora OS, Linux VM, or Android VM
 
 **Window System:**
 - Draggable windows with title bars, borders, and close buttons
@@ -54,7 +54,7 @@ To develop a modern, secure, and highly efficient operating system that surpasse
 
 **Visual Effects:**
 - **3D**: Enhanced shadows, vivid gradients, 12px rounded corners, alpha blending
-- **4D**: Animation system with 9 easing functions
+- **4D**: Animation system with 9 easing functions (linear, quad in/out, cubic in/out, bounce, elastic, back)
 - **5D**: Particle systems, glow effects, glass/blur effects, interactive icons
 
 **5D Icon System:**
