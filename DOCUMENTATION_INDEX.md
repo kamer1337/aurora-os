@@ -1,6 +1,6 @@
 # Aurora OS - Documentation Index
 
-**Last Updated**: November 26, 2025  
+**Last Updated**: November 28, 2025  
 **Project Status**: Release Candidate
 
 ---
@@ -10,12 +10,13 @@
 These are the key documents for understanding Aurora OS:
 
 - **[README.md](README.md)** - Project overview, requirements, and roadmap ⭐ START HERE
-- **[FEATURES.md](FEATURES.md)** - Comprehensive feature list ⭐ NEW
-- **[ROADMAP.md](ROADMAP.md)** - Next steps and long-term vision ⭐
-- **[TODO.md](TODO.md)** - Current tasks, priorities, and completion status
+- **[FEATURES.md](FEATURES.md)** - Comprehensive feature list
+- **[ROADMAP.md](ROADMAP.md)** - Next steps and long-term vision
+- **[TODO.md](TODO.md)** - Priority tasks and future work
 - **[RELEASE_CANDIDATE_SUMMARY.md](RELEASE_CANDIDATE_SUMMARY.md)** - Current release information
 - **[TESTING_SUMMARY.md](TESTING_SUMMARY.md)** - Test results and quality assurance
-- **[ISSUE_RESOLUTION_SUMMARY.md](ISSUE_RESOLUTION_SUMMARY.md)** - Resolved issues and fixes
+- **[BETA_TESTING_GUIDE.md](BETA_TESTING_GUIDE.md)** - Guide for beta testers
+- **[THIRD_PARTY_SDK.md](THIRD_PARTY_SDK.md)** - SDK for application developers
 
 ---
 
@@ -23,21 +24,21 @@ These are the key documents for understanding Aurora OS:
 
 ### For New Users
 1. Read: [README.md](README.md) - Understand the project
-2. Review: [FEATURES.md](FEATURES.md) - See what Aurora OS can do ⭐ NEW
+2. Review: [FEATURES.md](FEATURES.md) - See what Aurora OS can do
 3. Check: [ROADMAP.md](ROADMAP.md) - See the next steps and future plans
 4. Review: [RELEASE_CANDIDATE_SUMMARY.md](RELEASE_CANDIDATE_SUMMARY.md) - See what's available
 5. Setup: [docs/GETTING_STARTED.md](docs/GETTING_STARTED.md) - Build and run
 
 ### For Developers
 1. Read: [README.md](README.md) - Project overview
-2. Features: [FEATURES.md](FEATURES.md) - Current capabilities ⭐ NEW
+2. Features: [FEATURES.md](FEATURES.md) - Current capabilities
 3. Review: [ROADMAP.md](ROADMAP.md) - Understand the development direction
 4. Setup: [docs/GETTING_STARTED.md](docs/GETTING_STARTED.md) - Development environment
 5. Structure: [docs/PROJECT_STRUCTURE.md](docs/PROJECT_STRUCTURE.md) - Code organization
-6. Current work: [TODO.md](TODO.md) - What's in progress
+6. Current work: [TODO.md](TODO.md) - Priority tasks
 
 ### For Contributors
-1. Features: [FEATURES.md](FEATURES.md) - Understand what's implemented ⭐ NEW
+1. Features: [FEATURES.md](FEATURES.md) - Understand what's implemented
 2. Check: [ROADMAP.md](ROADMAP.md) - Understand priorities and long-term plans
 3. Status: [TODO.md](TODO.md) - What needs work
 4. APIs: See Technical Documentation below
@@ -235,28 +236,17 @@ All Aurora OS documentation follows these standards:
 
 ## Recent Updates
 
-### November 26, 2025 - Known Issues Resolution and Future Enhancements
-- **RESOLVED**: Configuration persistence issue - Desktop settings now persist via VFS
-- **RESOLVED**: Single-user system limitation - Login/guest screen with authentication implemented
-- **RESOLVED**: Limited fonts issue - Multiple fonts now available (4 font families)
-- **RESOLVED**: Multiple workspaces - Virtual desktop support with OS type selection
-- **UPDATED**: All known issues documentation across ROADMAP.md, FEATURES.md, TODO.md, FAQ.md, RELEASE_NOTES_v1.0.md
-- **MARKED DONE**: Theme Manager, Plugin system, Developer documentation in ROADMAP.md
+### November 28, 2025 - Documentation Cleanup and TODO Reorganization
+- **ARCHIVED**: Moved 10 implementation summary documents to docs/archive
+- **UPDATED**: TODO.md - Focused on actionable future tasks only
+- **UPDATED**: Documentation index to reflect current structure
+- **REMOVED**: Redundant completed task lists from root directory
 
-### November 19, 2025 - Major Cleanup and Enhancements
-- **ADDED**: [FEATURES.md](FEATURES.md) - Comprehensive feature list
-- **ADDED**: Login/guest screen with user authentication system
-- **IMPLEMENTED**: Missing gui_close_window function
-- **CLEANUP**: Moved 16 redundant implementation summaries to docs/archive
-- **FIXED**: Build errors with test files
-- **UPDATED**: README.md, ROADMAP.md, TODO.md with latest features
-
-### November 17, 2025 - Documentation Reorganization
-- **ADDED**: [ROADMAP.md](ROADMAP.md) - Next steps and long-term vision
-- **REORGANIZED**: Moved detailed technical documents from root to docs/ directory
-- **CONSOLIDATED**: Renamed and organized implementation summaries
-- **UPDATED**: This index to reflect new structure
-- **IMPROVED**: Clear separation between essential and technical documentation
+### November 26, 2025 - Known Issues Resolution
+- **RESOLVED**: Configuration persistence - Desktop settings persist via VFS
+- **RESOLVED**: Single-user system - Login/guest screen implemented
+- **RESOLVED**: Limited fonts - Multiple fonts now available
+- **RESOLVED**: Multiple workspaces - Virtual desktop support added
 
 ### Previous Updates
 - Phase 5 completion documentation
@@ -283,7 +273,7 @@ All Aurora OS documentation follows these standards:
 - Setting up development environment? → [docs/GETTING_STARTED.md](docs/GETTING_STARTED.md)
 - Understanding project structure? → [docs/PROJECT_STRUCTURE.md](docs/PROJECT_STRUCTURE.md)
 - Contributing code? → [TODO.md](TODO.md) + relevant phase docs
-- Reviewing progress? → [IMPLEMENTATION_SUMMARY.md](IMPLEMENTATION_SUMMARY.md) + [RELEASE_CANDIDATE_SUMMARY.md](RELEASE_CANDIDATE_SUMMARY.md)
+- Reviewing progress? → [FEATURES.md](FEATURES.md) + [RELEASE_CANDIDATE_SUMMARY.md](RELEASE_CANDIDATE_SUMMARY.md)
 
 ---
 
