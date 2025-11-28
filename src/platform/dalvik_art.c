@@ -332,7 +332,7 @@ int dalvik_execute_instruction(dalvik_vm_t* vm, vm_frame_t* frame, uint16_t inst
                         (void)method_idx;
                         
                         /* Simulate return value in register 0 */
-                        frame->regs[0] = 0;
+                        frame->regs[0].i32 = 0;
                     }
                 }
                 frame->pc += 3;  /* Skip instruction (1) + method index (2) */
@@ -430,7 +430,7 @@ int dalvik_start(dalvik_vm_t* vm, const char* entry_class, const char* entry_met
         
         /* For Android apps, typical entry is onCreate or main */
         /* Check if class has method table (simplified) */
-        if (vm->class_loader->class_count > 0) {
+        if (vm->class_loader->num_classes > 0) {
             /* Mark that we found the method (for now, assume success) */
             entry_method_ptr = main_class;  /* Use class pointer as method placeholder */
         }
