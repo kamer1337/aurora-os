@@ -85,8 +85,12 @@ NTSTATUS WINAPI RtlAnsiStringToUnicodeString(PUNICODE_STRING DestinationString,
 }
 
 void WINAPI RtlFreeUnicodeString(PUNICODE_STRING UnicodeString) {
-    if (UnicodeString && UnicodeString->Buffer) {
-        kfree(UnicodeString->Buffer);
+    /* Note: Only free buffers that were allocated by RTL functions.
+     * RtlInitUnicodeString does not allocate memory, so we should
+     * only free buffers allocated by RtlAnsiStringToUnicodeString
+     * with AllocateDestinationString=TRUE. Since our implementation
+     * doesn't allocate, we just clear the structure fields. */
+    if (UnicodeString) {
         UnicodeString->Buffer = NULL;
         UnicodeString->Length = 0;
         UnicodeString->MaximumLength = 0;

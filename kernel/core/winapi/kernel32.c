@@ -1151,9 +1151,13 @@ HANDLE WINAPI CreateFileA(LPCSTR lpFileName, DWORD dwDesiredAccess, DWORD dwShar
     
     /* Try to use VFS first */
     int vfs_flags = 0;
-    if (dwDesiredAccess & GENERIC_READ) vfs_flags |= O_RDONLY;
-    if (dwDesiredAccess & GENERIC_WRITE) vfs_flags |= O_WRONLY;
-    if ((dwDesiredAccess & GENERIC_READ) && (dwDesiredAccess & GENERIC_WRITE)) vfs_flags = O_RDWR;
+    if ((dwDesiredAccess & GENERIC_READ) && (dwDesiredAccess & GENERIC_WRITE)) {
+        vfs_flags = O_RDWR;
+    } else if (dwDesiredAccess & GENERIC_WRITE) {
+        vfs_flags = O_WRONLY;
+    } else if (dwDesiredAccess & GENERIC_READ) {
+        vfs_flags = O_RDONLY;
+    }
     
     switch (dwCreationDisposition) {
         case CREATE_NEW:
