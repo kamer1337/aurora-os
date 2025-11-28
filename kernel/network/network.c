@@ -184,6 +184,14 @@ void network_init(void) {
         tcp_connections[i].remote_seq = 0;
         tcp_connections[i].ack_num = 0;
     }
+    
+    /* Initialize DNS resolver */
+    extern void dns_init(void);
+    dns_init();
+    
+    /* Initialize HTTP client */
+    extern void http_client_init(void);
+    http_client_init();
 }
 
 /**
