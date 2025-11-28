@@ -87,9 +87,12 @@ void process_init(void) {
     /* Initialize process table */
     for (uint32_t i = 0; i < MAX_PROCESSES; i++) {
         process_table[i].pid = 0;
+        process_table[i].ppid = 0;
         process_table[i].state = PROCESS_TERMINATED;
         process_table[i].stack_ptr = NULL;
         process_table[i].priority = 0;
+        process_table[i].exit_status = 0;
+        process_table[i].wait_target = 0;
         process_table[i].next = NULL;
     }
     
@@ -129,8 +132,11 @@ process_t* process_create(void (*entry)(void), uint32_t priority) {
     
     /* Initialize process control block */
     process->pid = next_pid++;
+    process->ppid = current_process ? current_process->pid : 0;
     process->state = PROCESS_READY;
     process->priority = priority;
+    process->exit_status = 0;
+    process->wait_target = 0;
     process->next = NULL;
     
     /* Setup stack pointer (stack grows downward) */
@@ -351,4 +357,150 @@ void scheduler_schedule(void) {
         process_t* old = current_process;
         switch_context(old, next);
     }
+}
+
+/**
+ * Get current running process
+ */
+process_t* process_get_current(void) {
+    return current_process;
+}
+
+/**
+ * Find process by PID
+ */
+process_t* process_find_by_pid(uint32_t pid) {
+    for (uint32_t i = 0; i < MAX_PROCESSES; i++) {
+        if (process_table[i].pid == pid) {
+            return &process_table[i];
+        }
+    }
+    return NULL;
+}
+
+/**
+ * Wait for child process to terminate
+ * @param pid Process ID to wait for (0 = any child)
+ * @param status Pointer to store exit status
+ * @return PID of terminated child, or -1 on error
+ */
+int32_t process_wait(uint32_t pid, int32_t* status) {
+    if (!current_process) {
+        return -1;
+    }
+    
+    /* Find a terminated child process */
+    process_t* child = NULL;
+    
+    for (uint32_t i = 0; i < MAX_PROCESSES; i++) {
+        if (process_table[i].ppid == current_process->pid) {
+            if (pid == 0 || process_table[i].pid == pid) {
+                /* Found a child process */
+                if (process_table[i].state == PROCESS_TERMINATED) {
+                    /* Child already terminated, harvest it */
+                    child = &process_table[i];
+                    break;
+                }
+            }
+        }
+    }
+    
+    if (child) {
+        /* Return exit status */
+        if (status) {
+            *status = child->exit_status;
+        }
+        uint32_t child_pid = child->pid;
+        
+        /* Clean up the child process entry */
+        child->pid = 0;
+        child->ppid = 0;
+        child->exit_status = 0;
+        
+        return (int32_t)child_pid;
+    }
+    
+    /* No terminated child found, check if any child exists */
+    int has_children = 0;
+    for (uint32_t i = 0; i < MAX_PROCESSES; i++) {
+        if (process_table[i].ppid == current_process->pid && 
+            process_table[i].pid != 0 &&
+            (pid == 0 || process_table[i].pid == pid)) {
+            has_children = 1;
+            break;
+        }
+    }
+    
+    if (!has_children) {
+        /* No children to wait for */
+        return -1;
+    }
+    
+    /* Block current process until a child terminates */
+    current_process->state = PROCESS_WAITING;
+    current_process->wait_target = pid;
+    
+    /* Yield to let other processes run */
+    scheduler_schedule();
+    
+    /* After waking up, try to find the terminated child again */
+    for (uint32_t i = 0; i < MAX_PROCESSES; i++) {
+        if (process_table[i].ppid == current_process->pid) {
+            if (pid == 0 || process_table[i].pid == pid) {
+                if (process_table[i].state == PROCESS_TERMINATED) {
+                    child = &process_table[i];
+                    break;
+                }
+            }
+        }
+    }
+    
+    if (child) {
+        if (status) {
+            *status = child->exit_status;
+        }
+        uint32_t child_pid = child->pid;
+        
+        child->pid = 0;
+        child->ppid = 0;
+        child->exit_status = 0;
+        
+        return (int32_t)child_pid;
+    }
+    
+    return -1;
+}
+
+/**
+ * Execute a program (replaces current process image)
+ * @param path Path to executable
+ * @param argv Argument vector (NULL-terminated)
+ * @return -1 on error (doesn't return on success)
+ */
+int32_t process_exec(const char* path, char* const argv[]) {
+    (void)argv;  /* Arguments not used in simple implementation */
+    
+    if (!path || !current_process) {
+        return -1;
+    }
+    
+    /* In a full implementation, this would:
+     * 1. Load executable from filesystem
+     * 2. Parse ELF/binary format
+     * 3. Set up new address space
+     * 4. Copy arguments to new stack
+     * 5. Jump to entry point
+     *
+     * For now, we just validate the path exists and return error
+     * since we don't have a full executable loader
+     */
+    
+    /* Check if path is valid (non-empty) */
+    if (path[0] == '\0') {
+        return -1;
+    }
+    
+    /* Return error - exec not fully implemented */
+    /* A real implementation would not return here */
+    return -1;
 }

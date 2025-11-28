@@ -18,6 +18,64 @@ static uint32_t g_property_count = 0;
 /* Android VM version */
 #define ANDROID_VM_VERSION "1.0.0-aurora-aosp"
 
+/* Android Boot Image Header structures */
+#define BOOT_MAGIC "ANDROID!"
+#define BOOT_MAGIC_SIZE 8
+#define BOOT_NAME_SIZE  16
+#define BOOT_ARGS_SIZE  512
+#define BOOT_EXTRA_ARGS_SIZE 1024
+
+/* Android boot.img v0-v2 header (legacy format) */
+typedef struct __attribute__((packed)) {
+    uint8_t  magic[BOOT_MAGIC_SIZE];      /* "ANDROID!" */
+    uint32_t kernel_size;                  /* Size of kernel in bytes */
+    uint32_t kernel_addr;                  /* Physical load address of kernel */
+    uint32_t ramdisk_size;                 /* Size of ramdisk in bytes */
+    uint32_t ramdisk_addr;                 /* Physical load address of ramdisk */
+    uint32_t second_size;                  /* Size of second bootloader */
+    uint32_t second_addr;                  /* Physical load address of second bootloader */
+    uint32_t tags_addr;                    /* Physical address for kernel tags */
+    uint32_t page_size;                    /* Flash page size (usually 2048 or 4096) */
+    uint32_t header_version;               /* Header version (0, 1, or 2) */
+    uint32_t os_version;                   /* OS version and security patch level */
+    uint8_t  name[BOOT_NAME_SIZE];         /* Product name */
+    uint8_t  cmdline[BOOT_ARGS_SIZE];      /* Kernel command line */
+    uint8_t  id[32];                       /* Timestamp / checksum / sha */
+    uint8_t  extra_cmdline[BOOT_EXTRA_ARGS_SIZE]; /* Extra command line */
+    /* v1 additions */
+    uint32_t recovery_dtbo_size;           /* Size of recovery dtbo */
+    uint64_t recovery_dtbo_offset;         /* Offset of recovery dtbo in boot image */
+    uint32_t header_size;                  /* Size of boot header */
+    /* v2 additions */
+    uint32_t dtb_size;                     /* Size of dtb image */
+    uint64_t dtb_addr;                     /* Physical load address of dtb */
+} android_boot_img_hdr_t;
+
+/* Android boot.img v3 header (GKI format) */
+typedef struct __attribute__((packed)) {
+    uint8_t  magic[BOOT_MAGIC_SIZE];       /* "ANDROID!" */
+    uint32_t kernel_size;                   /* Size of kernel */
+    uint32_t ramdisk_size;                  /* Size of ramdisk */
+    uint32_t os_version;                    /* OS version */
+    uint32_t header_size;                   /* Size of this header */
+    uint32_t reserved[4];                   /* Reserved */
+    uint32_t header_version;                /* Must be 3 */
+    uint8_t  cmdline[BOOT_ARGS_SIZE + BOOT_EXTRA_ARGS_SIZE]; /* Command line */
+} android_boot_img_hdr_v3_t;
+
+/* Android boot.img v4 header */
+typedef struct __attribute__((packed)) {
+    uint8_t  magic[BOOT_MAGIC_SIZE];       /* "ANDROID!" */
+    uint32_t kernel_size;                   /* Size of kernel */
+    uint32_t ramdisk_size;                  /* Size of ramdisk */
+    uint32_t os_version;                    /* OS version */
+    uint32_t header_size;                   /* Size of this header */
+    uint32_t reserved[4];                   /* Reserved */
+    uint32_t header_version;                /* Must be 4 */
+    uint8_t  cmdline[BOOT_ARGS_SIZE + BOOT_EXTRA_ARGS_SIZE]; /* Command line */
+    uint32_t signature_size;                /* Size of signature block */
+} android_boot_img_hdr_v4_t;
+
 /* Console output buffer for write syscall */
 #define ANDROID_CONSOLE_BUFFER_SIZE 4096
 static char g_android_console_buffer[ANDROID_CONSOLE_BUFFER_SIZE];
@@ -250,6 +308,107 @@ void android_vm_destroy(AndroidVM* vm) {
     }
 }
 
+/**
+ * Helper to check if data matches Android boot magic
+ */
+static bool is_android_boot_magic(const uint8_t* data) {
+    return data[0] == 'A' && data[1] == 'N' && data[2] == 'D' &&
+           data[3] == 'R' && data[4] == 'O' && data[5] == 'I' &&
+           data[6] == 'D' && data[7] == '!';
+}
+
+/**
+ * Parse Android boot.img header to extract kernel info
+ * @param data Boot image data
+ * @param size Boot image size
+ * @param kernel_offset Output: offset to kernel in image
+ * @param kernel_size Output: kernel size
+ * @param kernel_addr Output: kernel load address
+ * @param ramdisk_offset Output: offset to ramdisk in image
+ * @param ramdisk_size Output: ramdisk size
+ * @param ramdisk_addr Output: ramdisk load address
+ * @param page_size Output: page size used for alignment
+ * @param cmdline Output: kernel command line (max 512 bytes)
+ * @return Header version (0-4) or -1 on error
+ */
+static int parse_android_boot_header(const uint8_t* data, uint32_t size,
+                                     uint32_t* kernel_offset, uint32_t* kernel_size,
+                                     uint32_t* kernel_addr,
+                                     uint32_t* ramdisk_offset, uint32_t* ramdisk_size,
+                                     uint32_t* ramdisk_addr,
+                                     uint32_t* page_size,
+                                     char* cmdline) {
+    if (size < sizeof(android_boot_img_hdr_t)) {
+        return -1;
+    }
+    
+    /* Check for Android boot magic */
+    if (!is_android_boot_magic(data)) {
+        return -1;
+    }
+    
+    /* Check header version */
+    const android_boot_img_hdr_t* hdr = (const android_boot_img_hdr_t*)data;
+    uint32_t version = hdr->header_version;
+    
+    if (version >= 3) {
+        /* v3/v4 format (GKI) */
+        const android_boot_img_hdr_v3_t* hdr_v3 = (const android_boot_img_hdr_v3_t*)data;
+        
+        *page_size = 4096;  /* Fixed 4KB pages for v3+ */
+        *kernel_size = hdr_v3->kernel_size;
+        *ramdisk_size = hdr_v3->ramdisk_size;
+        
+        /* In v3+, kernel follows header directly (page-aligned) */
+        uint32_t hdr_pages = (hdr_v3->header_size + *page_size - 1) / *page_size;
+        *kernel_offset = hdr_pages * *page_size;
+        
+        /* Default load addresses for ARM64 */
+        *kernel_addr = 0x80000;  /* KERNEL_ADDR for ARM64 */
+        *ramdisk_addr = 0x01000000;
+        
+        /* Calculate ramdisk offset */
+        uint32_t kernel_pages = (*kernel_size + *page_size - 1) / *page_size;
+        *ramdisk_offset = *kernel_offset + (kernel_pages * *page_size);
+        
+        /* Copy command line */
+        if (cmdline) {
+            platform_memcpy(cmdline, hdr_v3->cmdline, 
+                           sizeof(hdr_v3->cmdline) < 512 ? sizeof(hdr_v3->cmdline) : 512);
+            cmdline[511] = '\0';
+        }
+        
+        return version;
+    } else {
+        /* v0/v1/v2 format (legacy) */
+        *page_size = hdr->page_size;
+        if (*page_size == 0) {
+            *page_size = 2048;  /* Default page size */
+        }
+        
+        *kernel_size = hdr->kernel_size;
+        *kernel_addr = hdr->kernel_addr;
+        *ramdisk_size = hdr->ramdisk_size;
+        *ramdisk_addr = hdr->ramdisk_addr;
+        
+        /* Kernel follows the header (page-aligned) */
+        *kernel_offset = *page_size;  /* First page is header */
+        
+        /* Ramdisk follows kernel (page-aligned) */
+        uint32_t kernel_pages = (*kernel_size + *page_size - 1) / *page_size;
+        *ramdisk_offset = *kernel_offset + (kernel_pages * *page_size);
+        
+        /* Copy command line */
+        if (cmdline) {
+            platform_memcpy(cmdline, hdr->cmdline, 
+                           sizeof(hdr->cmdline) < 512 ? sizeof(hdr->cmdline) : 512);
+            cmdline[511] = '\0';
+        }
+        
+        return version;
+    }
+}
+
 int android_vm_load_kernel(AndroidVM* vm, const uint8_t* kernel_data, uint32_t size) {
     if (!vm || !kernel_data || size == 0) {
         return -1;
@@ -270,9 +429,36 @@ int android_vm_load_kernel(AndroidVM* vm, const uint8_t* kernel_data, uint32_t s
     platform_memcpy(vm->kernel_image, kernel_data, size);
     vm->kernel_size = size;
     
-    /* TODO: Parse Android boot image header to find kernel entry point */
-    /* Android boot images have specific header format with kernel, ramdisk, etc. */
-    vm->kernel_entry = ANDROID_VM_KERNEL_BASE;
+    /* Parse Android boot image header to find kernel entry point */
+    uint32_t kernel_offset, parsed_kernel_size, kernel_addr;
+    uint32_t ramdisk_offset, ramdisk_size, ramdisk_addr;
+    uint32_t page_size;
+    char cmdline[512];
+    
+    int version = parse_android_boot_header(kernel_data, size,
+                                            &kernel_offset, &parsed_kernel_size, &kernel_addr,
+                                            &ramdisk_offset, &ramdisk_size, &ramdisk_addr,
+                                            &page_size, cmdline);
+    
+    if (version >= 0) {
+        /* Valid Android boot image */
+        vm->kernel_entry = kernel_addr;
+        
+        /* Set ramdisk info if present in boot image */
+        if (ramdisk_size > 0) {
+            vm->has_ramdisk = true;
+            vm->ramdisk_addr = ramdisk_addr;
+            vm->ramdisk_size = ramdisk_size;
+        }
+        
+        /* Copy command line if not already set */
+        if (cmdline[0] != '\0' && vm->kernel_cmdline[0] == '\0') {
+            platform_strncpy(vm->kernel_cmdline, cmdline, sizeof(vm->kernel_cmdline));
+        }
+    } else {
+        /* Not a boot.img, treat as raw kernel binary */
+        vm->kernel_entry = ANDROID_VM_KERNEL_BASE;
+    }
     
     return 0;
 }
@@ -282,12 +468,24 @@ int android_vm_load_ramdisk(AndroidVM* vm, const uint8_t* ramdisk_data, uint32_t
         return -1;
     }
     
+    if (!vm->aurora_vm) {
+        return -1;  /* Need Aurora VM to load ramdisk into memory */
+    }
+    
+    /* Set ramdisk load address (default if not set by boot image) */
+    if (vm->ramdisk_addr == 0) {
+        vm->ramdisk_addr = ANDROID_VM_RAMDISK_BASE;
+    }
+    
     /* Set ramdisk parameters */
     vm->has_ramdisk = true;
     vm->ramdisk_size = size;
     
-    /* TODO: Load ramdisk into VM memory at ramdisk_addr */
-    /* This would copy the ramdisk data to the VM's memory space */
+    /* Load ramdisk into VM memory at ramdisk_addr */
+    AuroraVM* avm = vm->aurora_vm;
+    if (avm && avm->memory && vm->ramdisk_addr + size <= ANDROID_VM_MEMORY_SIZE) {
+        platform_memcpy(&avm->memory[vm->ramdisk_addr], ramdisk_data, size);
+    }
     
     return 0;
 }

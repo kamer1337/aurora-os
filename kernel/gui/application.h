@@ -37,6 +37,7 @@ typedef enum {
     APP_SYSTEM_SETTINGS,// New: System Settings
     APP_APP_STORE,      // New: Application Store
     APP_LINUX_INSTALLER,// New: Linux Installer
+    APP_POWER_OPTIONS,  // New: Power Options (Shutdown, Restart, etc.)
     APP_MAX
 } app_type_t;
 

@@ -873,13 +873,47 @@ BOOL WINAPI VirtualProtect(LPVOID lpAddress, SIZE_T dwSize, DWORD flNewProtect, 
 }
 
 SIZE_T WINAPI VirtualQuery(LPCVOID lpAddress, void* lpBuffer, SIZE_T dwLength) {
-    (void)lpAddress;
-    (void)lpBuffer;
-    (void)dwLength;
+    if (!lpBuffer || dwLength < sizeof(MEMORY_BASIC_INFORMATION)) {
+        winapi_set_last_error(ERROR_INVALID_PARAMETER);
+        return 0;
+    }
     
-    /* Memory query not implemented */
-    winapi_set_last_error(ERROR_CALL_NOT_IMPLEMENTED);
-    return 0;
+    MEMORY_BASIC_INFORMATION* mbi = (MEMORY_BASIC_INFORMATION*)lpBuffer;
+    
+    /* Get memory region information */
+    uintptr_t addr = (uintptr_t)lpAddress;
+    
+    /* Round down to page boundary (assume 4KB pages) */
+    uintptr_t page_base = addr & ~((uintptr_t)0xFFF);
+    
+    /* Fill in the memory information structure */
+    mbi->BaseAddress = (void*)page_base;
+    mbi->AllocationBase = (void*)page_base;  /* Simplified: assume same as base */
+    mbi->AllocationProtect = PAGE_READWRITE;
+    mbi->RegionSize = 0x1000;  /* Default to one page */
+    mbi->State = MEM_COMMIT;   /* Assume committed */
+    mbi->Protect = PAGE_READWRITE;
+    mbi->Type = MEM_PRIVATE;
+    
+    /* Check if address is in valid memory range */
+    /* In Aurora OS, we have simplified memory management */
+    if (addr >= 0x100000 && addr < 0x400000) {
+        /* Kernel code/data region */
+        mbi->Protect = PAGE_EXECUTE_READ;
+        mbi->Type = MEM_IMAGE;
+    } else if (addr >= 0x400000 && addr < 0x800000) {
+        /* Heap region */
+        mbi->Protect = PAGE_READWRITE;
+        mbi->Type = MEM_PRIVATE;
+    } else if (addr < 0x1000) {
+        /* Null page - not accessible */
+        mbi->State = MEM_FREE;
+        mbi->Protect = PAGE_NOACCESS;
+        mbi->Type = 0;
+    }
+    
+    winapi_set_last_error(ERROR_SUCCESS);
+    return sizeof(MEMORY_BASIC_INFORMATION);
 }
 
 HGLOBAL WINAPI GlobalAlloc(DWORD uFlags, SIZE_T dwBytes) {
@@ -1683,27 +1717,95 @@ BOOL WINAPI GetFileInformationByHandle(HANDLE hFile, LPBY_HANDLE_FILE_INFORMATIO
     return TRUE;
 }
 
+/* File lock structure for tracking locks */
+#define MAX_FILE_LOCKS 64
+typedef struct {
+    HANDLE file;
+    uint64_t offset;
+    uint64_t length;
+    int in_use;
+} file_lock_entry_t;
+
+static file_lock_entry_t g_file_locks[MAX_FILE_LOCKS];
+static int g_file_locks_initialized = 0;
+
+static void init_file_locks(void) {
+    if (!g_file_locks_initialized) {
+        for (int i = 0; i < MAX_FILE_LOCKS; i++) {
+            g_file_locks[i].in_use = 0;
+        }
+        g_file_locks_initialized = 1;
+    }
+}
+
 BOOL WINAPI LockFile(HANDLE hFile, DWORD dwFileOffsetLow, DWORD dwFileOffsetHigh,
                      DWORD nNumberOfBytesToLockLow, DWORD nNumberOfBytesToLockHigh) {
-    (void)hFile;
-    (void)dwFileOffsetLow;
-    (void)dwFileOffsetHigh;
-    (void)nNumberOfBytesToLockLow;
-    (void)nNumberOfBytesToLockHigh;
+    if (hFile == INVALID_HANDLE_VALUE || hFile == NULL) {
+        winapi_set_last_error(ERROR_INVALID_HANDLE);
+        return FALSE;
+    }
     
-    /* File locking not implemented */
-    winapi_set_last_error(ERROR_SUCCESS);
-    return TRUE;
+    init_file_locks();
+    
+    uint64_t offset = ((uint64_t)dwFileOffsetHigh << 32) | dwFileOffsetLow;
+    uint64_t length = ((uint64_t)nNumberOfBytesToLockHigh << 32) | nNumberOfBytesToLockLow;
+    
+    /* Check for overlapping locks */
+    for (int i = 0; i < MAX_FILE_LOCKS; i++) {
+        if (g_file_locks[i].in_use && g_file_locks[i].file == hFile) {
+            uint64_t lock_end = g_file_locks[i].offset + g_file_locks[i].length;
+            uint64_t new_end = offset + length;
+            
+            /* Check for overlap */
+            if (offset < lock_end && new_end > g_file_locks[i].offset) {
+                winapi_set_last_error(ERROR_LOCK_VIOLATION);
+                return FALSE;
+            }
+        }
+    }
+    
+    /* Find free slot and add lock */
+    for (int i = 0; i < MAX_FILE_LOCKS; i++) {
+        if (!g_file_locks[i].in_use) {
+            g_file_locks[i].file = hFile;
+            g_file_locks[i].offset = offset;
+            g_file_locks[i].length = length;
+            g_file_locks[i].in_use = 1;
+            winapi_set_last_error(ERROR_SUCCESS);
+            return TRUE;
+        }
+    }
+    
+    /* No free slots */
+    winapi_set_last_error(ERROR_NOT_ENOUGH_MEMORY);
+    return FALSE;
 }
 
 BOOL WINAPI UnlockFile(HANDLE hFile, DWORD dwFileOffsetLow, DWORD dwFileOffsetHigh,
                        DWORD nNumberOfBytesToUnlockLow, DWORD nNumberOfBytesToUnlockHigh) {
-    (void)hFile;
-    (void)dwFileOffsetLow;
-    (void)dwFileOffsetHigh;
-    (void)nNumberOfBytesToUnlockLow;
-    (void)nNumberOfBytesToUnlockHigh;
+    if (hFile == INVALID_HANDLE_VALUE || hFile == NULL) {
+        winapi_set_last_error(ERROR_INVALID_HANDLE);
+        return FALSE;
+    }
     
+    init_file_locks();
+    
+    uint64_t offset = ((uint64_t)dwFileOffsetHigh << 32) | dwFileOffsetLow;
+    uint64_t length = ((uint64_t)nNumberOfBytesToUnlockHigh << 32) | nNumberOfBytesToUnlockLow;
+    
+    /* Find and remove the lock */
+    for (int i = 0; i < MAX_FILE_LOCKS; i++) {
+        if (g_file_locks[i].in_use && 
+            g_file_locks[i].file == hFile &&
+            g_file_locks[i].offset == offset &&
+            g_file_locks[i].length == length) {
+            g_file_locks[i].in_use = 0;
+            winapi_set_last_error(ERROR_SUCCESS);
+            return TRUE;
+        }
+    }
+    
+    /* Lock not found - still return success (Windows behavior) */
     winapi_set_last_error(ERROR_SUCCESS);
     return TRUE;
 }

@@ -54,6 +54,7 @@ static int launch_music_player(void);
 static int launch_video_player(void);
 static int launch_goals_manager(void);
 static int launch_linux_installer(void);
+static int launch_power_options(void);
 
 void app_init(void) {
     if (app_framework_initialized) return;
@@ -243,6 +244,14 @@ void app_init(void) {
         .running = 0
     };
     
+    applications[APP_POWER_OPTIONS] = (application_t){
+        .type = APP_POWER_OPTIONS,
+        .name = "Power Options",
+        .description = "Shutdown, restart, sleep, or hibernate the system",
+        .window = NULL,
+        .running = 0
+    };
+    
     app_framework_initialized = 1;
 }
 
@@ -329,6 +338,9 @@ int app_launch(app_type_t type) {
             break;
         case APP_LINUX_INSTALLER:
             result = launch_linux_installer();
+            break;
+        case APP_POWER_OPTIONS:
+            result = launch_power_options();
             break;
         default:
             return -1;
@@ -1537,6 +1549,36 @@ static int launch_linux_installer(void) {
     
     // Instructions
     gui_create_label(window, "Press number key (1-4) to select distribution for installation", 20, 480);
+    
+    gui_show_window(window);
+    gui_focus_window(window);
+    
+    return 0;
+}
+
+static int launch_power_options(void) {
+    // Create power options dialog window
+    window_t* window = gui_create_window("Power Options", 400, 200, 400, 350);
+    if (!window) return -1;
+    
+    applications[APP_POWER_OPTIONS].window = window;
+    
+    // Add header
+    gui_create_label(window, "Power Options", 20, 20);
+    gui_create_label(window, "Select an action:", 20, 50);
+    
+    // Power options buttons
+    gui_create_button(window, "Shutdown", 100, 90, 200, 40);
+    gui_create_label(window, "Turn off the computer", 135, 135);
+    
+    gui_create_button(window, "Restart", 100, 160, 200, 40);
+    gui_create_label(window, "Restart the computer", 140, 205);
+    
+    gui_create_button(window, "Sleep", 100, 230, 200, 40);
+    gui_create_label(window, "Put computer in low-power state", 105, 275);
+    
+    // Cancel button
+    gui_create_button(window, "Cancel", 150, 305, 100, 35);
     
     gui_show_window(window);
     gui_focus_window(window);

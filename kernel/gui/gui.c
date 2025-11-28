@@ -14,6 +14,7 @@
 #include "../memory/memory.h"
 #include "../drivers/mouse.h"
 #include "../drivers/keyboard.h"
+#include "../drivers/timer.h"
 #include <stddef.h>
 
 // String functions (minimal implementations)
@@ -257,7 +258,8 @@ void gui_process_event(event_t* event) {
                                         }
                                     }
                                     break;
-                                case 13: // Power Options (placeholder)
+                                case 13: // Power Options
+                                    app_launch(APP_POWER_OPTIONS);
                                     break;
                             }
                         }
@@ -568,7 +570,8 @@ void gui_process_event(event_t* event) {
                                     }
                                 }
                                 break;
-                            case 15: // Power Options (placeholder)
+                            case 15: // Power Options
+                                app_launch(APP_POWER_OPTIONS);
                                 break;
                         }
                         start_menu_visible = 0;
@@ -1010,9 +1013,11 @@ void gui_draw_taskbar(void) {
         window = window->next;
     }
     
-    // Draw system tray area (placeholder)
+    // Draw system tray area with real time
     uint32_t tray_x = fb->width - 100;
-    font_manager_draw_string(tray_x, taskbar_y + 13, "12:00 PM", COLOR_WHITE, 
+    char time_str[16];
+    timer_get_time_string(time_str, sizeof(time_str));
+    font_manager_draw_string(tray_x, taskbar_y + 13, time_str, COLOR_WHITE, 
                           (color_t){45, 45, 48, 255});
 }
 

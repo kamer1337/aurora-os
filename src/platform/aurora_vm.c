@@ -539,13 +539,139 @@ static int handle_syscall(AuroraVM *vm) {
             return 0;
         }
         
-        case AURORA_SYSCALL_MUTEX_LOCK:
-        case AURORA_SYSCALL_MUTEX_UNLOCK:
-        case AURORA_SYSCALL_SEM_WAIT:
-        case AURORA_SYSCALL_SEM_POST:
-            /* Synchronization primitives - placeholder */
-            vm->cpu.registers[0] = 0;
+        case AURORA_SYSCALL_MUTEX_LOCK: {
+            /* Mutex lock: r1 = mutex_addr (in VM memory) */
+            uint32_t mutex_addr = vm->cpu.registers[1];
+            
+            /* Validate address bounds */
+            if (mutex_addr + sizeof(aurora_mutex_t) > AURORA_VM_MEMORY_SIZE) {
+                vm->cpu.registers[0] = (uint32_t)-1;  /* Invalid address */
+                return 0;
+            }
+            
+            aurora_mutex_t* mutex = (aurora_mutex_t*)&vm->memory[mutex_addr];
+            
+            if (!mutex->locked) {
+                /* Mutex is free, acquire it */
+                mutex->locked = true;
+                mutex->owner = vm->scheduler.current;
+                vm->cpu.registers[0] = 0;  /* Success */
+            } else if (mutex->owner == vm->scheduler.current) {
+                /* Already owned by this thread - error (not recursive) */
+                vm->cpu.registers[0] = (uint32_t)-2;  /* Deadlock would occur */
+            } else {
+                /* Mutex is locked by another thread, wait */
+                vm->scheduler.threads[vm->scheduler.current].waiting = true;
+                vm->scheduler.threads[vm->scheduler.current].wait_target = mutex_addr;
+                aurora_vm_thread_yield(vm);
+                vm->cpu.registers[0] = 0;  /* Will retry after yield */
+            }
             return 0;
+        }
+        
+        case AURORA_SYSCALL_MUTEX_UNLOCK: {
+            /* Mutex unlock: r1 = mutex_addr */
+            uint32_t mutex_addr = vm->cpu.registers[1];
+            
+            /* Validate address bounds */
+            if (mutex_addr + sizeof(aurora_mutex_t) > AURORA_VM_MEMORY_SIZE) {
+                vm->cpu.registers[0] = (uint32_t)-1;  /* Invalid address */
+                return 0;
+            }
+            
+            aurora_mutex_t* mutex = (aurora_mutex_t*)&vm->memory[mutex_addr];
+            
+            if (!mutex->locked) {
+                /* Mutex not locked */
+                vm->cpu.registers[0] = (uint32_t)-1;  /* Error: not locked */
+            } else if (mutex->owner != vm->scheduler.current) {
+                /* Not owned by this thread */
+                vm->cpu.registers[0] = (uint32_t)-2;  /* Error: not owner */
+            } else {
+                /* Unlock the mutex */
+                mutex->locked = false;
+                mutex->owner = 0;
+                
+                /* Wake up any threads waiting on this mutex */
+                for (uint32_t i = 0; i < AURORA_VM_MAX_THREADS; i++) {
+                    if (vm->scheduler.threads[i].active &&
+                        vm->scheduler.threads[i].waiting &&
+                        vm->scheduler.threads[i].wait_target == mutex_addr) {
+                        vm->scheduler.threads[i].waiting = false;
+                        vm->scheduler.threads[i].wait_target = 0;
+                        break;  /* Only wake one waiter */
+                    }
+                }
+                
+                vm->cpu.registers[0] = 0;  /* Success */
+            }
+            return 0;
+        }
+        
+        case AURORA_SYSCALL_SEM_WAIT: {
+            /* Semaphore wait (P operation): r1 = sem_addr */
+            uint32_t sem_addr = vm->cpu.registers[1];
+            
+            /* Validate address bounds */
+            if (sem_addr + sizeof(aurora_semaphore_t) > AURORA_VM_MEMORY_SIZE) {
+                vm->cpu.registers[0] = (uint32_t)-1;  /* Invalid address */
+                return 0;
+            }
+            
+            aurora_semaphore_t* sem = (aurora_semaphore_t*)&vm->memory[sem_addr];
+            
+            if (sem->value > 0) {
+                /* Semaphore available, decrement and continue */
+                sem->value--;
+                vm->cpu.registers[0] = 0;  /* Success */
+            } else {
+                /* Semaphore not available, add to wait queue */
+                if (sem->wait_count < AURORA_VM_MAX_THREADS) {
+                    sem->waiting[sem->wait_count++] = vm->scheduler.current;
+                }
+                vm->scheduler.threads[vm->scheduler.current].waiting = true;
+                vm->scheduler.threads[vm->scheduler.current].wait_target = sem_addr;
+                aurora_vm_thread_yield(vm);
+                vm->cpu.registers[0] = 0;  /* Will check again after wake */
+            }
+            return 0;
+        }
+        
+        case AURORA_SYSCALL_SEM_POST: {
+            /* Semaphore post (V operation): r1 = sem_addr */
+            uint32_t sem_addr = vm->cpu.registers[1];
+            
+            /* Validate address bounds */
+            if (sem_addr + sizeof(aurora_semaphore_t) > AURORA_VM_MEMORY_SIZE) {
+                vm->cpu.registers[0] = (uint32_t)-1;  /* Invalid address */
+                return 0;
+            }
+            
+            aurora_semaphore_t* sem = (aurora_semaphore_t*)&vm->memory[sem_addr];
+            
+            /* Increment semaphore value */
+            sem->value++;
+            
+            /* Wake up first waiting thread if any */
+            if (sem->wait_count > 0) {
+                uint32_t tid = sem->waiting[0];
+                
+                /* Remove from wait queue (shift remaining entries) */
+                for (uint32_t i = 0; i < sem->wait_count - 1; i++) {
+                    sem->waiting[i] = sem->waiting[i + 1];
+                }
+                sem->wait_count--;
+                
+                /* Wake the thread */
+                if (tid < AURORA_VM_MAX_THREADS && vm->scheduler.threads[tid].waiting) {
+                    vm->scheduler.threads[tid].waiting = false;
+                    vm->scheduler.threads[tid].wait_target = 0;
+                }
+            }
+            
+            vm->cpu.registers[0] = 0;  /* Success */
+            return 0;
+        }
         
         default:
             /* Unknown syscall */

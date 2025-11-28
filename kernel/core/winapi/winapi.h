@@ -115,10 +115,26 @@ typedef HANDLE* PHANDLE;
 #define MEM_COMMIT      0x00001000
 #define MEM_RESERVE     0x00002000
 #define MEM_RELEASE     0x00008000
+#define MEM_FREE        0x00010000
+#define MEM_PRIVATE     0x00020000
+#define MEM_IMAGE       0x01000000
 #define PAGE_NOACCESS   0x00000001
 #define PAGE_READONLY   0x00000002
 #define PAGE_READWRITE  0x00000004
 #define PAGE_EXECUTE    0x00000010
+#define PAGE_EXECUTE_READ 0x00000020
+#define PAGE_EXECUTE_READWRITE 0x00000040
+
+/* Memory region information structure */
+typedef struct {
+    void*  BaseAddress;
+    void*  AllocationBase;
+    DWORD  AllocationProtect;
+    SIZE_T RegionSize;
+    DWORD  State;
+    DWORD  Protect;
+    DWORD  Type;
+} MEMORY_BASIC_INFORMATION, *PMEMORY_BASIC_INFORMATION;
 
 /* Error codes */
 #define ERROR_SUCCESS           0
