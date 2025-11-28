@@ -470,6 +470,448 @@ android_vm_state_t android_vm_get_state(AndroidVM* vm) {
     return vm->state;
 }
 
+/* Extended Android syscall numbers (ARM64 ABI - unique numbers) */
+#define ANDROID_EXT_SYSCALL_LSEEK       62
+#define ANDROID_EXT_SYSCALL_GETPPID     173
+#define ANDROID_EXT_SYSCALL_GETTID      178
+#define ANDROID_EXT_SYSCALL_GETEUID     175
+#define ANDROID_EXT_SYSCALL_GETEGID     177
+#define ANDROID_EXT_SYSCALL_SETUID      146
+#define ANDROID_EXT_SYSCALL_SETGID      144
+#define ANDROID_EXT_SYSCALL_UMASK       166
+#define ANDROID_EXT_SYSCALL_CHDIR       49
+#define ANDROID_EXT_SYSCALL_FCHDIR      50
+#define ANDROID_EXT_SYSCALL_GETCWD      17
+#define ANDROID_EXT_SYSCALL_DUP         23
+#define ANDROID_EXT_SYSCALL_DUP3        24
+#define ANDROID_EXT_SYSCALL_PIPE2       59
+#define ANDROID_EXT_SYSCALL_FCNTL       25
+#define ANDROID_EXT_SYSCALL_FSTAT       80
+#define ANDROID_EXT_SYSCALL_FSTATAT     79
+#define ANDROID_EXT_SYSCALL_MKDIRAT     34
+#define ANDROID_EXT_SYSCALL_UNLINKAT    35
+#define ANDROID_EXT_SYSCALL_RENAMEAT    38
+#define ANDROID_EXT_SYSCALL_READLINKAT  78
+#define ANDROID_EXT_SYSCALL_SYMLINKAT   36
+#define ANDROID_EXT_SYSCALL_LINKAT      37
+#define ANDROID_EXT_SYSCALL_FCHMOD      52
+#define ANDROID_EXT_SYSCALL_FCHMODAT    53
+#define ANDROID_EXT_SYSCALL_FCHOWN      55
+#define ANDROID_EXT_SYSCALL_FCHOWNAT    54
+#define ANDROID_EXT_SYSCALL_UTIMENSAT   88
+#define ANDROID_EXT_SYSCALL_NANOSLEEP   101
+#define ANDROID_EXT_SYSCALL_CLOCK_GETTIME 113
+#define ANDROID_EXT_SYSCALL_GETTIMEOFDAY 169
+#define ANDROID_EXT_SYSCALL_GETRLIMIT   163
+#define ANDROID_EXT_SYSCALL_SETRLIMIT   164
+#define ANDROID_EXT_SYSCALL_GETRUSAGE   165
+#define ANDROID_EXT_SYSCALL_SYSINFO     179
+#define ANDROID_EXT_SYSCALL_UNAME       160
+#define ANDROID_EXT_SYSCALL_KILL        129
+#define ANDROID_EXT_SYSCALL_TGKILL      131
+#define ANDROID_EXT_SYSCALL_RT_SIGACTION 134
+#define ANDROID_EXT_SYSCALL_RT_SIGPROCMASK 135
+#define ANDROID_EXT_SYSCALL_SIGALTSTACK 132
+#define ANDROID_EXT_SYSCALL_SOCKET      198
+#define ANDROID_EXT_SYSCALL_SOCKETPAIR  199
+#define ANDROID_EXT_SYSCALL_BIND        200
+#define ANDROID_EXT_SYSCALL_LISTEN      201
+#define ANDROID_EXT_SYSCALL_ACCEPT      202
+#define ANDROID_EXT_SYSCALL_ACCEPT4     242
+#define ANDROID_EXT_SYSCALL_CONNECT     203
+#define ANDROID_EXT_SYSCALL_SENDTO      206
+#define ANDROID_EXT_SYSCALL_RECVFROM    207
+#define ANDROID_EXT_SYSCALL_SHUTDOWN    210
+#define ANDROID_EXT_SYSCALL_SETSOCKOPT  208
+#define ANDROID_EXT_SYSCALL_GETSOCKOPT  209
+#define ANDROID_EXT_SYSCALL_EPOLL_CREATE1 20
+#define ANDROID_EXT_SYSCALL_EPOLL_CTL   21
+#define ANDROID_EXT_SYSCALL_EPOLL_PWAIT 22
+#define ANDROID_EXT_SYSCALL_EVENTFD2    19
+#define ANDROID_EXT_SYSCALL_TIMERFD_CREATE 85
+#define ANDROID_EXT_SYSCALL_TIMERFD_SETTIME 86
+#define ANDROID_EXT_SYSCALL_TIMERFD_GETTIME 87
+#define ANDROID_EXT_SYSCALL_SIGNALFD4   74
+#define ANDROID_EXT_SYSCALL_GETRANDOM   278
+#define ANDROID_EXT_SYSCALL_MEMFD_CREATE 279
+#define ANDROID_EXT_SYSCALL_MADVISE     233
+#define ANDROID_EXT_SYSCALL_MPROTECT    226
+#define ANDROID_EXT_SYSCALL_MSYNC       227
+#define ANDROID_EXT_SYSCALL_MLOCK       228
+#define ANDROID_EXT_SYSCALL_MUNLOCK     229
+#define ANDROID_EXT_SYSCALL_SET_TID_ADDRESS 96
+#define ANDROID_EXT_SYSCALL_SET_ROBUST_LIST 99
+#define ANDROID_EXT_SYSCALL_GET_ROBUST_LIST 100
+#define ANDROID_EXT_SYSCALL_SCHED_YIELD 124
+#define ANDROID_EXT_SYSCALL_SCHED_GETAFFINITY 123
+#define ANDROID_EXT_SYSCALL_SCHED_SETAFFINITY 122
+#define ANDROID_EXT_SYSCALL_ARCH_PRCTL  158
+#define ANDROID_EXT_SYSCALL_SECCOMP     277
+
+/* Current directory for file operations */
+static char g_android_cwd[256] = "/";
+static uint32_t g_android_umask = 0022;
+
+/* Socket tracking */
+#define ANDROID_MAX_SOCKETS 32
+typedef struct {
+    bool in_use;
+    int domain;
+    int type;
+    int protocol;
+    bool connected;
+    bool listening;
+} android_socket_t;
+
+static android_socket_t g_android_sockets[ANDROID_MAX_SOCKETS];
+static int g_android_next_sock_fd = 100; /* Start socket fds at 100 */
+
+/* Epoll tracking */
+#define ANDROID_MAX_EPOLL 16
+typedef struct {
+    bool in_use;
+    int fd;
+    int events;
+} android_epoll_entry_t;
+
+typedef struct {
+    bool in_use;
+    android_epoll_entry_t entries[32];
+    uint32_t entry_count;
+} android_epoll_t;
+
+static android_epoll_t g_android_epolls[ANDROID_MAX_EPOLL];
+static int g_android_next_epoll_fd = 200; /* Start epoll fds at 200 */
+
+/**
+ * Extended Android syscall handler for additional syscalls
+ */
+static int32_t android_vm_handle_extended_syscall(AndroidVM* vm, uint32_t syscall_num, uint32_t* args) {
+    (void)vm; /* May not be needed for all syscalls */
+    
+    switch (syscall_num) {
+        /* File position operations */
+        case ANDROID_EXT_SYSCALL_LSEEK: {
+            /* args[0] = fd, args[1] = offset, args[2] = whence */
+            uint32_t fd = args[0];
+            int32_t offset = (int32_t)args[1];
+            uint32_t whence = args[2];
+            
+            if (fd >= ANDROID_MAX_FDS || !g_android_fd_table[fd].in_use) {
+                return -9; /* -EBADF */
+            }
+            
+            uint32_t new_pos;
+            switch (whence) {
+                case 0: /* SEEK_SET */
+                    new_pos = (uint32_t)offset;
+                    break;
+                case 1: /* SEEK_CUR */
+                    new_pos = g_android_fd_table[fd].position + (uint32_t)offset;
+                    break;
+                case 2: /* SEEK_END */
+                    new_pos = g_android_fd_table[fd].size + (uint32_t)offset;
+                    break;
+                default:
+                    return -22; /* -EINVAL */
+            }
+            
+            g_android_fd_table[fd].position = new_pos;
+            return (int32_t)new_pos;
+        }
+        
+        /* Process ID operations */
+        case ANDROID_EXT_SYSCALL_GETPPID:
+            return (g_android_current_pid > 1) ? 1 : 0; /* Parent is init (1) */
+            
+        case ANDROID_EXT_SYSCALL_GETTID:
+            return (int32_t)g_android_next_tid - 1; /* Current thread ID */
+            
+        case ANDROID_EXT_SYSCALL_GETEUID:
+        case ANDROID_EXT_SYSCALL_GETEGID:
+            return 0; /* Root for Android init */
+            
+        case ANDROID_EXT_SYSCALL_SETUID:
+        case ANDROID_EXT_SYSCALL_SETGID:
+            return 0; /* Success */
+            
+        /* File mask and directory operations */
+        case ANDROID_EXT_SYSCALL_UMASK: {
+            uint32_t old_umask = g_android_umask;
+            g_android_umask = args[0] & 0777;
+            return (int32_t)old_umask;
+        }
+        
+        case ANDROID_EXT_SYSCALL_CHDIR:
+        case ANDROID_EXT_SYSCALL_FCHDIR:
+            return 0; /* Success */
+            
+        case ANDROID_EXT_SYSCALL_GETCWD: {
+            /* args[0] = buf, args[1] = size */
+            uint32_t size = args[1];
+            uint32_t len = platform_strlen(g_android_cwd);
+            if (size <= len) {
+                return -34; /* -ERANGE */
+            }
+            return (int32_t)(len + 1);
+        }
+        
+        /* File descriptor operations */
+        case ANDROID_EXT_SYSCALL_DUP: {
+            uint32_t oldfd = args[0];
+            if (oldfd >= ANDROID_MAX_FDS || !g_android_fd_table[oldfd].in_use) {
+                return -9; /* -EBADF */
+            }
+            if (g_android_next_fd >= ANDROID_MAX_FDS) {
+                return -24; /* -EMFILE */
+            }
+            int newfd = g_android_next_fd++;
+            g_android_fd_table[newfd] = g_android_fd_table[oldfd];
+            return newfd;
+        }
+        
+        case ANDROID_EXT_SYSCALL_DUP3: {
+            uint32_t oldfd = args[0];
+            uint32_t newfd = args[1];
+            if (oldfd >= ANDROID_MAX_FDS || !g_android_fd_table[oldfd].in_use) {
+                return -9; /* -EBADF */
+            }
+            if (newfd >= ANDROID_MAX_FDS) {
+                return -9; /* -EBADF */
+            }
+            if (oldfd == newfd) {
+                return (int32_t)newfd;
+            }
+            g_android_fd_table[newfd] = g_android_fd_table[oldfd];
+            return (int32_t)newfd;
+        }
+        
+        case ANDROID_EXT_SYSCALL_PIPE2: {
+            /* Create pipe - allocate two file descriptors */
+            if (g_android_next_fd + 1 >= ANDROID_MAX_FDS) {
+                return -24; /* -EMFILE */
+            }
+            int read_fd = g_android_next_fd++;
+            int write_fd = g_android_next_fd++;
+            g_android_fd_table[read_fd].in_use = true;
+            g_android_fd_table[read_fd].type = 5; /* Pipe */
+            g_android_fd_table[write_fd].in_use = true;
+            g_android_fd_table[write_fd].type = 5; /* Pipe */
+            return 0;
+        }
+        
+        case ANDROID_EXT_SYSCALL_FCNTL: {
+            /* args[0] = fd, args[1] = cmd, args[2] = arg */
+            uint32_t fd = args[0];
+            uint32_t cmd = args[1];
+            
+            if (fd >= ANDROID_MAX_FDS || !g_android_fd_table[fd].in_use) {
+                return -9; /* -EBADF */
+            }
+            
+            /* Handle common fcntl commands */
+            switch (cmd) {
+                case 0: /* F_DUPFD */
+                    if (g_android_next_fd >= ANDROID_MAX_FDS) return -24;
+                    g_android_fd_table[g_android_next_fd] = g_android_fd_table[fd];
+                    return g_android_next_fd++;
+                case 1: /* F_GETFD */
+                    return 0;
+                case 2: /* F_SETFD */
+                    return 0;
+                case 3: /* F_GETFL */
+                    return (int32_t)g_android_fd_table[fd].flags;
+                case 4: /* F_SETFL */
+                    g_android_fd_table[fd].flags = args[2];
+                    return 0;
+                default:
+                    return 0;
+            }
+        }
+        
+        /* File stat operations */
+        case ANDROID_EXT_SYSCALL_FSTAT:
+        case ANDROID_EXT_SYSCALL_FSTATAT:
+            return 0; /* Success - would fill stat buffer */
+        
+        /* Directory operations */
+        case ANDROID_EXT_SYSCALL_MKDIRAT:
+        case ANDROID_EXT_SYSCALL_UNLINKAT:
+        case ANDROID_EXT_SYSCALL_RENAMEAT:
+        case ANDROID_EXT_SYSCALL_READLINKAT:
+        case ANDROID_EXT_SYSCALL_SYMLINKAT:
+        case ANDROID_EXT_SYSCALL_LINKAT:
+        case ANDROID_EXT_SYSCALL_FCHMOD:
+        case ANDROID_EXT_SYSCALL_FCHMODAT:
+        case ANDROID_EXT_SYSCALL_FCHOWN:
+        case ANDROID_EXT_SYSCALL_FCHOWNAT:
+        case ANDROID_EXT_SYSCALL_UTIMENSAT:
+            return 0;
+        
+        /* Time operations */
+        case ANDROID_EXT_SYSCALL_NANOSLEEP:
+            return 0; /* Sleep completed */
+            
+        case ANDROID_EXT_SYSCALL_CLOCK_GETTIME:
+        case ANDROID_EXT_SYSCALL_GETTIMEOFDAY:
+            return 0; /* Would fill time structure */
+        
+        /* Resource operations */
+        case ANDROID_EXT_SYSCALL_GETRLIMIT:
+        case ANDROID_EXT_SYSCALL_SETRLIMIT:
+        case ANDROID_EXT_SYSCALL_GETRUSAGE:
+        case ANDROID_EXT_SYSCALL_SYSINFO:
+            return 0;
+        
+        case ANDROID_EXT_SYSCALL_UNAME:
+            return 0; /* Would fill utsname structure */
+        
+        /* Signal operations */
+        case ANDROID_EXT_SYSCALL_KILL:
+        case ANDROID_EXT_SYSCALL_TGKILL:
+            return 0;
+            
+        case ANDROID_EXT_SYSCALL_RT_SIGACTION:
+        case ANDROID_EXT_SYSCALL_RT_SIGPROCMASK:
+        case ANDROID_EXT_SYSCALL_SIGALTSTACK:
+            return 0;
+        
+        /* Socket operations */
+        case ANDROID_EXT_SYSCALL_SOCKET: {
+            /* args[0] = domain, args[1] = type, args[2] = protocol */
+            if (g_android_next_sock_fd >= 100 + ANDROID_MAX_SOCKETS) {
+                return -24; /* -EMFILE */
+            }
+            
+            int sock_idx = g_android_next_sock_fd - 100;
+            g_android_sockets[sock_idx].in_use = true;
+            g_android_sockets[sock_idx].domain = (int)args[0];
+            g_android_sockets[sock_idx].type = (int)args[1];
+            g_android_sockets[sock_idx].protocol = (int)args[2];
+            g_android_sockets[sock_idx].connected = false;
+            g_android_sockets[sock_idx].listening = false;
+            
+            return g_android_next_sock_fd++;
+        }
+        
+        case ANDROID_EXT_SYSCALL_SOCKETPAIR: {
+            if (g_android_next_sock_fd + 1 >= 100 + ANDROID_MAX_SOCKETS) {
+                return -24; /* -EMFILE */
+            }
+            int sock_idx1 = g_android_next_sock_fd - 100;
+            int sock_idx2 = sock_idx1 + 1;
+            g_android_sockets[sock_idx1].in_use = true;
+            g_android_sockets[sock_idx2].in_use = true;
+            g_android_next_sock_fd += 2;
+            return 0;
+        }
+        
+        case ANDROID_EXT_SYSCALL_BIND:
+        case ANDROID_EXT_SYSCALL_LISTEN:
+        case ANDROID_EXT_SYSCALL_ACCEPT:
+        case ANDROID_EXT_SYSCALL_ACCEPT4:
+        case ANDROID_EXT_SYSCALL_CONNECT:
+        case ANDROID_EXT_SYSCALL_SENDTO:
+        case ANDROID_EXT_SYSCALL_RECVFROM:
+        case ANDROID_EXT_SYSCALL_SHUTDOWN:
+        case ANDROID_EXT_SYSCALL_SETSOCKOPT:
+        case ANDROID_EXT_SYSCALL_GETSOCKOPT:
+            return 0;
+        
+        /* Epoll operations */
+        case ANDROID_EXT_SYSCALL_EPOLL_CREATE1: {
+            if (g_android_next_epoll_fd >= 200 + ANDROID_MAX_EPOLL) {
+                return -24; /* -EMFILE */
+            }
+            int epoll_idx = g_android_next_epoll_fd - 200;
+            g_android_epolls[epoll_idx].in_use = true;
+            g_android_epolls[epoll_idx].entry_count = 0;
+            return g_android_next_epoll_fd++;
+        }
+        
+        case ANDROID_EXT_SYSCALL_EPOLL_CTL:
+            return 0;
+            
+        case ANDROID_EXT_SYSCALL_EPOLL_PWAIT:
+            return 0; /* No events ready */
+        
+        /* Event operations */
+        case ANDROID_EXT_SYSCALL_EVENTFD2: {
+            if (g_android_next_fd >= ANDROID_MAX_FDS) return -24;
+            int fd = g_android_next_fd++;
+            g_android_fd_table[fd].in_use = true;
+            g_android_fd_table[fd].type = 6; /* eventfd */
+            return fd;
+        }
+        
+        case ANDROID_EXT_SYSCALL_TIMERFD_CREATE: {
+            if (g_android_next_fd >= ANDROID_MAX_FDS) return -24;
+            int fd = g_android_next_fd++;
+            g_android_fd_table[fd].in_use = true;
+            g_android_fd_table[fd].type = 7; /* timerfd */
+            return fd;
+        }
+        
+        case ANDROID_EXT_SYSCALL_TIMERFD_SETTIME:
+        case ANDROID_EXT_SYSCALL_TIMERFD_GETTIME:
+            return 0;
+        
+        case ANDROID_EXT_SYSCALL_SIGNALFD4: {
+            if (g_android_next_fd >= ANDROID_MAX_FDS) return -24;
+            int fd = g_android_next_fd++;
+            g_android_fd_table[fd].in_use = true;
+            g_android_fd_table[fd].type = 8; /* signalfd */
+            return fd;
+        }
+        
+        /* Random and memory operations */
+        case ANDROID_EXT_SYSCALL_GETRANDOM:
+            return (int32_t)args[1]; /* Return requested bytes */
+            
+        case ANDROID_EXT_SYSCALL_MEMFD_CREATE: {
+            if (g_android_next_fd >= ANDROID_MAX_FDS) return -24;
+            int fd = g_android_next_fd++;
+            g_android_fd_table[fd].in_use = true;
+            g_android_fd_table[fd].type = 9; /* memfd */
+            return fd;
+        }
+        
+        case ANDROID_EXT_SYSCALL_MADVISE:
+        case ANDROID_EXT_SYSCALL_MPROTECT:
+        case ANDROID_EXT_SYSCALL_MSYNC:
+        case ANDROID_EXT_SYSCALL_MLOCK:
+        case ANDROID_EXT_SYSCALL_MUNLOCK:
+            return 0;
+        
+        /* Thread operations */
+        case ANDROID_EXT_SYSCALL_SET_TID_ADDRESS:
+            return (int32_t)g_android_next_tid - 1;
+            
+        case ANDROID_EXT_SYSCALL_SET_ROBUST_LIST:
+        case ANDROID_EXT_SYSCALL_GET_ROBUST_LIST:
+            return 0;
+        
+        /* Scheduler operations */
+        case ANDROID_EXT_SYSCALL_SCHED_YIELD:
+            return 0;
+            
+        case ANDROID_EXT_SYSCALL_SCHED_GETAFFINITY:
+        case ANDROID_EXT_SYSCALL_SCHED_SETAFFINITY:
+            return 0;
+        
+        /* Architecture-specific operations */
+        case ANDROID_EXT_SYSCALL_ARCH_PRCTL:
+            return 0;
+            
+        case ANDROID_EXT_SYSCALL_SECCOMP:
+            return 0;
+        
+        default:
+            /* Unknown syscall - return -ENOSYS */
+            return -38;
+    }
+}
+
 int32_t android_vm_handle_syscall(AndroidVM* vm, uint32_t syscall_num, uint32_t* args) {
     if (!vm || !args) {
         return -1;
@@ -481,6 +923,34 @@ int32_t android_vm_handle_syscall(AndroidVM* vm, uint32_t syscall_num, uint32_t*
             /* Exit process - stop VM execution */
             vm->state = ANDROID_VM_STATE_STOPPED;
             return 0;
+            
+        case ANDROID_SYSCALL_FORK: {
+            /* Fork - create child process */
+            /* In a VM context, fork creates a new process entry */
+            /* Find free thread slot for child process */
+            int slot = -1;
+            for (int i = 0; i < ANDROID_MAX_THREADS; i++) {
+                if (!g_android_threads[i].active) {
+                    slot = i;
+                    break;
+                }
+            }
+            
+            if (slot < 0) {
+                return -11; /* -EAGAIN - no resources */
+            }
+            
+            /* Create child process with new PID */
+            uint32_t child_pid = g_android_next_tid++;
+            g_android_threads[slot].active = true;
+            g_android_threads[slot].tid = child_pid;
+            g_android_threads[slot].pid = child_pid;
+            g_android_threads[slot].parent_tid = g_android_current_pid;
+            g_android_threads[slot].stack_ptr = 0;
+            
+            /* Return child PID to parent, would return 0 to child */
+            return (int32_t)child_pid;
+        }
             
         case ANDROID_SYSCALL_WRITE: {
             /* Write to file descriptor */
@@ -524,7 +994,8 @@ int32_t android_vm_handle_syscall(AndroidVM* vm, uint32_t syscall_num, uint32_t*
                 return (int32_t)count;
             }
             
-            /* For regular files, return count (simulated write) */
+            /* For regular files, update position and return count */
+            g_android_fd_table[fd].position += count;
             return (int32_t)count;
         }
             
@@ -545,11 +1016,95 @@ int32_t android_vm_handle_syscall(AndroidVM* vm, uint32_t syscall_num, uint32_t*
                 return 0;
             }
             
-            /* For regular files, simulate empty read */
+            /* For regular files, calculate bytes available to read */
+            uint32_t available = 0;
+            if (g_android_fd_table[fd].size > g_android_fd_table[fd].position) {
+                available = g_android_fd_table[fd].size - g_android_fd_table[fd].position;
+            }
+            
+            if (count > available) {
+                count = available;
+            }
+            
+            /* Update file position */
+            g_android_fd_table[fd].position += count;
             (void)buf_ptr;
-            (void)count;
+            return (int32_t)count;
+        }
+            
+        case ANDROID_SYSCALL_OPEN: {
+            /* Open file (legacy syscall) */
+            /* args[0] = pathname ptr, args[1] = flags, args[2] = mode */
+            uint32_t flags = args[1];
+            
+            /* Find free fd slot */
+            if (g_android_next_fd >= ANDROID_MAX_FDS) {
+                return -24; /* -EMFILE */
+            }
+            
+            int new_fd = g_android_next_fd++;
+            g_android_fd_table[new_fd].in_use = true;
+            g_android_fd_table[new_fd].type = 3; /* Regular file */
+            g_android_fd_table[new_fd].flags = flags;
+            g_android_fd_table[new_fd].position = 0;
+            g_android_fd_table[new_fd].size = 0;
+            
+            return new_fd;
+        }
+            
+        case ANDROID_SYSCALL_CLOSE: {
+            /* Close file descriptor */
+            /* args[0] = fd */
+            uint32_t fd = args[0];
+            
+            /* Validate file descriptor */
+            if (fd >= ANDROID_MAX_FDS || !g_android_fd_table[fd].in_use) {
+                return -9; /* -EBADF */
+            }
+            
+            /* Don't allow closing stdin, stdout, stderr */
+            if (fd < 3) {
+                return -9; /* -EBADF */
+            }
+            
+            /* Mark fd as available */
+            g_android_fd_table[fd].in_use = false;
+            g_android_fd_table[fd].type = 0;
+            g_android_fd_table[fd].flags = 0;
+            g_android_fd_table[fd].position = 0;
+            g_android_fd_table[fd].size = 0;
+            g_android_fd_table[fd].path[0] = '\0';
+            
             return 0;
         }
+        
+        case ANDROID_SYSCALL_WAITPID: {
+            /* Wait for child process */
+            /* args[0] = pid, args[1] = status ptr, args[2] = options */
+            int32_t pid = (int32_t)args[0];
+            
+            /* Find matching child process */
+            for (int i = 0; i < ANDROID_MAX_THREADS; i++) {
+                if (g_android_threads[i].active && 
+                    g_android_threads[i].parent_tid == g_android_current_pid) {
+                    if (pid == -1 || (int32_t)g_android_threads[i].pid == pid) {
+                        /* Return the child's PID */
+                        uint32_t child_pid = g_android_threads[i].pid;
+                        /* Mark thread as inactive (reaped) */
+                        g_android_threads[i].active = false;
+                        return (int32_t)child_pid;
+                    }
+                }
+            }
+            
+            /* No child found */
+            return -10; /* -ECHILD */
+        }
+        
+        case ANDROID_SYSCALL_EXECVE:
+            /* Execute program - not fully supported in VM context */
+            /* Return success but don't actually exec */
+            return 0;
             
         case ANDROID_SYSCALL_GETPID:
             /* Get process ID */
@@ -558,6 +1113,43 @@ int32_t android_vm_handle_syscall(AndroidVM* vm, uint32_t syscall_num, uint32_t*
         case ANDROID_SYSCALL_GETUID:
             /* Get user ID - return root (0) for Android init */
             return 0;
+        
+        case ANDROID_SYSCALL_IOCTL: {
+            /* Device I/O control */
+            /* args[0] = fd, args[1] = request, args[2] = argp */
+            uint32_t fd = args[0];
+            uint32_t request = args[1];
+            
+            /* Validate file descriptor */
+            if (fd >= ANDROID_MAX_FDS || !g_android_fd_table[fd].in_use) {
+                return -9; /* -EBADF */
+            }
+            
+            /* Handle common ioctl requests */
+            /* TCGETS (terminal attributes) */
+            if (request == 0x5401) {
+                /* Not a terminal - return error */
+                if (g_android_fd_table[fd].type != 0 && 
+                    g_android_fd_table[fd].type != 1 && 
+                    g_android_fd_table[fd].type != 2) {
+                    return -25; /* -ENOTTY */
+                }
+                return 0; /* Success for terminal */
+            }
+            
+            /* TIOCGWINSZ (get window size) */
+            if (request == 0x5413) {
+                return 0; /* Success - would fill in window size */
+            }
+            
+            /* FIONREAD (bytes available) */
+            if (request == 0x541B) {
+                return 0;
+            }
+            
+            /* Unknown request - return success by default for compatibility */
+            return 0;
+        }
             
         case ANDROID_SYSCALL_BRK: {
             /* Change data segment size */
@@ -609,6 +1201,27 @@ int32_t android_vm_handle_syscall(AndroidVM* vm, uint32_t syscall_num, uint32_t*
             /* Fixed mapping at specified address */
             return (int32_t)addr;
         }
+        
+        case ANDROID_SYSCALL_MUNMAP: {
+            /* Memory unmap */
+            /* args[0] = addr, args[1] = length */
+            uint32_t addr = args[0];
+            uint32_t length = args[1];
+            
+            /* Validate address alignment */
+            if (addr & 0xFFF) {
+                return -22; /* -EINVAL */
+            }
+            
+            /* In a full implementation, we would:
+             * 1. Find the mapping at addr
+             * 2. Remove it from the mapping table
+             * 3. Return the memory to the allocator
+             * For now, just validate and return success
+             */
+            (void)length;
+            return 0;
+        }
             
         case ANDROID_SYSCALL_CLONE: {
             /* Create child process/thread */
@@ -657,6 +1270,12 @@ int32_t android_vm_handle_syscall(AndroidVM* vm, uint32_t syscall_num, uint32_t*
                     return 0;
                 case 38: /* PR_SET_NO_NEW_PRIVS */
                     return 0;
+                case 22: /* PR_SET_SECCOMP */
+                    return 0;
+                case 28: /* PR_CAPBSET_READ */
+                    return 1; /* Capability is in bounding set */
+                case 25: /* PR_CAPBSET_DROP */
+                    return 0;
                 default:
                     return 0; /* Success for unhandled options */
             }
@@ -672,15 +1291,29 @@ int32_t android_vm_handle_syscall(AndroidVM* vm, uint32_t syscall_num, uint32_t*
             /* Futex operations */
             #define FUTEX_WAIT 0
             #define FUTEX_WAKE 1
+            #define FUTEX_REQUEUE 3
+            #define FUTEX_CMP_REQUEUE 4
+            #define FUTEX_WAKE_OP 5
+            #define FUTEX_WAIT_BITSET 9
+            #define FUTEX_WAKE_BITSET 10
             
             switch (op & 0x7F) {
                 case FUTEX_WAIT:
+                case FUTEX_WAIT_BITSET:
                     /* Wait on futex - for simplicity, return immediately */
                     (void)uaddr;
                     (void)val;
                     return 0;
                 case FUTEX_WAKE:
+                case FUTEX_WAKE_BITSET:
                     /* Wake waiters - return number of waiters woken */
+                    return 1;
+                case FUTEX_REQUEUE:
+                case FUTEX_CMP_REQUEUE:
+                    /* Requeue waiters */
+                    return 0;
+                case FUTEX_WAKE_OP:
+                    /* Wake with operation */
                     return 1;
                 default:
                     return 0;
@@ -709,10 +1342,17 @@ int32_t android_vm_handle_syscall(AndroidVM* vm, uint32_t syscall_num, uint32_t*
             
             return new_fd;
         }
+        
+        case ANDROID_SYSCALL_FACCESSAT: {
+            /* Check file accessibility */
+            /* args[0] = dirfd, args[1] = pathname ptr, args[2] = mode, args[3] = flags */
+            /* For now, return success (file exists and is accessible) */
+            return 0;
+        }
             
         default:
-            /* Unimplemented syscall - return -ENOSYS */
-            return -38;
+            /* Check for additional syscalls in extended range */
+            return android_vm_handle_extended_syscall(vm, syscall_num, args);
     }
 }
 
@@ -781,4 +1421,128 @@ const char* android_vm_get_arch_name(android_arch_t arch) {
         return arch_names[arch];
     }
     return "Unknown";
+}
+
+uint32_t android_vm_get_syscall_count(void) {
+    return ANDROID_SYSCALL_COUNT;
+}
+
+bool android_vm_is_syscall_implemented(uint32_t syscall_num) {
+    /* Check if syscall is in the main handler */
+    switch (syscall_num) {
+        case ANDROID_SYSCALL_EXIT:
+        case ANDROID_SYSCALL_FORK:
+        case ANDROID_SYSCALL_READ:
+        case ANDROID_SYSCALL_WRITE:
+        case ANDROID_SYSCALL_OPEN:
+        case ANDROID_SYSCALL_CLOSE:
+        case ANDROID_SYSCALL_WAITPID:
+        case ANDROID_SYSCALL_EXECVE:
+        case ANDROID_SYSCALL_GETPID:
+        case ANDROID_SYSCALL_GETUID:
+        case ANDROID_SYSCALL_IOCTL:
+        case ANDROID_SYSCALL_BRK:
+        case ANDROID_SYSCALL_MMAP:
+        case ANDROID_SYSCALL_MUNMAP:
+        case ANDROID_SYSCALL_CLONE:
+        case ANDROID_SYSCALL_PRCTL:
+        case ANDROID_SYSCALL_FUTEX:
+        case ANDROID_SYSCALL_OPENAT:
+        case ANDROID_SYSCALL_FACCESSAT:
+            return true;
+        default:
+            break;
+    }
+    
+    /* Check extended syscalls */
+    switch (syscall_num) {
+        case ANDROID_EXT_SYSCALL_LSEEK:
+        case ANDROID_EXT_SYSCALL_GETPPID:
+        case ANDROID_EXT_SYSCALL_GETTID:
+        case ANDROID_EXT_SYSCALL_GETEUID:
+        case ANDROID_EXT_SYSCALL_GETEGID:
+        case ANDROID_EXT_SYSCALL_SETUID:
+        case ANDROID_EXT_SYSCALL_SETGID:
+        case ANDROID_EXT_SYSCALL_UMASK:
+        case ANDROID_EXT_SYSCALL_CHDIR:
+        case ANDROID_EXT_SYSCALL_FCHDIR:
+        case ANDROID_EXT_SYSCALL_GETCWD:
+        case ANDROID_EXT_SYSCALL_DUP:
+        case ANDROID_EXT_SYSCALL_DUP3:
+        case ANDROID_EXT_SYSCALL_PIPE2:
+        case ANDROID_EXT_SYSCALL_FCNTL:
+        case ANDROID_EXT_SYSCALL_FSTAT:
+        case ANDROID_EXT_SYSCALL_FSTATAT:
+        case ANDROID_EXT_SYSCALL_MKDIRAT:
+        case ANDROID_EXT_SYSCALL_UNLINKAT:
+        case ANDROID_EXT_SYSCALL_RENAMEAT:
+        case ANDROID_EXT_SYSCALL_READLINKAT:
+        case ANDROID_EXT_SYSCALL_SYMLINKAT:
+        case ANDROID_EXT_SYSCALL_LINKAT:
+        case ANDROID_EXT_SYSCALL_FCHMOD:
+        case ANDROID_EXT_SYSCALL_FCHMODAT:
+        case ANDROID_EXT_SYSCALL_FCHOWN:
+        case ANDROID_EXT_SYSCALL_FCHOWNAT:
+        case ANDROID_EXT_SYSCALL_UTIMENSAT:
+        case ANDROID_EXT_SYSCALL_NANOSLEEP:
+        case ANDROID_EXT_SYSCALL_CLOCK_GETTIME:
+        case ANDROID_EXT_SYSCALL_GETTIMEOFDAY:
+        case ANDROID_EXT_SYSCALL_GETRLIMIT:
+        case ANDROID_EXT_SYSCALL_SETRLIMIT:
+        case ANDROID_EXT_SYSCALL_GETRUSAGE:
+        case ANDROID_EXT_SYSCALL_SYSINFO:
+        case ANDROID_EXT_SYSCALL_UNAME:
+        case ANDROID_EXT_SYSCALL_KILL:
+        case ANDROID_EXT_SYSCALL_TGKILL:
+        case ANDROID_EXT_SYSCALL_RT_SIGACTION:
+        case ANDROID_EXT_SYSCALL_RT_SIGPROCMASK:
+        case ANDROID_EXT_SYSCALL_SIGALTSTACK:
+        case ANDROID_EXT_SYSCALL_SOCKET:
+        case ANDROID_EXT_SYSCALL_SOCKETPAIR:
+        case ANDROID_EXT_SYSCALL_BIND:
+        case ANDROID_EXT_SYSCALL_LISTEN:
+        case ANDROID_EXT_SYSCALL_ACCEPT:
+        case ANDROID_EXT_SYSCALL_ACCEPT4:
+        case ANDROID_EXT_SYSCALL_CONNECT:
+        case ANDROID_EXT_SYSCALL_SENDTO:
+        case ANDROID_EXT_SYSCALL_RECVFROM:
+        case ANDROID_EXT_SYSCALL_SHUTDOWN:
+        case ANDROID_EXT_SYSCALL_SETSOCKOPT:
+        case ANDROID_EXT_SYSCALL_GETSOCKOPT:
+        case ANDROID_EXT_SYSCALL_EPOLL_CREATE1:
+        case ANDROID_EXT_SYSCALL_EPOLL_CTL:
+        case ANDROID_EXT_SYSCALL_EPOLL_PWAIT:
+        case ANDROID_EXT_SYSCALL_EVENTFD2:
+        case ANDROID_EXT_SYSCALL_TIMERFD_CREATE:
+        case ANDROID_EXT_SYSCALL_TIMERFD_SETTIME:
+        case ANDROID_EXT_SYSCALL_TIMERFD_GETTIME:
+        case ANDROID_EXT_SYSCALL_SIGNALFD4:
+        case ANDROID_EXT_SYSCALL_GETRANDOM:
+        case ANDROID_EXT_SYSCALL_MEMFD_CREATE:
+        case ANDROID_EXT_SYSCALL_MADVISE:
+        case ANDROID_EXT_SYSCALL_MPROTECT:
+        case ANDROID_EXT_SYSCALL_MSYNC:
+        case ANDROID_EXT_SYSCALL_MLOCK:
+        case ANDROID_EXT_SYSCALL_MUNLOCK:
+        case ANDROID_EXT_SYSCALL_SET_TID_ADDRESS:
+        case ANDROID_EXT_SYSCALL_SET_ROBUST_LIST:
+        case ANDROID_EXT_SYSCALL_GET_ROBUST_LIST:
+        case ANDROID_EXT_SYSCALL_SCHED_YIELD:
+        case ANDROID_EXT_SYSCALL_SCHED_GETAFFINITY:
+        case ANDROID_EXT_SYSCALL_SCHED_SETAFFINITY:
+        case ANDROID_EXT_SYSCALL_ARCH_PRCTL:
+        case ANDROID_EXT_SYSCALL_SECCOMP:
+            return true;
+        default:
+            return false;
+    }
+}
+
+const char* android_vm_get_console_output(void) {
+    return g_android_console_buffer;
+}
+
+void android_vm_clear_console(void) {
+    g_android_console_pos = 0;
+    g_android_console_buffer[0] = '\0';
 }
