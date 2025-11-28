@@ -287,7 +287,6 @@ void gui_process_event(event_t* event) {
                                     break;
                                 case 15: // Power Options
                                     gui_show_power_options();
-                                case 13: // Power Options
                                     app_launch(APP_POWER_OPTIONS);
                                     break;
                             }
