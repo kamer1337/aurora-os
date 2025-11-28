@@ -46,8 +46,8 @@
 #define EDOM 33
 #define ERANGE 34
 #define ENOSYS 38
-#define ELOOP 40
 #define ENOTEMPTY 39
+#define ELOOP 40
 
 /* Android/ARM64 syscall numbers */
 #define __NR_ANDROID_read 0

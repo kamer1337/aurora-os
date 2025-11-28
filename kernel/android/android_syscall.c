@@ -519,11 +519,15 @@ long android_sys_lseek(long fd, long offset, long whence, long unused1, long unu
     
     switch (whence) {
         case SEEK_SET:
+            if (offset < 0) return -EINVAL;
             entry->offset = (uint32_t)offset;
             break;
-        case SEEK_CUR:
-            entry->offset += offset;
+        case SEEK_CUR: {
+            long new_offset = (long)entry->offset + offset;
+            if (new_offset < 0) return -EINVAL;
+            entry->offset = (uint32_t)new_offset;
             break;
+        }
         case SEEK_END:
             return -EINVAL;
         default:
@@ -621,6 +625,11 @@ long android_sys_renameat(long olddirfd, long oldpath, long newdirfd, long newpa
     return 0;
 }
 
+/* Access mode check bits */
+#define ACCESS_R_BIT 4  /* Read access check */
+#define ACCESS_W_BIT 2  /* Write access check */
+#define ACCESS_X_BIT 1  /* Execute access check */
+
 long android_sys_faccessat(long dirfd, long pathname, long mode, long flags, long unused1, long unused2) {
     (void)dirfd; (void)flags; (void)unused1; (void)unused2;
     
@@ -629,9 +638,9 @@ long android_sys_faccessat(long dirfd, long pathname, long mode, long flags, lon
     }
     
     int access_mode = 0;
-    if (mode & 4) access_mode |= R_OK;
-    if (mode & 2) access_mode |= W_OK;
-    if (mode & 1) access_mode |= X_OK;
+    if (mode & ACCESS_R_BIT) access_mode |= R_OK;
+    if (mode & ACCESS_W_BIT) access_mode |= W_OK;
+    if (mode & ACCESS_X_BIT) access_mode |= X_OK;
     
     if (vfs_access((const char*)pathname, access_mode) != 0) {
         return -EACCES;
