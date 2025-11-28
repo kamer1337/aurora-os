@@ -5,6 +5,7 @@
  */
 
 #include "usb.h"
+#include "usb_storage.h"
 #include "../memory/memory.h"
 #include <stddef.h>
 
@@ -352,7 +353,8 @@ int usb_hid_attach(usb_device_t* device) {
  * Initialize USB mass storage driver
  */
 void usb_msd_init(void) {
-    /* Initialize mass storage driver structures */
+    /* Initialize USB mass storage subsystem */
+    usb_storage_init();
 }
 
 /**
@@ -363,9 +365,11 @@ int usb_msd_attach(usb_device_t* device) {
         return -1;
     }
     
-    /* Get storage device info */
-    /* Setup bulk endpoints */
-    /* Register as block device */
+    /* Attach device using USB storage driver */
+    usb_storage_device_t* storage_dev = usb_storage_attach(device);
+    if (!storage_dev) {
+        return -1;
+    }
     
     return 0;
 }

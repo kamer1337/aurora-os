@@ -48,8 +48,8 @@
   - [ ] Implement PNG/BMP image loading
   - [ ] Support custom wallpaper images
 
-- [ ] **USB Storage Support**
-  - [ ] USB mass storage driver
+- [x] **USB Storage Support**
+  - [x] USB mass storage driver
   - [ ] USB device hot-plug support
 
 - [ ] **Multi-User Support**
