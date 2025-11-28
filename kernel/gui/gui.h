@@ -315,4 +315,10 @@ void gui_set_window_transparency(window_t* window, uint8_t transparency);
  */
 uint8_t gui_get_window_transparency(window_t* window);
 
+/**
+ * Show power options dialog
+ * Displays shutdown, restart, and sleep options
+ */
+void gui_show_power_options(void);
+
 #endif // GUI_H

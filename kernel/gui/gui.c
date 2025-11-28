@@ -57,11 +57,11 @@ static window_t* context_menu_window = NULL;
 static int32_t context_menu_x = 0;
 static int32_t context_menu_y = 0;
 
-// Start menu animation state (for future implementation)
-// static float start_menu_animation = 0.0f;  // 0.0 = closed, 1.0 = open
+// Start menu animation state
+static float start_menu_animation = 0.0f;  // 0.0 = closed, 1.0 = open
 static uint8_t start_menu_animating = 0;
-// static uint32_t start_menu_anim_start_time = 0;
-// #define START_MENU_ANIMATION_DURATION 200  // milliseconds
+static uint8_t start_menu_opening = 0;     // 1 = opening, 0 = closing
+#define START_MENU_ANIMATION_SPEED 0.15f   // Animation step per frame
 
 // Start menu keyboard navigation state
 static int32_t start_menu_selected_item = 0;
@@ -93,6 +93,7 @@ static const int32_t desktop_icon_count = 9;
 static void gui_draw_start_menu(void);
 static void gui_draw_context_menu(void);
 static void gui_draw_desktop_icon(desktop_icon_t* icon);
+void gui_show_power_options(void);
 
 int gui_init(void) {
     if (gui_initialized) {
@@ -150,6 +151,26 @@ void gui_update(void) {
         live_wallpaper_update(16, cursor_x, cursor_y);  // ~60 FPS (16ms per frame)
     }
     
+    // Update start menu animation
+    if (start_menu_animating) {
+        if (start_menu_opening) {
+            // Opening animation - slide up
+            start_menu_animation += START_MENU_ANIMATION_SPEED;
+            if (start_menu_animation >= 1.0f) {
+                start_menu_animation = 1.0f;
+                start_menu_animating = 0;
+            }
+        } else {
+            // Closing animation - slide down
+            start_menu_animation -= START_MENU_ANIMATION_SPEED;
+            if (start_menu_animation <= 0.0f) {
+                start_menu_animation = 0.0f;
+                start_menu_animating = 0;
+                start_menu_visible = 0;
+            }
+        }
+    }
+    
     // Redraw desktop background
     gui_draw_desktop();
     
@@ -165,8 +186,8 @@ void gui_update(void) {
     // Draw taskbar
     gui_draw_taskbar();
     
-    // Draw start menu if visible
-    if (start_menu_visible) {
+    // Draw start menu if visible (including during animation)
+    if (start_menu_visible || start_menu_animating) {
         gui_draw_start_menu();
     }
     
@@ -203,7 +224,7 @@ void gui_process_event(event_t* event) {
                         int32_t relative_y = event->y - (int32_t)menu_y - (int32_t)header_height;
                         
                         // Check if clicked on a menu item (not header)
-                        if (relative_y >= 0 && relative_y < (int32_t)((item_height + item_spacing) * 14)) {
+                        if (relative_y >= 0 && relative_y < (int32_t)((item_height + item_spacing) * 16)) {
                             uint32_t item_index = (uint32_t)relative_y / (item_height + item_spacing);
                             
                             // Launch the corresponding application
@@ -241,10 +262,16 @@ void gui_process_event(event_t* event) {
                                 case 10: // Calculator
                                     app_launch(APP_CALCULATOR);
                                     break;
-                                case 11: // Help & Support
+                                case 11: // Goals Manager
+                                    app_launch(APP_GOALS_MANAGER);
+                                    break;
+                                case 12: // Linux Installer
+                                    app_launch(APP_LINUX_INSTALLER);
+                                    break;
+                                case 13: // Help & Support
                                     app_launch(APP_HELP);
                                     break;
-                                case 12: // Toggle Wallpaper
+                                case 14: // Toggle Wallpaper
                                     {
                                         desktop_config_t* cfg = desktop_config_get();
                                         if (cfg) {
@@ -257,19 +284,20 @@ void gui_process_event(event_t* event) {
                                         }
                                     }
                                     break;
-                                case 13: // Power Options (placeholder)
+                                case 15: // Power Options
+                                    gui_show_power_options();
                                     break;
                             }
                         }
                         
-                        // Close the menu after launching
-                        start_menu_visible = 0;
+                        // Close the menu with animation after launching
                         start_menu_animating = 1;
+                        start_menu_opening = 0;
                         return;
                     } else {
-                        // Clicked outside start menu - close it
-                        start_menu_visible = 0;
+                        // Clicked outside start menu - close it with animation
                         start_menu_animating = 1;
+                        start_menu_opening = 0;
                     }
                 }
             }
@@ -324,9 +352,10 @@ void gui_process_event(event_t* event) {
                         return;
                     }
                     
-                    // Hide start menu if clicking elsewhere on taskbar
-                    if (start_menu_visible) {
-                        start_menu_visible = 0;
+                    // Hide start menu with animation if clicking elsewhere on taskbar
+                    if (start_menu_visible && !start_menu_animating) {
+                        start_menu_animating = 1;
+                        start_menu_opening = 0;
                     }
                     
                     // Clicked on taskbar - check window list buttons
@@ -502,13 +531,27 @@ void gui_process_event(event_t* event) {
                     case 0x48: // Up arrow
                         if (start_menu_selected_item > 0) {
                             start_menu_selected_item--;
+                        } else {
+                            // Wrap to bottom
+                            start_menu_selected_item = start_menu_item_count - 1;
                         }
                         break;
                     case 0x50: // Down arrow
+                    case '\t': // Tab key - also navigates down
                         if (start_menu_selected_item < start_menu_item_count - 1) {
                             start_menu_selected_item++;
+                        } else {
+                            // Wrap to top
+                            start_menu_selected_item = 0;
                         }
                         break;
+                    case 0x4B: // Left arrow - previous page (first item)
+                        start_menu_selected_item = 0;
+                        break;
+                    case 0x4D: // Right arrow - next page (last item)
+                        start_menu_selected_item = start_menu_item_count - 1;
+                        break;
+                    case ' ': // Space key - also activates selected item
                     case 0x0D: // Enter key (also '\r')
                     case '\n':
                         // Launch the selected application
@@ -568,16 +611,19 @@ void gui_process_event(event_t* event) {
                                     }
                                 }
                                 break;
-                            case 15: // Power Options (placeholder)
+                            case 15: // Power Options
+                                gui_show_power_options();
                                 break;
                         }
-                        start_menu_visible = 0;
+                        // Close menu with animation
                         start_menu_animating = 1;
+                        start_menu_opening = 0;
                         start_menu_selected_item = 0;
                         break;
                     case 0x1B: // Escape key
-                        start_menu_visible = 0;
+                        // Close menu with animation
                         start_menu_animating = 1;
+                        start_menu_opening = 0;
                         start_menu_selected_item = 0;
                         break;
                 }
@@ -1210,25 +1256,39 @@ static void gui_draw_start_menu(void) {
     uint32_t menu_width = 250;
     uint32_t menu_height = 725;  // Increased height for Linux Installer
     uint32_t menu_x = 5;
-    uint32_t menu_y = fb->height - 40 - menu_height;
+    
+    // Apply slide-up animation using eased animation value
+    float eased_anim = gui_ease(start_menu_animation, EASE_OUT_QUAD);
+    int32_t anim_offset = (int32_t)((1.0f - eased_anim) * menu_height);
+    int32_t menu_y = fb->height - 40 - menu_height + anim_offset;
+    
+    // Calculate visible portion during animation
+    uint32_t visible_height = (uint32_t)(menu_height * eased_anim);
+    if (visible_height < 1) visible_height = 1;
     
     // Draw menu background with shadow
-    gui_draw_shadow(menu_x, menu_y, menu_width, menu_height, 4, 8);
-    framebuffer_draw_rect(menu_x, menu_y, menu_width, menu_height,
+    gui_draw_shadow(menu_x, menu_y, menu_width, visible_height, 4, 8);
+    framebuffer_draw_rect(menu_x, menu_y, menu_width, visible_height,
                         (color_t){45, 45, 48, 255});
     
     // Draw menu border
-    framebuffer_draw_rect_outline(menu_x, menu_y, menu_width, menu_height,
+    framebuffer_draw_rect_outline(menu_x, menu_y, menu_width, visible_height,
                                  (color_t){80, 80, 85, 255});
     
+    // Only draw content if enough menu is visible
+    if (eased_anim < 0.1f) return;
+    
     // Draw menu header
-    framebuffer_draw_rect(menu_x, menu_y, menu_width, 60,
-                        (color_t){0, 120, 215, 255});
-    font_manager_draw_string(menu_x + 10, menu_y + 10, "Aurora OS", COLOR_WHITE,
-                          (color_t){0, 120, 215, 255});
-    font_manager_draw_string(menu_x + 10, menu_y + 30, "Start Menu", 
-                          (color_t){200, 200, 200, 255},
-                          (color_t){0, 120, 215, 255});
+    uint32_t header_height = 60;
+    if (visible_height >= header_height) {
+        framebuffer_draw_rect(menu_x, menu_y, menu_width, header_height,
+                            (color_t){0, 120, 215, 255});
+        font_manager_draw_string(menu_x + 10, menu_y + 10, "Aurora OS", COLOR_WHITE,
+                              (color_t){0, 120, 215, 255});
+        font_manager_draw_string(menu_x + 10, menu_y + 30, "Start Menu", 
+                              (color_t){200, 200, 200, 255},
+                              (color_t){0, 120, 215, 255});
+    }
     
     // Draw menu items (updated to include Linux Installer)
     const char* items[] = {
@@ -1254,6 +1314,9 @@ static void gui_draw_start_menu(void) {
     uint32_t item_y = menu_y + 70;
     
     for (int i = 0; i < 16; i++) {
+        // Only draw items that are visible
+        if (item_y - menu_y + item_height > visible_height) break;
+        
         // Draw item background (highlight selected item)
         color_t item_bg;
         if (i == start_menu_selected_item) {
@@ -1354,11 +1417,17 @@ static void gui_draw_desktop_icon(desktop_icon_t* icon) {
 }
 
 void gui_toggle_start_menu(void) {
-    start_menu_visible = !start_menu_visible;
-    
-    // Hide context menu when opening start menu
-    if (start_menu_visible) {
+    if (!start_menu_visible && !start_menu_animating) {
+        // Start opening animation
+        start_menu_visible = 1;
+        start_menu_animating = 1;
+        start_menu_opening = 1;
+        start_menu_animation = 0.0f;
         context_menu_visible = 0;
+    } else if (start_menu_visible && !start_menu_animating) {
+        // Start closing animation
+        start_menu_animating = 1;
+        start_menu_opening = 0;
     }
 }
 
@@ -1370,8 +1439,11 @@ void gui_show_context_menu(window_t* window, int32_t x, int32_t y) {
     context_menu_y = y;
     context_menu_visible = 1;
     
-    // Hide start menu when showing context menu
-    start_menu_visible = 0;
+    // Hide start menu with animation when showing context menu
+    if (start_menu_visible && !start_menu_animating) {
+        start_menu_animating = 1;
+        start_menu_opening = 0;
+    }
 }
 
 void gui_hide_context_menu(void) {
@@ -1427,4 +1499,130 @@ void gui_set_window_transparency(window_t* window, uint8_t transparency) {
 uint8_t gui_get_window_transparency(window_t* window) {
     if (!window) return 100;
     return window->transparency;
+}
+
+// Power options dialog state
+static window_t* power_options_window = NULL;
+
+// Power button click handlers
+static void power_shutdown_click(widget_t* widget, int32_t x, int32_t y) {
+    (void)widget;
+    (void)x;
+    (void)y;
+    // In a real OS, this would trigger a system shutdown
+    // For now, show a confirmation message and close the dialog
+    if (power_options_window) {
+        gui_destroy_window(power_options_window);
+        power_options_window = NULL;
+    }
+    
+    // Create shutdown confirmation dialog
+    window_t* confirm = gui_create_window("Shutdown", 350, 250, 300, 150);
+    if (confirm) {
+        confirm->bg_color = (color_t){240, 240, 245, 255};
+        gui_create_label(confirm, "System is shutting down...", 30, 40);
+        gui_create_label(confirm, "Please save your work.", 50, 70);
+        gui_create_button(confirm, "OK", 110, 100, 80, 35);
+        gui_show_window(confirm);
+        gui_focus_window(confirm);
+    }
+}
+
+static void power_restart_click(widget_t* widget, int32_t x, int32_t y) {
+    (void)widget;
+    (void)x;
+    (void)y;
+    // In a real OS, this would trigger a system restart
+    if (power_options_window) {
+        gui_destroy_window(power_options_window);
+        power_options_window = NULL;
+    }
+    
+    // Create restart confirmation dialog
+    window_t* confirm = gui_create_window("Restart", 350, 250, 300, 150);
+    if (confirm) {
+        confirm->bg_color = (color_t){240, 240, 245, 255};
+        gui_create_label(confirm, "System is restarting...", 40, 40);
+        gui_create_label(confirm, "Please wait.", 80, 70);
+        gui_create_button(confirm, "OK", 110, 100, 80, 35);
+        gui_show_window(confirm);
+        gui_focus_window(confirm);
+    }
+}
+
+static void power_sleep_click(widget_t* widget, int32_t x, int32_t y) {
+    (void)widget;
+    (void)x;
+    (void)y;
+    // In a real OS, this would trigger sleep mode
+    if (power_options_window) {
+        gui_destroy_window(power_options_window);
+        power_options_window = NULL;
+    }
+    
+    // Create sleep confirmation dialog
+    window_t* confirm = gui_create_window("Sleep", 350, 250, 300, 150);
+    if (confirm) {
+        confirm->bg_color = (color_t){240, 240, 245, 255};
+        gui_create_label(confirm, "Entering sleep mode...", 45, 40);
+        gui_create_label(confirm, "Press any key to wake.", 40, 70);
+        gui_create_button(confirm, "OK", 110, 100, 80, 35);
+        gui_show_window(confirm);
+        gui_focus_window(confirm);
+    }
+}
+
+static void power_cancel_click(widget_t* widget, int32_t x, int32_t y) {
+    (void)widget;
+    (void)x;
+    (void)y;
+    if (power_options_window) {
+        gui_destroy_window(power_options_window);
+        power_options_window = NULL;
+    }
+}
+
+void gui_show_power_options(void) {
+    // Don't create multiple power options dialogs
+    if (power_options_window) {
+        gui_focus_window(power_options_window);
+        return;
+    }
+    
+    power_options_window = gui_create_window("Power Options", 300, 200, 400, 280);
+    if (!power_options_window) return;
+    
+    power_options_window->bg_color = (color_t){45, 45, 48, 255};
+    
+    // Header
+    gui_create_label(power_options_window, "Power Options", 140, 15);
+    gui_create_label(power_options_window, "Choose an action:", 145, 45);
+    
+    // Power option buttons
+    widget_t* shutdown_btn = gui_create_button(power_options_window, "Shut Down", 50, 80, 300, 40);
+    if (shutdown_btn) {
+        shutdown_btn->bg_color = (color_t){200, 60, 60, 255};  // Red
+        gui_set_widget_click_handler(shutdown_btn, power_shutdown_click);
+    }
+    
+    widget_t* restart_btn = gui_create_button(power_options_window, "Restart", 50, 130, 300, 40);
+    if (restart_btn) {
+        restart_btn->bg_color = (color_t){60, 150, 200, 255};  // Blue
+        gui_set_widget_click_handler(restart_btn, power_restart_click);
+    }
+    
+    widget_t* sleep_btn = gui_create_button(power_options_window, "Sleep", 50, 180, 300, 40);
+    if (sleep_btn) {
+        sleep_btn->bg_color = (color_t){80, 80, 90, 255};  // Gray
+        gui_set_widget_click_handler(sleep_btn, power_sleep_click);
+    }
+    
+    widget_t* cancel_btn = gui_create_button(power_options_window, "Cancel", 150, 235, 100, 30);
+    if (cancel_btn) {
+        cancel_btn->bg_color = (color_t){100, 100, 110, 255};
+        gui_set_widget_click_handler(cancel_btn, power_cancel_click);
+    }
+    
+    gui_show_window(power_options_window);
+    gui_focus_window(power_options_window);
 }
