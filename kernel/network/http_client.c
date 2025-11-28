@@ -195,19 +195,37 @@ static int base64_encode(const uint8_t* input, size_t input_len,
     }
     
     size_t out_pos = 0;
-    size_t i = 0;
+    size_t in_pos = 0;
     
-    while (i < input_len) {
-        uint32_t octet_a = i < input_len ? input[i++] : 0;
-        uint32_t octet_b = i < input_len ? input[i++] : 0;
-        uint32_t octet_c = i < input_len ? input[i++] : 0;
-        
-        uint32_t triple = (octet_a << 16) | (octet_b << 8) | octet_c;
+    /* Process 3 bytes at a time */
+    while (in_pos + 2 < input_len) {
+        uint32_t triple = ((uint32_t)input[in_pos] << 16) |
+                          ((uint32_t)input[in_pos + 1] << 8) |
+                          (uint32_t)input[in_pos + 2];
         
         output[out_pos++] = base64_table[(triple >> 18) & 0x3F];
         output[out_pos++] = base64_table[(triple >> 12) & 0x3F];
-        output[out_pos++] = (i > input_len + 1) ? '=' : base64_table[(triple >> 6) & 0x3F];
-        output[out_pos++] = (i > input_len) ? '=' : base64_table[triple & 0x3F];
+        output[out_pos++] = base64_table[(triple >> 6) & 0x3F];
+        output[out_pos++] = base64_table[triple & 0x3F];
+        
+        in_pos += 3;
+    }
+    
+    /* Handle remaining bytes */
+    size_t remaining = input_len - in_pos;
+    if (remaining == 2) {
+        uint32_t triple = ((uint32_t)input[in_pos] << 16) |
+                          ((uint32_t)input[in_pos + 1] << 8);
+        output[out_pos++] = base64_table[(triple >> 18) & 0x3F];
+        output[out_pos++] = base64_table[(triple >> 12) & 0x3F];
+        output[out_pos++] = base64_table[(triple >> 6) & 0x3F];
+        output[out_pos++] = '=';
+    } else if (remaining == 1) {
+        uint32_t triple = (uint32_t)input[in_pos] << 16;
+        output[out_pos++] = base64_table[(triple >> 18) & 0x3F];
+        output[out_pos++] = base64_table[(triple >> 12) & 0x3F];
+        output[out_pos++] = '=';
+        output[out_pos++] = '=';
     }
     
     output[out_pos] = '\0';

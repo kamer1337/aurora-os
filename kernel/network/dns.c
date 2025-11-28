@@ -78,7 +78,12 @@ static dns_resolver_t resolver;
 static dns_cache_entry_t cache_storage[DNS_CACHE_STORAGE_SIZE];
 static uint32_t cache_storage_used = 0;
 
-/* Fake time for stub implementation */
+/* 
+ * Stub time function for cache TTL validation.
+ * In a real implementation, this would integrate with the kernel's
+ * system time (e.g., from RTC or timer subsystem).
+ * Currently uses monotonically increasing fake time for basic functionality.
+ */
 static uint64_t get_current_timestamp(void) {
     static uint64_t fake_time = 1700000000ULL;
     return fake_time++;
