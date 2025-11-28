@@ -8,118 +8,71 @@ To develop a modern, secure, and highly efficient operating system that surpasse
 
 ---
 
-## **2. Screenshots**
+## **2. Screenshots Showcase**
 
-### Boot Screen
+> **10 screenshots** demonstrating Aurora OS features at Full HD resolution (1920x1080)
 
-Aurora OS uses GRUB as its bootloader, providing a clean boot interface:
+### 📸 Core Desktop Experience
 
-![Aurora OS Boot Screen](screenshots/aurora-os-boot.png)
+| Screenshot | Description |
+|------------|-------------|
+| ![Boot Screen](screenshots/aurora-os-boot.png) | **Boot Screen** - GRUB bootloader with multi-OS selection (Aurora OS, Linux VM, Android VM) |
+| ![Desktop](screenshots/aurora-os-desktop.png) | **Desktop Environment** - Modern desktop with taskbar, start menu, and 5D effects |
+| ![Windows](screenshots/aurora-os-windows.png) | **Window Management** - Multi-window support with focus management and decorations |
+| ![Start Menu](screenshots/aurora-os-startmenu.png) | **Start Menu** - Interactive application launcher with system navigation |
 
-### Desktop Environment
+### 🎨 Advanced Visual Effects
 
-Aurora OS features a modern desktop environment with advanced visual effects:
+| Screenshot | Description |
+|------------|-------------|
+| ![Effects](screenshots/aurora-os-effects.png) | **3D/4D/5D Effects** - Gradients, particle systems, glow effects, and animations |
+| ![4D Parallax](screenshots/aurora-os-4d-parallax-depth.png) | **4D Parallax Depth** - Multi-layer parallax with atmospheric perspective |
+| ![5D Particles](screenshots/aurora-os-5d-particle-effects.png) | **5D Particle Effects** - Volumetric lighting with dynamic glow and compositing |
+| ![5D Glass](screenshots/aurora-os-5d-glass-blur.png) | **5D Glass Blur** - Frosted glass with background blur and transparency |
+| ![Live Wallpaper](screenshots/aurora-os-live-wallpaper-depth.png) | **Live Wallpaper** - Interactive nature scenes with parallax motion |
+| ![4D/5D Showcase](screenshots/aurora-os-4d-5d-showcase.png) | **Combined Showcase** - All spatial depth and interactive effects together |
 
-![Aurora OS Desktop](screenshots/aurora-os-desktop.png)
+### 🖥️ Key GUI Features
 
-**Key GUI Features:**
-- **Framebuffer Graphics**: Full HD 1920x1080x32 resolution with full RGBA color support
-- **Login/Guest Screen**: User authentication system with guest mode support
-- **Window Management**: Draggable windows with title bars, borders, and close buttons
-- **Widget System**: Buttons, labels, panels, and interactive elements
-- **3D Visual Effects**: Enhanced shadows, vivid gradients, prominent rounded corners (12px radius), and alpha blending
-- **4D Animation System**: Smooth animations with 7 easing functions (linear, ease-in, ease-out, ease-in-out, bounce, elastic, back)
-- **5D Interactive Effects**: Particle systems, glow effects, and glass/blur effects with real-time icon interactions
-- **5D Icon System**: Interactive icons with hover glow effects, depth-based perspective scaling, alpha blending transitions, and particle emission on interaction
-- **Live Wallpaper System**: Optional 4D/5D spatial depth wallpaper with interactive parallax and animated nature scenes (trees, mountains, clouds, flowers)
-- **Desktop Environment**: Modular architecture with wallpaper support, taskbar, start menu, context menus, and interactive desktop icons
-- **Visual Design**: Modern UI with vivid colors, gradient window titles, and rounded interface elements
-- **Performance**: Software-rendered at ~125 FPS
+<details>
+<summary><strong>Click to expand feature details</strong></summary>
 
-### Window Management
+**Graphics & Display:**
+- Full HD 1920x1080x32 resolution with RGBA color support
+- Software-rendered at ~125 FPS
+- 8 themes: Default, Dark, Light, Ocean, Forest, Sunset, Purple, and Custom (user-defined)
 
-Multiple windows can be displayed simultaneously with smooth overlapping and focus management:
+**Desktop Components:**
+- Login/Guest screen with user authentication
+- Modular architecture: wallpaper, taskbar, start menu, context menus
+- 4 virtual workspaces, each configurable to run Aurora OS, Linux VM, or Android VM
 
-![Aurora OS Window Management](screenshots/aurora-os-windows.png)
+**Window System:**
+- Draggable windows with title bars, borders, and close buttons
+- Widget system: buttons, labels, panels, and interactive elements
+- Focus management and smooth overlapping
 
-### Start Menu
+**Visual Effects:**
+- **3D**: Enhanced shadows, vivid gradients, 12px rounded corners, alpha blending
+- **4D**: Animation system with 9 easing functions (linear, quad in/out, cubic in/out, bounce, elastic, back)
+- **5D**: Particle systems, glow effects, glass/blur effects, interactive icons
 
-Interactive start menu for launching applications and accessing system features:
+**5D Icon System:**
+- Hover glow effects with customizable intensity
+- Depth-based perspective scaling (0.0-1.0 range)
+- Particle emission on interaction
+- Glass effect integration for system tray
 
-![Aurora OS Start Menu](screenshots/aurora-os-startmenu.png)
+</details>
 
-### Advanced Visual Effects
+### 📋 Screenshot Gallery Summary
 
-3D/4D/5D effects demonstration including gradients, particle systems, glow effects, and animations:
+| Category | Screenshots | Resolution | Features Shown |
+|----------|-------------|------------|----------------|
+| Core Desktop | 4 | Standard | Boot, desktop, windows, start menu |
+| Visual Effects | 6 | Full HD 1920x1080 | 3D/4D/5D effects, parallax, particles |
 
-![Aurora OS Visual Effects](screenshots/aurora-os-effects.png)
-
-### 4D/5D Spatial Depth Features
-
-Aurora OS features advanced photorealistic 4D/5D spatial depth rendering with multiple parallax layers:
-
-#### 4D Parallax Spatial Depth
-
-Photorealistic multi-layer parallax rendering with depth-based animation, atmospheric perspective, and perspective-correct scaling:
-
-![Aurora OS 4D Parallax Depth](screenshots/aurora-os-4d-parallax-depth.png)
-
-#### 5D Interactive Particle Effects
-
-Photorealistic real-time particle systems with volumetric lighting, dynamic glow, specular highlights, and alpha-blended compositing:
-
-![Aurora OS 5D Particle Effects](screenshots/aurora-os-5d-particle-effects.png)
-
-#### 5D Glass & Blur Effects
-
-Photorealistic frosted glass effects with real background blur, transparency, color tinting, and multi-layer compositing:
-
-![Aurora OS 5D Glass Blur](screenshots/aurora-os-5d-glass-blur.png)
-
-#### Live Wallpaper with Spatial Depth
-
-Photorealistic interactive nature scenes with volumetric clouds, atmospheric perspective, and depth-based parallax motion:
-
-![Aurora OS Live Wallpaper Depth](screenshots/aurora-os-live-wallpaper-depth.png)
-
-#### Combined 4D/5D Showcase
-
-Comprehensive photorealistic demonstration of all spatial depth and interactive effects working together:
-
-![Aurora OS 4D/5D Showcase](screenshots/aurora-os-4d-5d-showcase.png)
-
-#### 5D Interactive Icon System
-
-Aurora OS features an advanced 5D interactive icon system with real-time visual feedback:
-
-**Icon Interaction Features:**
-- **Hover Glow Effects**: Icons emit photorealistic glow halos when hovered, with customizable color and intensity
-- **Depth-Based Perspective**: Desktop icons scale based on spatial depth (0.0-1.0 range), with foreground icons appearing larger and more prominent
-- **Alpha Blending Transitions**: Smooth transparency changes based on depth and interaction state
-- **Particle Emission**: Interactive icons can emit particle effects on click, creating dynamic visual feedback
-- **Glass Effect Integration**: System tray and quick launch icons utilize frosted glass backgrounds with blur
-- **Real-Time Highlighting**: Rounded rectangle highlights with configurable radius and color on hover state
-- **Shadow Rendering**: Multi-layer shadows with blur for enhanced depth perception
-- **Sprite Support**: Custom icon sprites with alpha channel support for detailed graphics
-
-**Implementation Details:**
-- Quick Launch icons: 5D glow effect with 2-pixel intensity on hover, rounded highlights with 6px radius
-- System Tray icons: 16x16 sprites with glass effect background, 3px rounded highlights
-- Desktop Icons: Perspective scaling (base 48x48), depth-aware alpha blending, multi-pass rendering (background to foreground)
-- All icons support click callbacks and tooltip displays with visual feedback
-
-The desktop environment includes:
-- Interactive start menu for launching applications
-- Taskbar showing running applications and system status
-- Window decorations with modern visual effects
-- Customizable wallpaper and themes
-- Photorealistic 4D/5D spatial depth rendering with parallax layers
-- Real-time particle systems with volumetric lighting and interactive effects
-- Interactive desktop icons with 5D glow, perspective depth, and particle feedback
-- System tray icons with glass effects and hover highlighting
-- Quick launch bar with 5D icon interactions and smooth transitions
-
-*Note: The GUI requires proper VGA/VESA BIOS support. The screenshots above demonstrate the fully implemented GUI framework running on compatible hardware. The 4D/5D spatial depth and effects screenshots (parallax depth, particle effects, glass blur, live wallpaper depth, and combined showcase) are captured at Full HD resolution (1920x1080) showcasing the advanced visual capabilities. Earlier screenshots (boot, desktop, windows, start menu, effects) are at standard resolutions demonstrating core functionality.*
+*Note: All screenshots demonstrate the fully implemented GUI framework. VGA/VESA BIOS support required for graphical modes.*
 
 ---
 
