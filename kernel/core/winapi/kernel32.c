@@ -3517,14 +3517,86 @@ UINT WINAPI SetErrorMode(UINT uMode) {
 
 DWORD WINAPI GetPrivateProfileStringA(LPCSTR lpAppName, LPCSTR lpKeyName, LPCSTR lpDefault,
                                       LPSTR lpReturnedString, DWORD nSize, LPCSTR lpFileName) {
-    (void)lpAppName;
-    (void)lpKeyName;
-    (void)lpFileName;
-    
     if (!lpReturnedString || nSize == 0) {
         return 0;
     }
     
+    /* Try to read from the INI file */
+    if (lpFileName && lpAppName && lpKeyName) {
+        int fd = vfs_open(lpFileName, 0);  /* O_RDONLY */
+        if (fd >= 0) {
+            /* Read the file content */
+            char buffer[1024];
+            int bytes_read = vfs_read(fd, buffer, sizeof(buffer) - 1);
+            vfs_close(fd);
+            
+            if (bytes_read > 0) {
+                buffer[bytes_read] = '\0';
+                
+                /* Simple INI parser: find [section] and key=value */
+                char section_marker[128];
+                int spos = 0;
+                section_marker[spos++] = '[';
+                const char* app = lpAppName;
+                while (*app && spos < 126) section_marker[spos++] = *app++;
+                section_marker[spos++] = ']';
+                section_marker[spos] = '\0';
+                
+                /* Find section */
+                char* section = buffer;
+                int found_section = 0;
+                while (*section) {
+                    /* Check for section match */
+                    const char* sm = section_marker;
+                    const char* sp = section;
+                    while (*sm && *sp && *sm == *sp) { sm++; sp++; }
+                    if (*sm == '\0') {
+                        found_section = 1;
+                        section = (char*)sp;
+                        break;
+                    }
+                    /* Move to next line */
+                    while (*section && *section != '\n') section++;
+                    if (*section) section++;
+                }
+                
+                if (found_section) {
+                    /* Find key within section */
+                    while (*section) {
+                        /* Check for new section start */
+                        if (*section == '[') break;
+                        
+                        /* Skip whitespace */
+                        while (*section == ' ' || *section == '\t') section++;
+                        
+                        /* Check for key match */
+                        const char* key = lpKeyName;
+                        const char* sp = section;
+                        while (*key && *sp && *key == *sp) { key++; sp++; }
+                        
+                        if (*key == '\0' && *sp == '=') {
+                            /* Found the key, extract value */
+                            sp++;  /* Skip '=' */
+                            while (*sp == ' ' || *sp == '\t') sp++;  /* Skip whitespace */
+                            
+                            DWORD i = 0;
+                            while (*sp && *sp != '\n' && *sp != '\r' && i < nSize - 1) {
+                                lpReturnedString[i++] = *sp++;
+                            }
+                            lpReturnedString[i] = '\0';
+                            return i;
+                        }
+                        
+                        /* Move to next line */
+                        while (*section && *section != '\n') section++;
+                        if (*section) section++;
+                    }
+                }
+            }
+        }
+    }
+    
+    /* Return default value if key not found */
     if (lpDefault) {
         k32_strncpy(lpReturnedString, lpDefault, (int)nSize - 1);
         return (DWORD)k32_strlen(lpReturnedString);
@@ -3536,12 +3608,161 @@ DWORD WINAPI GetPrivateProfileStringA(LPCSTR lpAppName, LPCSTR lpKeyName, LPCSTR
 
 BOOL WINAPI WritePrivateProfileStringA(LPCSTR lpAppName, LPCSTR lpKeyName,
                                        LPCSTR lpString, LPCSTR lpFileName) {
-    (void)lpAppName;
-    (void)lpKeyName;
-    (void)lpString;
-    (void)lpFileName;
+    if (!lpFileName) {
+        winapi_set_last_error(ERROR_INVALID_PARAMETER);
+        return FALSE;
+    }
     
-    /* INI file writing not implemented */
+    /* Read existing file content */
+    char existing[2048];
+    int existing_len = 0;
+    
+    int fd = vfs_open(lpFileName, 0);  /* O_RDONLY */
+    if (fd >= 0) {
+        existing_len = vfs_read(fd, existing, sizeof(existing) - 1);
+        vfs_close(fd);
+        if (existing_len > 0) {
+            existing[existing_len] = '\0';
+        } else {
+            existing_len = 0;
+            existing[0] = '\0';
+        }
+    } else {
+        existing[0] = '\0';
+    }
+    
+    /* If deleting (lpString is NULL) or deleting section (lpKeyName is NULL) */
+    if (lpString == NULL || lpAppName == NULL) {
+        /* Deletion not fully implemented - just return success */
+        winapi_set_last_error(ERROR_SUCCESS);
+        return TRUE;
+    }
+    
+    /* Build new content */
+    char new_content[2048];
+    int new_len = 0;
+    
+    /* Build section marker */
+    char section_marker[128];
+    int spos = 0;
+    section_marker[spos++] = '[';
+    const char* app = lpAppName;
+    while (*app && spos < 126) section_marker[spos++] = *app++;
+    section_marker[spos++] = ']';
+    section_marker[spos] = '\0';
+    
+    int found_section = 0;
+    int found_key = 0;
+    char* src = existing;
+    
+    while (*src && new_len < 2000) {
+        /* Copy until we find the section or end */
+        if (*src == '[') {
+            /* Check if this is our section */
+            const char* sm = section_marker;
+            const char* sp = src;
+            while (*sm && *sp && *sm == *sp) { sm++; sp++; }
+            
+            if (*sm == '\0') {
+                found_section = 1;
+                /* Copy section header */
+                while (*src && *src != '\n' && new_len < 2000) {
+                    new_content[new_len++] = *src++;
+                }
+                if (*src == '\n') new_content[new_len++] = *src++;
+                
+                /* Now handle keys within section */
+                while (*src && *src != '[' && new_len < 2000) {
+                    /* Check if this line is our key */
+                    while (*src == ' ' || *src == '\t') {
+                        new_content[new_len++] = *src++;
+                    }
+                    
+                    const char* key = lpKeyName;
+                    char* sp2 = src;
+                    while (*key && *sp2 && *key == *sp2) { key++; sp2++; }
+                    
+                    if (*key == '\0' && *sp2 == '=') {
+                        /* Found the key - replace with new value */
+                        found_key = 1;
+                        const char* k = lpKeyName;
+                        while (*k) new_content[new_len++] = *k++;
+                        new_content[new_len++] = '=';
+                        const char* v = lpString;
+                        while (*v) new_content[new_len++] = *v++;
+                        new_content[new_len++] = '\n';
+                        
+                        /* Skip old line */
+                        while (*src && *src != '\n') src++;
+                        if (*src == '\n') src++;
+                    } else {
+                        /* Copy this line as-is */
+                        while (*src && *src != '\n' && new_len < 2000) {
+                            new_content[new_len++] = *src++;
+                        }
+                        if (*src == '\n') new_content[new_len++] = *src++;
+                    }
+                }
+                
+                /* If key not found, add it */
+                if (!found_key) {
+                    const char* k = lpKeyName;
+                    while (*k) new_content[new_len++] = *k++;
+                    new_content[new_len++] = '=';
+                    const char* v = lpString;
+                    while (*v) new_content[new_len++] = *v++;
+                    new_content[new_len++] = '\n';
+                    found_key = 1;
+                }
+            } else {
+                /* Different section - copy as-is */
+                while (*src && new_len < 2000) {
+                    new_content[new_len++] = *src++;
+                    if (*(src-1) == '\n' && (*src == '[' || *src == '\0')) break;
+                }
+            }
+        } else {
+            /* Copy line as-is */
+            while (*src && *src != '\n' && new_len < 2000) {
+                new_content[new_len++] = *src++;
+            }
+            if (*src == '\n') new_content[new_len++] = *src++;
+        }
+    }
+    
+    /* If section not found, add it */
+    if (!found_section) {
+        if (new_len > 0 && new_content[new_len-1] != '\n') {
+            new_content[new_len++] = '\n';
+        }
+        const char* sm = section_marker;
+        while (*sm && new_len < 2000) new_content[new_len++] = *sm++;
+        new_content[new_len++] = '\n';
+        const char* k = lpKeyName;
+        while (*k && new_len < 2000) new_content[new_len++] = *k++;
+        new_content[new_len++] = '=';
+        const char* v = lpString;
+        while (*v && new_len < 2000) new_content[new_len++] = *v++;
+        new_content[new_len++] = '\n';
+    }
+    
+    new_content[new_len] = '\0';
+    
+    /* Write to file */
+    fd = vfs_open(lpFileName, 0x0241);  /* O_WRONLY | O_CREAT | O_TRUNC */
+    if (fd < 0) {
+        winapi_set_last_error(ERROR_ACCESS_DENIED);
+        return FALSE;
+    }
+    
+    int written = vfs_write(fd, new_content, new_len);
+    vfs_close(fd);
+    
+    if (written < 0) {
+        winapi_set_last_error(ERROR_WRITE_FAULT);
+        return FALSE;
+    }
+    
     winapi_set_last_error(ERROR_SUCCESS);
     return TRUE;
 }
