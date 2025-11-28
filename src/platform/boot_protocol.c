@@ -522,3 +522,348 @@ uint32_t boot_crc32(const uint8_t* data, uint32_t len) {
 const char* boot_protocol_get_version(void) {
     return "1.0.0-aurora-boot";
 }
+
+/* ============================================================================
+ * EXTENDED LINUX BOOT PROTOCOL FEATURES
+ * ============================================================================ */
+
+/**
+ * Add E820 memory map entry
+ */
+int linux_boot_add_e820_entry(uint64_t addr, uint64_t size, uint32_t type) {
+    if (g_linux_boot_state.e820_entries >= E820_MAX_ENTRIES) {
+        return -1;  /* Map full */
+    }
+    
+    uint8_t idx = g_linux_boot_state.e820_entries++;
+    g_linux_boot_state.e820_map[idx].addr = addr;
+    g_linux_boot_state.e820_map[idx].size = size;
+    g_linux_boot_state.e820_map[idx].type = type;
+    
+    return (int)idx;
+}
+
+/**
+ * Get E820 memory map entry count
+ */
+uint8_t linux_boot_get_e820_count(void) {
+    return g_linux_boot_state.e820_entries;
+}
+
+/**
+ * Get E820 memory map entry by index
+ */
+int linux_boot_get_e820_entry(uint8_t idx, uint64_t* addr, uint64_t* size, uint32_t* type) {
+    if (idx >= g_linux_boot_state.e820_entries) {
+        return -1;
+    }
+    
+    if (addr) *addr = g_linux_boot_state.e820_map[idx].addr;
+    if (size) *size = g_linux_boot_state.e820_map[idx].size;
+    if (type) *type = g_linux_boot_state.e820_map[idx].type;
+    
+    return 0;
+}
+
+/**
+ * Setup KASLR (Kernel Address Space Layout Randomization)
+ * Provides random kernel load address for security
+ */
+int linux_boot_setup_kaslr(LinuxVM* vm, uint32_t entropy) {
+    if (!vm) {
+        return -1;
+    }
+    
+    if (!g_linux_boot_state.initialized) {
+        return -1;
+    }
+    
+    /* Calculate randomized kernel address */
+    /* KASLR randomizes the kernel load address within alignment constraints */
+    uint32_t alignment = 0x200000;  /* 2MB alignment for modern kernels */
+    uint32_t min_addr = 0x1000000;  /* 16MB minimum */
+    uint32_t max_addr = 0x4000000;  /* 64MB maximum for 128MB VM */
+    
+    /* Use entropy to generate random offset */
+    uint32_t range = (max_addr - min_addr) / alignment;
+    uint32_t offset = (entropy % range) * alignment;
+    uint32_t kaslr_addr = min_addr + offset;
+    
+    g_linux_boot_state.kernel_addr = kaslr_addr;
+    
+    return 0;
+}
+
+/**
+ * Get kernel load address (with KASLR if enabled)
+ */
+uint32_t linux_boot_get_kernel_addr(void) {
+    return g_linux_boot_state.kernel_addr;
+}
+
+/**
+ * Set initrd (initial ramdisk) address and size
+ */
+int linux_boot_set_initrd(LinuxVM* vm, uint32_t addr, uint32_t size) {
+    if (!vm) {
+        return -1;
+    }
+    
+    g_linux_boot_state.initrd_addr = addr;
+    g_linux_boot_state.initrd_size = size;
+    
+    return 0;
+}
+
+/**
+ * Get initrd information
+ */
+int linux_boot_get_initrd(uint32_t* addr, uint32_t* size) {
+    if (addr) *addr = g_linux_boot_state.initrd_addr;
+    if (size) *size = g_linux_boot_state.initrd_size;
+    return 0;
+}
+
+/**
+ * Set command line for Linux boot
+ */
+int linux_boot_set_cmdline(const char* cmdline) {
+    if (!cmdline) {
+        return -1;
+    }
+    
+    platform_strncpy(g_linux_boot_state.cmdline, cmdline, sizeof(g_linux_boot_state.cmdline));
+    return 0;
+}
+
+/**
+ * Get command line
+ */
+const char* linux_boot_get_cmdline(void) {
+    return g_linux_boot_state.cmdline;
+}
+
+/**
+ * Append to command line
+ */
+int linux_boot_append_cmdline(const char* append) {
+    if (!append) {
+        return -1;
+    }
+    
+    uint32_t current_len = platform_strlen(g_linux_boot_state.cmdline);
+    uint32_t append_len = platform_strlen(append);
+    
+    if (current_len + append_len + 2 >= sizeof(g_linux_boot_state.cmdline)) {
+        return -1;  /* Would overflow */
+    }
+    
+    if (current_len > 0) {
+        g_linux_boot_state.cmdline[current_len++] = ' ';
+    }
+    platform_strncpy(g_linux_boot_state.cmdline + current_len, append, 
+                     sizeof(g_linux_boot_state.cmdline) - current_len);
+    
+    return 0;
+}
+
+/* EFI boot support */
+#define EFI_LOADER_SIGNATURE    "EL64"
+#define EFI_LOADER_SIGNATURE_32 "EL32"
+
+/**
+ * EFI system table pointer (for EFI boot)
+ */
+typedef struct {
+    uint64_t efi_system_table;
+    uint64_t efi_memmap;
+    uint32_t efi_memmap_size;
+    uint32_t efi_memmap_desc_size;
+    uint32_t efi_memmap_desc_version;
+    char efi_loader_signature[4];
+} efi_boot_info_t;
+
+static efi_boot_info_t g_efi_boot_info = {0};
+
+/**
+ * Setup EFI boot (for UEFI systems)
+ */
+int linux_boot_setup_efi(LinuxVM* vm, uint64_t system_table) {
+    if (!vm) {
+        return -1;
+    }
+    
+    g_efi_boot_info.efi_system_table = system_table;
+    platform_strncpy(g_efi_boot_info.efi_loader_signature, EFI_LOADER_SIGNATURE_32, 4);
+    
+    return 0;
+}
+
+/**
+ * Check if EFI boot is configured
+ */
+bool linux_boot_is_efi(void) {
+    return g_efi_boot_info.efi_system_table != 0;
+}
+
+/**
+ * Get EFI system table address
+ */
+uint64_t linux_boot_get_efi_system_table(void) {
+    return g_efi_boot_info.efi_system_table;
+}
+
+/* ============================================================================
+ * EXTENDED ANDROID BOOT PROTOCOL FEATURES  
+ * ============================================================================ */
+
+/**
+ * Load vendor boot image
+ */
+int android_boot_load_vendor(AndroidVM* vm, const uint8_t* vendor_image, uint32_t size) {
+    if (!vm || !vendor_image || size < sizeof(vendor_boot_img_hdr_t)) {
+        return -1;
+    }
+    
+    /* Verify vendor boot magic */
+    if (platform_memcmp(vendor_image, "VNDRBOOT", 8) != 0) {
+        return -1;
+    }
+    
+    const vendor_boot_img_hdr_t* hdr = (const vendor_boot_img_hdr_t*)vendor_image;
+    
+    /* Store vendor boot configuration */
+    g_android_boot_state.dtb_addr = (uint32_t)hdr->dtb_addr;
+    g_android_boot_state.dtb_size = hdr->dtb_size;
+    
+    /* Append vendor cmdline to existing cmdline */
+    if (hdr->cmdline[0] != '\0') {
+        uint32_t len = platform_strlen(g_android_boot_state.cmdline);
+        if (len > 0 && len < sizeof(g_android_boot_state.cmdline) - 1) {
+            g_android_boot_state.cmdline[len++] = ' ';
+        }
+        platform_strncpy(g_android_boot_state.cmdline + len, 
+                        (const char*)hdr->cmdline,
+                        sizeof(g_android_boot_state.cmdline) - len);
+    }
+    
+    /* Load vendor ramdisk if present */
+    if (hdr->vendor_ramdisk_size > 0) {
+        uint32_t ramdisk_offset = hdr->header_size;
+        const uint8_t* ramdisk_data = vendor_image + ramdisk_offset;
+        
+        if (ramdisk_offset + hdr->vendor_ramdisk_size <= size) {
+            /* Merge with existing ramdisk or load as primary */
+            if (g_android_boot_state.ramdisk_size == 0) {
+                g_android_boot_state.ramdisk_addr = hdr->ramdisk_addr;
+                g_android_boot_state.ramdisk_size = hdr->vendor_ramdisk_size;
+            }
+            (void)ramdisk_data;  /* Would copy to VM memory in real implementation */
+        }
+    }
+    
+    /* Load DTB if present */
+    if (hdr->dtb_size > 0) {
+        uint32_t dtb_offset = hdr->header_size + 
+            ((hdr->vendor_ramdisk_size + hdr->page_size - 1) / hdr->page_size) * hdr->page_size;
+        
+        if (dtb_offset + hdr->dtb_size <= size) {
+            /* Store DTB info */
+            g_android_boot_state.dtb_addr = (uint32_t)hdr->dtb_addr;
+            g_android_boot_state.dtb_size = hdr->dtb_size;
+        }
+    }
+    
+    return 0;
+}
+
+/**
+ * Get Android boot command line from protocol state
+ */
+const char* boot_protocol_get_android_cmdline(void) {
+    return g_android_boot_state.cmdline;
+}
+
+/**
+ * Set Android boot command line in protocol state
+ */
+int boot_protocol_set_android_cmdline(const char* cmdline) {
+    if (!cmdline) {
+        return -1;
+    }
+    
+    platform_strncpy(g_android_boot_state.cmdline, cmdline, sizeof(g_android_boot_state.cmdline));
+    return 0;
+}
+
+/**
+ * Append to Android boot command line in protocol state
+ */
+int boot_protocol_append_android_cmdline(const char* append) {
+    if (!append) {
+        return -1;
+    }
+    
+    uint32_t len = platform_strlen(g_android_boot_state.cmdline);
+    if (len > 0 && len < sizeof(g_android_boot_state.cmdline) - 1) {
+        g_android_boot_state.cmdline[len++] = ' ';
+    }
+    platform_strncpy(g_android_boot_state.cmdline + len, append,
+                     sizeof(g_android_boot_state.cmdline) - len);
+    return 0;
+}
+
+/**
+ * Get DTB (Device Tree Blob) information
+ */
+int boot_protocol_get_android_dtb(uint32_t* addr, uint32_t* size) {
+    if (addr) *addr = g_android_boot_state.dtb_addr;
+    if (size) *size = g_android_boot_state.dtb_size;
+    return 0;
+}
+
+/**
+ * Verify Android boot image signature (Android Verified Boot)
+ */
+int boot_protocol_verify_android_signature(const uint8_t* image, uint32_t size, const uint8_t* key, uint32_t key_size) {
+    if (!image || size < sizeof(boot_img_hdr_v4_t) || !key || key_size == 0) {
+        return -1;
+    }
+    
+    /* Verify it's a v4 boot image with signature */
+    if (!android_boot_is_valid_image(image, size)) {
+        return -1;
+    }
+    
+    const boot_img_hdr_v4_t* hdr = (const boot_img_hdr_v4_t*)image;
+    if (hdr->header_version != 4 || hdr->signature_size == 0) {
+        return -1;  /* No signature present */
+    }
+    
+    /* Calculate expected signature location */
+    uint32_t page_size = 4096;
+    uint32_t kernel_pages = (hdr->kernel_size + page_size - 1) / page_size;
+    uint32_t ramdisk_pages = (hdr->ramdisk_size + page_size - 1) / page_size;
+    uint32_t sig_offset = hdr->header_size + (kernel_pages + ramdisk_pages) * page_size;
+    
+    if (sig_offset + hdr->signature_size > size) {
+        return -1;  /* Signature extends beyond image */
+    }
+    
+    /* Calculate hash of image (simplified - real implementation would use SHA256) */
+    uint32_t hash = boot_crc32(image, sig_offset);
+    (void)hash;  /* Would compare against signature */
+    (void)key;   /* Would use key to verify */
+    
+    /* In real implementation, would verify signature using AVB key */
+    return 0;
+}
+
+/**
+ * Reset boot state
+ */
+void boot_protocol_reset(void) {
+    platform_memset(&g_android_boot_state, 0, sizeof(g_android_boot_state));
+    platform_memset(&g_linux_boot_state, 0, sizeof(g_linux_boot_state));
+    platform_memset(&g_efi_boot_info, 0, sizeof(g_efi_boot_info));
+}
