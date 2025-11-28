@@ -651,22 +651,40 @@ int vfs_access(const char* path, int mode) {
         return -1; /* File doesn't exist */
     }
     
+    /* F_OK just checks existence */
+    if (mode == F_OK) {
+        return 0;
+    }
+    
     /* Check requested permissions against inode mode */
     uint16_t required = 0;
-    if (mode & O_RDONLY) required |= S_IROTH;
-    if (mode & O_WRONLY) required |= S_IWOTH;
+    uint16_t owner_req = 0;
     
-    /* Simple check: if any required permission is set in mode, allow */
-    if ((inode->mode & required) == required) {
+    if (mode & R_OK) {
+        required |= S_IROTH;
+        owner_req |= S_IRUSR;
+    }
+    if (mode & W_OK) {
+        required |= S_IWOTH;
+        owner_req |= S_IWUSR;
+    }
+    if (mode & X_OK) {
+        required |= S_IXOTH;
+        owner_req |= S_IXUSR;
+    }
+    
+    /* Check if others permissions allow access */
+    if (required != 0 && (inode->mode & required) == required) {
         return 0;
     }
     
     /* Also allow if owner permissions are set (simplified - no user check) */
-    uint16_t owner_req = 0;
-    if (mode & O_RDONLY) owner_req |= S_IRUSR;
-    if (mode & O_WRONLY) owner_req |= S_IWUSR;
+    if (owner_req != 0 && (inode->mode & owner_req) == owner_req) {
+        return 0;
+    }
     
-    if ((inode->mode & owner_req) == owner_req) {
+    /* If no specific permissions requested, just check file exists */
+    if (required == 0 && owner_req == 0) {
         return 0;
     }
     

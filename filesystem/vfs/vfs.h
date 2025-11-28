@@ -29,6 +29,12 @@
 #define SEEK_CUR    1
 #define SEEK_END    2
 
+/* Access permission check modes for vfs_access */
+#define F_OK        0  /* Check existence */
+#define R_OK        4  /* Check read permission */
+#define W_OK        2  /* Check write permission */
+#define X_OK        1  /* Check execute permission */
+
 /* File permission bits (Unix-style) */
 #define S_IRUSR     0x0100  /* Owner read */
 #define S_IWUSR     0x0080  /* Owner write */
