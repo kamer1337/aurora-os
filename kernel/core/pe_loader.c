@@ -5,6 +5,7 @@
  */
 
 #include "pe_loader.h"
+#include "dll_loader.h"
 #include "../memory/memory.h"
 #include "../drivers/vga.h"
 #include <stddef.h>
@@ -220,23 +221,51 @@ int pe_resolve_imports(pe_image_t* image) {
             ilt = iat;
         }
         
+        /* Load the DLL module */
+        HMODULE dll_module = dll_get_module_handle(dll_name);
+        if (!dll_module) {
+            dll_module = dll_load(dll_name);
+        }
+        
         /* Iterate through import entries */
         while (*ilt != 0) {
+            void* func_addr = NULL;
+            
             if (*ilt & IMAGE_ORDINAL_FLAG32) {
                 /* Import by ordinal */
                 uint16_t ordinal = (uint16_t)(*ilt & 0xFFFF);
                 vga_write("  Import by ordinal: ");
                 vga_write_dec(ordinal);
-                vga_write("\n");
-                /* TODO: Look up function by ordinal from DLL */
+                
+                /* Look up function by ordinal from DLL */
+                if (dll_module) {
+                    func_addr = dll_get_proc_address_ordinal(dll_module, ordinal);
+                }
+                
+                if (func_addr) {
+                    vga_write(" -> resolved\n");
+                    *iat = (uint32_t)(uintptr_t)func_addr;
+                } else {
+                    vga_write(" -> NOT FOUND\n");
+                }
             } else {
                 /* Import by name */
                 pe_import_by_name_t* hint_name = (pe_import_by_name_t*)
                     ((uint8_t*)image->image_base + (*ilt & 0x7FFFFFFF));
                 vga_write("  Import by name: ");
                 vga_write(hint_name->Name);
-                vga_write("\n");
-                /* TODO: Look up function by name from DLL */
+                
+                /* Look up function by name from DLL */
+                if (dll_module) {
+                    func_addr = dll_get_proc_address(dll_module, hint_name->Name);
+                }
+                
+                if (func_addr) {
+                    vga_write(" -> resolved\n");
+                    *iat = (uint32_t)(uintptr_t)func_addr;
+                } else {
+                    vga_write(" -> NOT FOUND\n");
+                }
             }
             
             ilt++;

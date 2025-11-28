@@ -2,7 +2,7 @@
 # Build the Aurora VM library and test suite independently from the kernel
 
 CC = gcc
-CFLAGS = -Wall -Wextra -std=c99 -I include
+CFLAGS = -Wall -Wextra -std=c99 -I include -DAURORA_STANDALONE
 LDFLAGS = 
 
 # Source files

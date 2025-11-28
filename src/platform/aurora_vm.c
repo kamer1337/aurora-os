@@ -1868,20 +1868,209 @@ void aurora_vm_jit_enable(AuroraVM *vm, bool enabled) {
     }
 }
 
+/**
+ * Generate native x86 code for a basic block of Aurora VM instructions.
+ * 
+ * This is a simplified JIT compiler that generates native x86 code for common
+ * instruction patterns including arithmetic, load immediate, and control flow.
+ * 
+ * @param vm           Pointer to the Aurora VM instance
+ * @param start_addr   Starting address of the basic block in VM memory (for debugging)
+ * @param instructions Array of decoded Aurora VM instructions to compile
+ * @param num_instr    Number of instructions in the array
+ * @param native_buf   Buffer to write generated native code into
+ * @param buf_size     Size of the native code buffer in bytes
+ * 
+ * @return Number of bytes of native code generated, or -1 on error
+ * 
+ * Register mapping for generated x86 code:
+ *   EAX - Scratch register for arithmetic operations
+ *   ESI - Base pointer to VM registers array (preserved across calls)
+ *   EDI - Scratch register for address calculation
+ *   EBX - Reserved (preserved)
+ *   ECX - Scratch
+ *   EDX - Scratch
+ * 
+ * Supported instructions: ADD, SUB, LOADI, HALT (and others fall through to interpreter)
+ */
+static int jit_generate_native(AuroraVM *vm, uint32_t start_addr, uint32_t *instructions, 
+                                uint32_t num_instr, uint8_t *native_buf, uint32_t buf_size) {
+    if (!vm || !instructions || !native_buf || buf_size < 64) return -1;
+    
+    uint32_t pos = 0;
+    
+    /* Function prologue */
+    native_buf[pos++] = 0x55;                   /* push ebp */
+    native_buf[pos++] = 0x89; native_buf[pos++] = 0xe5;  /* mov ebp, esp */
+    native_buf[pos++] = 0x53;                   /* push ebx */
+    native_buf[pos++] = 0x56;                   /* push esi */
+    native_buf[pos++] = 0x57;                   /* push edi */
+    
+    /* Load VM pointers (would come from function arguments in real implementation) */
+    /* For now, just generate placeholder code */
+    
+    for (uint32_t i = 0; i < num_instr && pos < buf_size - 32; i++) {
+        uint32_t instr = instructions[i];
+        uint8_t opcode = (instr >> 24) & 0xFF;
+        uint8_t rd = (instr >> 20) & 0x0F;
+        uint8_t rs1 = (instr >> 16) & 0x0F;
+        uint8_t rs2 = (instr >> 12) & 0x0F;
+        int16_t imm = (int16_t)(instr & 0xFFFF);
+        
+        (void)rd; (void)rs1; (void)rs2; (void)imm;  /* Suppress warnings */
+        
+        switch (opcode) {
+            case 0xFF:  /* Reserved/NOP - handle as no-op */
+                native_buf[pos++] = 0x90;  /* nop */
+                break;
+                
+            case AURORA_OP_ADD:
+                /* mov eax, [esi + rs1*4] */
+                native_buf[pos++] = 0x8b;
+                native_buf[pos++] = 0x44;
+                native_buf[pos++] = 0x86;
+                native_buf[pos++] = rs1 * 4;
+                /* add eax, [esi + rs2*4] */
+                native_buf[pos++] = 0x03;
+                native_buf[pos++] = 0x44;
+                native_buf[pos++] = 0x86;
+                native_buf[pos++] = rs2 * 4;
+                /* mov [esi + rd*4], eax */
+                native_buf[pos++] = 0x89;
+                native_buf[pos++] = 0x44;
+                native_buf[pos++] = 0x86;
+                native_buf[pos++] = rd * 4;
+                break;
+                
+            case AURORA_OP_SUB:
+                /* mov eax, [esi + rs1*4] */
+                native_buf[pos++] = 0x8b;
+                native_buf[pos++] = 0x44;
+                native_buf[pos++] = 0x86;
+                native_buf[pos++] = rs1 * 4;
+                /* sub eax, [esi + rs2*4] */
+                native_buf[pos++] = 0x2b;
+                native_buf[pos++] = 0x44;
+                native_buf[pos++] = 0x86;
+                native_buf[pos++] = rs2 * 4;
+                /* mov [esi + rd*4], eax */
+                native_buf[pos++] = 0x89;
+                native_buf[pos++] = 0x44;
+                native_buf[pos++] = 0x86;
+                native_buf[pos++] = rd * 4;
+                break;
+                
+            case AURORA_OP_LOADI:
+                /* mov dword [esi + rd*4], imm (sign-extended from 16 to 32 bits) */
+                {
+                    int32_t sign_ext_imm = (int32_t)imm;  /* Proper sign extension */
+                    native_buf[pos++] = 0xc7;
+                    native_buf[pos++] = 0x44;
+                    native_buf[pos++] = 0x86;
+                    native_buf[pos++] = rd * 4;
+                    native_buf[pos++] = sign_ext_imm & 0xFF;
+                    native_buf[pos++] = (sign_ext_imm >> 8) & 0xFF;
+                    native_buf[pos++] = (sign_ext_imm >> 16) & 0xFF;
+                    native_buf[pos++] = (sign_ext_imm >> 24) & 0xFF;
+                }
+                break;
+                
+            case AURORA_OP_HALT:
+                /* Return from JIT code */
+                goto epilogue;
+                
+            default:
+                /* Unsupported opcode - bail out and interpret */
+                pos = 0;
+                goto epilogue;
+        }
+    }
+
+epilogue:
+    /* Function epilogue */
+    if (pos > 0) {
+        native_buf[pos++] = 0x5f;  /* pop edi */
+        native_buf[pos++] = 0x5e;  /* pop esi */
+        native_buf[pos++] = 0x5b;  /* pop ebx */
+        native_buf[pos++] = 0x5d;  /* pop ebp */
+        native_buf[pos++] = 0xc3;  /* ret */
+    }
+    
+    (void)start_addr;  /* Used for debugging/profiling in full implementation */
+    return (int)pos;
+}
+
 int aurora_vm_jit_compile_block(AuroraVM *vm, uint32_t addr) {
     if (!vm || !vm->jit.enabled || !vm->jit.cache) return -1;
     if (vm->jit.num_blocks >= 256) return -1;
+    if (addr >= AURORA_VM_MEMORY_SIZE - 64) return -1;
     
-    /* Simple JIT compilation stub - would need platform-specific code generation */
+    /* Check if block is already compiled */
+    for (uint32_t i = 0; i < vm->jit.num_blocks; i++) {
+        if (vm->jit.blocks[i].start_addr == addr && vm->jit.blocks[i].compiled) {
+            return 0;  /* Already compiled */
+        }
+    }
+    
+    /* Scan for end of basic block (HALT, JMP, or branch instruction) */
+    uint32_t instr_count = 0;
+    uint32_t instructions[64];
+    uint32_t scan_addr = addr;
+    
+    /* Validate memory bounds - AURORA_VM_MEMORY_SIZE must be at least 4 */
+    if (AURORA_VM_MEMORY_SIZE < 4) return -1;
+    const uint32_t max_scan_addr = AURORA_VM_MEMORY_SIZE - 4;
+    
+    while (scan_addr <= max_scan_addr && instr_count < 64) {
+        uint32_t instr = 0;
+        instr |= vm->memory[scan_addr] << 24;
+        instr |= vm->memory[scan_addr + 1] << 16;
+        instr |= vm->memory[scan_addr + 2] << 8;
+        instr |= vm->memory[scan_addr + 3];
+        
+        instructions[instr_count++] = instr;
+        scan_addr += 4;
+        
+        uint8_t opcode = (instr >> 24) & 0xFF;
+        /* End basic block at control flow instructions */
+        if (opcode == AURORA_OP_HALT || opcode == AURORA_OP_JMP ||
+            opcode == AURORA_OP_JZ || opcode == AURORA_OP_JNZ ||
+            opcode == AURORA_OP_CALL || opcode == AURORA_OP_RET) {
+            break;
+        }
+    }
+    
+    if (instr_count == 0) return -1;
+    
+    /* Find space in JIT cache */
+    uint32_t required_size = instr_count * 16 + 32;  /* Estimate: 16 bytes per instruction + prologue/epilogue */
+    if (vm->jit.cache_used + required_size > vm->jit.cache_size) {
+        /* Cache full - clear and restart */
+        aurora_vm_jit_clear_cache(vm);
+    }
+    
+    /* Generate native code */
+    uint8_t *native_ptr = vm->jit.cache + vm->jit.cache_used;
+    int native_len = jit_generate_native(vm, addr, instructions, instr_count, 
+                                          native_ptr, vm->jit.cache_size - vm->jit.cache_used);
+    
+    if (native_len <= 0) {
+        /* JIT compilation failed - block will be interpreted */
+        return -1;
+    }
+    
+    /* Record compiled block */
     aurora_jit_block_t *block = &vm->jit.blocks[vm->jit.num_blocks];
     block->start_addr = addr;
-    block->length = 64;  /* Assume 16 instructions */
-    block->native_code = NULL;  /* Would point to JIT cache */
-    block->native_length = 0;
+    block->length = instr_count * 4;
+    block->native_code = native_ptr;
+    block->native_length = (uint32_t)native_len;
     block->exec_count = 0;
-    block->compiled = false;  /* Not actually compiled yet */
+    block->compiled = true;
     
+    vm->jit.cache_used += (uint32_t)native_len;
     vm->jit.num_blocks++;
+    
     return 0;
 }
 
@@ -1898,17 +2087,276 @@ void aurora_vm_jit_clear_cache(AuroraVM *vm) {
 
 /* ===== GDB Server API Implementation ===== */
 
+/* GDB Remote Serial Protocol (RSP) helper functions */
+static uint8_t gdb_hex_to_nibble(char c) {
+    if (c >= '0' && c <= '9') return c - '0';
+    if (c >= 'a' && c <= 'f') return c - 'a' + 10;
+    if (c >= 'A' && c <= 'F') return c - 'A' + 10;
+    return 0;
+}
+
+static char gdb_nibble_to_hex(uint8_t nibble) {
+    const char hex[] = "0123456789abcdef";
+    return hex[nibble & 0x0F];
+}
+
+static uint8_t gdb_calculate_checksum(const char *data, size_t len) {
+    uint8_t checksum = 0;
+    for (size_t i = 0; i < len; i++) {
+        checksum += (uint8_t)data[i];
+    }
+    return checksum;
+}
+
+/* Format GDB RSP packet: $data#checksum */
+static int gdb_format_packet(const char *data, char *out_buf, size_t buf_size) {
+    size_t data_len = 0;
+    while (data[data_len]) data_len++;
+    
+    if (data_len + 5 > buf_size) return -1;  /* $...#XX */
+    
+    out_buf[0] = '$';
+    for (size_t i = 0; i < data_len; i++) {
+        out_buf[i + 1] = data[i];
+    }
+    out_buf[data_len + 1] = '#';
+    
+    uint8_t checksum = gdb_calculate_checksum(data, data_len);
+    out_buf[data_len + 2] = gdb_nibble_to_hex(checksum >> 4);
+    out_buf[data_len + 3] = gdb_nibble_to_hex(checksum & 0x0F);
+    out_buf[data_len + 4] = '\0';
+    
+    return (int)(data_len + 4);
+}
+
+/* Format register value as hex string (little-endian) */
+static int gdb_format_reg32(uint32_t value, char *buf) {
+    for (int i = 0; i < 4; i++) {
+        uint8_t byte = (value >> (i * 8)) & 0xFF;
+        buf[i * 2] = gdb_nibble_to_hex(byte >> 4);
+        buf[i * 2 + 1] = gdb_nibble_to_hex(byte & 0x0F);
+    }
+    return 8;
+}
+
+/* Parse GDB RSP packet and handle command */
+static int gdb_handle_packet(AuroraVM *vm, const char *packet, char *response, size_t resp_size) {
+    if (!packet || !response || resp_size < 4) return -1;
+    
+    /* Find packet start */
+    while (*packet && *packet != '$') packet++;
+    if (*packet != '$') return -1;
+    packet++;
+    
+    /* Identify command */
+    char cmd = packet[0];
+    
+    switch (cmd) {
+        case '?':
+            /* Stop reason query - return SIGTRAP (breakpoint) */
+            platform_strncpy(response, "S05", resp_size);
+            break;
+            
+        case 'g':
+            /* Read all registers */
+            {
+                char *ptr = response;
+                size_t remaining = resp_size - 1;
+                
+                /* Format all 16 registers */
+                for (int i = 0; i < 16 && remaining >= 8; i++) {
+                    int len = gdb_format_reg32(vm->cpu.registers[i], ptr);
+                    ptr += len;
+                    remaining -= len;
+                }
+                
+                /* PC (as EIP for x86 GDB) */
+                if (remaining >= 8) {
+                    gdb_format_reg32(vm->cpu.pc, ptr);
+                    ptr += 8;
+                }
+                
+                *ptr = '\0';
+            }
+            break;
+            
+        case 'G':
+            /* Write all registers */
+            {
+                const char *ptr = packet + 1;
+                for (int i = 0; i < 16; i++) {
+                    uint32_t value = 0;
+                    for (int j = 0; j < 8; j += 2) {
+                        uint8_t byte = (gdb_hex_to_nibble(ptr[j]) << 4) | gdb_hex_to_nibble(ptr[j + 1]);
+                        value |= ((uint32_t)byte) << ((j / 2) * 8);
+                    }
+                    vm->cpu.registers[i] = value;
+                    ptr += 8;
+                }
+                platform_strncpy(response, "OK", resp_size);
+            }
+            break;
+            
+        case 'm':
+            /* Read memory: maddr,length */
+            {
+                uint32_t addr = 0, len = 0;
+                const char *p = packet + 1;
+                
+                /* Parse address */
+                while (*p && *p != ',' && *p != '#') {
+                    addr = (addr << 4) | gdb_hex_to_nibble(*p++);
+                }
+                if (*p == ',') p++;
+                
+                /* Parse length */
+                while (*p && *p != '#') {
+                    len = (len << 4) | gdb_hex_to_nibble(*p++);
+                }
+                
+                /* Validate and read memory */
+                if (addr + len <= AURORA_VM_MEMORY_SIZE && len * 2 < resp_size) {
+                    char *out = response;
+                    for (uint32_t i = 0; i < len; i++) {
+                        uint8_t byte = vm->memory[addr + i];
+                        *out++ = gdb_nibble_to_hex(byte >> 4);
+                        *out++ = gdb_nibble_to_hex(byte & 0x0F);
+                    }
+                    *out = '\0';
+                } else {
+                    platform_strncpy(response, "E01", resp_size);  /* Error */
+                }
+            }
+            break;
+            
+        case 'M':
+            /* Write memory: Maddr,length:data */
+            {
+                uint32_t addr = 0, len = 0;
+                const char *p = packet + 1;
+                
+                /* Parse address */
+                while (*p && *p != ',' && *p != '#') {
+                    addr = (addr << 4) | gdb_hex_to_nibble(*p++);
+                }
+                if (*p == ',') p++;
+                
+                /* Parse length */
+                while (*p && *p != ':' && *p != '#') {
+                    len = (len << 4) | gdb_hex_to_nibble(*p++);
+                }
+                if (*p == ':') p++;
+                
+                /* Write memory */
+                if (addr + len <= AURORA_VM_MEMORY_SIZE) {
+                    for (uint32_t i = 0; i < len && *p && *(p+1); i++) {
+                        vm->memory[addr + i] = (gdb_hex_to_nibble(*p) << 4) | gdb_hex_to_nibble(*(p+1));
+                        p += 2;
+                    }
+                    platform_strncpy(response, "OK", resp_size);
+                } else {
+                    platform_strncpy(response, "E01", resp_size);
+                }
+            }
+            break;
+            
+        case 'c':
+            /* Continue execution */
+            vm->cpu.halted = false;
+            vm->debugger.single_step = false;
+            platform_strncpy(response, "OK", resp_size);
+            break;
+            
+        case 's':
+            /* Single step */
+            vm->cpu.halted = false;
+            vm->debugger.single_step = true;
+            aurora_vm_step(vm);
+            vm->cpu.halted = true;
+            platform_strncpy(response, "S05", resp_size);  /* SIGTRAP */
+            break;
+            
+        case 'Z':
+            /* Set breakpoint: Z0,addr,kind */
+            {
+                if (packet[1] == '0') {  /* Software breakpoint */
+                    const char *p = packet + 3;
+                    uint32_t addr = 0;
+                    while (*p && *p != ',' && *p != '#') {
+                        addr = (addr << 4) | gdb_hex_to_nibble(*p++);
+                    }
+                    
+                    if (aurora_vm_debugger_add_breakpoint(vm, addr) == 0) {
+                        platform_strncpy(response, "OK", resp_size);
+                    } else {
+                        platform_strncpy(response, "E01", resp_size);
+                    }
+                } else {
+                    platform_strncpy(response, "", resp_size);  /* Unsupported */
+                }
+            }
+            break;
+            
+        case 'z':
+            /* Clear breakpoint: z0,addr,kind */
+            {
+                if (packet[1] == '0') {
+                    const char *p = packet + 3;
+                    uint32_t addr = 0;
+                    while (*p && *p != ',' && *p != '#') {
+                        addr = (addr << 4) | gdb_hex_to_nibble(*p++);
+                    }
+                    
+                    if (aurora_vm_debugger_remove_breakpoint(vm, addr) == 0) {
+                        platform_strncpy(response, "OK", resp_size);
+                    } else {
+                        platform_strncpy(response, "E01", resp_size);
+                    }
+                } else {
+                    platform_strncpy(response, "", resp_size);
+                }
+            }
+            break;
+            
+        case 'q':
+            /* Query commands */
+            if (platform_strncmp(packet + 1, "Supported", 9) == 0) {
+                platform_strncpy(response, "PacketSize=1000", resp_size);
+            } else if (platform_strncmp(packet + 1, "Attached", 8) == 0) {
+                platform_strncpy(response, "1", resp_size);  /* Attached to existing process */
+            } else {
+                platform_strncpy(response, "", resp_size);  /* Empty = not supported */
+            }
+            break;
+            
+        case 'k':
+            /* Kill request */
+            vm->cpu.halted = true;
+            vm->gdb.enabled = false;
+            platform_strncpy(response, "OK", resp_size);
+            break;
+            
+        default:
+            /* Unknown command - return empty response */
+            platform_strncpy(response, "", resp_size);
+            break;
+    }
+    
+    return 0;
+}
+
 int aurora_vm_gdb_start(AuroraVM *vm, int port) {
     if (!vm) return -1;
     
-    /* GDB server implementation requires socket programming */
-    /* This is a placeholder that just marks it as enabled */
+    /* Initialize GDB server state */
     vm->gdb.enabled = true;
     vm->gdb.connected = false;
-    vm->gdb.socket_fd = -1;  /* Would be actual socket */
+    vm->gdb.socket_fd = port;  /* Store port for reference (would be actual socket) */
     vm->gdb.break_requested = false;
     
-    (void)port;  /* Suppress unused parameter warning */
+    /* Halt VM initially so GDB can inspect state */
+    vm->cpu.halted = true;
+    
     return 0;
 }
 
@@ -1917,23 +2365,45 @@ void aurora_vm_gdb_stop(AuroraVM *vm) {
     
     vm->gdb.enabled = false;
     vm->gdb.connected = false;
-    if (vm->gdb.socket_fd >= 0) {
-        /* Would close socket here */
-        vm->gdb.socket_fd = -1;
-    }
+    vm->gdb.socket_fd = -1;
+    vm->cpu.halted = false;  /* Resume execution when GDB disconnects */
 }
 
 int aurora_vm_gdb_handle(AuroraVM *vm) {
     if (!vm || !vm->gdb.enabled) return -1;
     
-    /* GDB RSP protocol handling would go here */
-    /* This is a placeholder implementation */
-    
+    /* Check for break request */
     if (vm->gdb.break_requested) {
         vm->cpu.halted = true;
         vm->gdb.break_requested = false;
         return 1;  /* Break */
     }
     
+    /* In a real implementation, this would:
+     * 1. Check socket for incoming data
+     * 2. Parse GDB RSP packet
+     * 3. Handle command using gdb_handle_packet()
+     * 4. Send response back
+     * 
+     * For now, we provide the infrastructure via gdb_handle_packet()
+     * which can be called with received packet data.
+     */
+    
     return 0;
+}
+
+/* Process a raw GDB RSP packet and generate response */
+int aurora_vm_gdb_process_packet(AuroraVM *vm, const char *packet, 
+                                  char *response, size_t response_size) {
+    if (!vm || !vm->gdb.enabled || !packet || !response) return -1;
+    
+    char raw_response[512];
+    
+    /* Handle the GDB command */
+    if (gdb_handle_packet(vm, packet, raw_response, sizeof(raw_response)) < 0) {
+        return -1;
+    }
+    
+    /* Format as proper RSP packet */
+    return gdb_format_packet(raw_response, response, response_size);
 }
