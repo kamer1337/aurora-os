@@ -54,7 +54,8 @@ KERNEL_SOURCES = $(wildcard $(KERNEL_DIR)/core/*.c) \
                  $(wildcard $(KERNEL_DIR)/gui/*.c) \
                  $(wildcard $(KERNEL_DIR)/smp/*.c) \
                  $(wildcard $(KERNEL_DIR)/network/*.c) \
-                 $(wildcard $(KERNEL_DIR)/usb/*.c)
+                 $(wildcard $(KERNEL_DIR)/usb/*.c) \
+                 $(wildcard $(KERNEL_DIR)/android/*.c)
 
 PLATFORM_SOURCES = $(filter-out src/platform/aurora_vm_stub.c, $(wildcard src/platform/*.c))
 

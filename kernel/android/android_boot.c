@@ -226,7 +226,7 @@ void android_boot_decode_patch_level(uint32_t os_version,
 /**
  * Get header version from boot image data
  */
-int android_boot_get_version(const void* data, size_t size) {
+int android_boot_image_get_version(const void* data, size_t size) {
     if (!data || size < sizeof(boot_img_hdr_v0_t)) {
         return BOOT_PARSE_INVALID_SIZE;
     }
@@ -466,7 +466,7 @@ int android_boot_parse(const void* data, size_t size, android_boot_info_t* info)
     }
     
     /* Get header version */
-    int version = android_boot_get_version(data, size);
+    int version = android_boot_image_get_version(data, size);
     if (version < 0) {
         return version;
     }

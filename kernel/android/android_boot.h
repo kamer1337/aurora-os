@@ -366,7 +366,7 @@ void android_boot_print_info(const android_boot_info_t* info);
  * @param size Size of boot.img data
  * @return Header version (0-4) or negative error code
  */
-int android_boot_get_version(const void* data, size_t size);
+int android_boot_image_get_version(const void* data, size_t size);
 
 /**
  * Validate boot image checksum (v0-v2)
