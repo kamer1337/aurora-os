@@ -171,6 +171,9 @@ void process_terminate(uint32_t pid) {
         return;
     }
     
+    /* Save the parent PID before clearing */
+    uint32_t parent_pid = process->ppid;
+    
     /* Free process resources */
     if (process->stack_ptr) {
         /* Calculate stack base from stack pointer */
@@ -178,11 +181,28 @@ void process_terminate(uint32_t pid) {
         kfree(stack_base);
     }
     
-    /* Mark process as terminated */
+    /* Mark process as terminated (but keep pid/ppid for wait() to collect) */
     process->state = PROCESS_TERMINATED;
-    process->pid = 0;
     process->stack_ptr = NULL;
     process->next = NULL;
+    
+    /* Wake up parent if it's waiting for this child */
+    if (parent_pid != 0) {
+        for (uint32_t i = 0; i < MAX_PROCESSES; i++) {
+            if (process_table[i].pid == parent_pid && 
+                process_table[i].state == PROCESS_WAITING) {
+                /* Check if parent is waiting for this specific child or any child */
+                if (process_table[i].wait_target == 0 || 
+                    process_table[i].wait_target == pid) {
+                    /* Wake up the parent */
+                    process_table[i].state = PROCESS_READY;
+                    process_table[i].wait_target = 0;
+                    enqueue_process(&process_table[i]);
+                    break;
+                }
+            }
+        }
+    }
     
     /* If this was the current process, schedule next */
     if (current_process == process) {

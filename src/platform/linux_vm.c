@@ -314,10 +314,14 @@ int linux_vm_load_initrd(LinuxVM* vm, const uint8_t* initrd_data, uint32_t size)
     
     /* Load initrd into VM memory space */
     /* Use Aurora VM's memory interface to copy data */
+    /* Note: Aurora VM memory is 64KB, Linux VM memory model is larger */
+    /* For compatibility, we store initrd reference; actual loading happens at VM start */
     AuroraVM* avm = vm->aurora_vm;
-    if (avm && avm->memory && initrd_base + size <= LINUX_VM_MEMORY_SIZE) {
+    if (avm && avm->memory && initrd_base + size <= AURORA_VM_MEMORY_SIZE) {
+        /* Can fit in Aurora VM memory - direct copy */
         platform_memcpy(&avm->memory[initrd_base], initrd_data, size);
     }
+    /* For larger initrd, it's stored in vm->initrd_addr/size for host-side handling */
     
     return 0;
 }

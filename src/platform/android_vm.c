@@ -482,10 +482,14 @@ int android_vm_load_ramdisk(AndroidVM* vm, const uint8_t* ramdisk_data, uint32_t
     vm->ramdisk_size = size;
     
     /* Load ramdisk into VM memory at ramdisk_addr */
+    /* Note: Aurora VM memory is 64KB, Android VM memory model is larger */
+    /* For compatibility, ramdisk data is stored via vm->ramdisk_* for host-side handling */
     AuroraVM* avm = vm->aurora_vm;
-    if (avm && avm->memory && vm->ramdisk_addr + size <= ANDROID_VM_MEMORY_SIZE) {
+    if (avm && avm->memory && vm->ramdisk_addr + size <= AURORA_VM_MEMORY_SIZE) {
+        /* Can fit in Aurora VM memory - direct copy */
         platform_memcpy(&avm->memory[vm->ramdisk_addr], ramdisk_data, size);
     }
+    /* For larger ramdisk, it's referenced via vm->ramdisk_addr/size */
     
     return 0;
 }
