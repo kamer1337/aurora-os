@@ -25,6 +25,26 @@
 #define NN_OUTPUT_SIZE 4
 #define NN_LEARNING_RATE 10    /* Fixed-point: 0.01 * 1000 */
 #define NN_FIXED_POINT_SCALE 1000
+#define NN_MIN_TRAINING_SAMPLES 100  /* Minimum samples before considering NN trained */
+
+/* Linear Congruential Generator constants (Numerical Recipes) */
+#define LCG_MULTIPLIER 1103515245
+#define LCG_INCREMENT 12345
+#define LCG_MODULUS 0x7FFFFFFF
+
+/* Weight initialization range */
+#define WEIGHT_INIT_RANGE 2000
+#define WEIGHT_INIT_OFFSET 1000
+#define BIAS_INIT_RANGE 200
+#define BIAS_INIT_OFFSET 100
+
+/* Prediction blending ratios (neural network vs simple) */
+#define NN_BLEND_WEIGHT 7      /* 70% weight for neural network predictions */
+#define SIMPLE_BLEND_WEIGHT 3  /* 30% weight for simple predictions */
+#define BLEND_DIVISOR 10
+
+/* Maximum target FPS */
+#define MAX_TARGET_FPS 1000
 
 /* Quality level definitions (granular settings) */
 #define QUALITY_LEVEL_ULTRA_LOW   0
@@ -199,7 +219,7 @@ static int32_t nn_sigmoid(int32_t x) {
 
 /**
  * Initialize neural network with random-like weights
- * Uses a simple LFSR for deterministic pseudo-random initialization
+ * Uses a Linear Congruential Generator (LCG) for deterministic pseudo-random initialization
  */
 static void nn_init(neural_network_t* nn) {
     uint32_t seed = 0x12345678;
@@ -207,21 +227,21 @@ static void nn_init(neural_network_t* nn) {
     /* Initialize hidden layer weights */
     for (int i = 0; i < NN_HIDDEN_SIZE; i++) {
         for (int j = 0; j < NN_INPUT_SIZE; j++) {
-            seed = (seed * 1103515245 + 12345) & 0x7FFFFFFF;
-            nn->hidden.weights[i][j] = ((int32_t)(seed % 2000) - 1000);
+            seed = (seed * LCG_MULTIPLIER + LCG_INCREMENT) & LCG_MODULUS;
+            nn->hidden.weights[i][j] = ((int32_t)(seed % WEIGHT_INIT_RANGE) - WEIGHT_INIT_OFFSET);
         }
-        seed = (seed * 1103515245 + 12345) & 0x7FFFFFFF;
-        nn->hidden.biases[i] = ((int32_t)(seed % 200) - 100);
+        seed = (seed * LCG_MULTIPLIER + LCG_INCREMENT) & LCG_MODULUS;
+        nn->hidden.biases[i] = ((int32_t)(seed % BIAS_INIT_RANGE) - BIAS_INIT_OFFSET);
     }
     
     /* Initialize output layer weights */
     for (int i = 0; i < NN_OUTPUT_SIZE; i++) {
         for (int j = 0; j < NN_HIDDEN_SIZE; j++) {
-            seed = (seed * 1103515245 + 12345) & 0x7FFFFFFF;
-            nn->output.weights[i][j] = ((int32_t)(seed % 2000) - 1000);
+            seed = (seed * LCG_MULTIPLIER + LCG_INCREMENT) & LCG_MODULUS;
+            nn->output.weights[i][j] = ((int32_t)(seed % WEIGHT_INIT_RANGE) - WEIGHT_INIT_OFFSET);
         }
-        seed = (seed * 1103515245 + 12345) & 0x7FFFFFFF;
-        nn->output.biases[i] = ((int32_t)(seed % 200) - 100);
+        seed = (seed * LCG_MULTIPLIER + LCG_INCREMENT) & LCG_MODULUS;
+        nn->output.biases[i] = ((int32_t)(seed % BIAS_INIT_RANGE) - BIAS_INIT_OFFSET);
     }
     
     nn->trained = 0;
@@ -300,7 +320,7 @@ static void nn_train(neural_network_t* nn, int32_t* target) {
     }
     
     nn->training_samples++;
-    if (nn->training_samples > 100) {
+    if (nn->training_samples > NN_MIN_TRAINING_SAMPLES) {
         nn->trained = 1;
     }
 }
@@ -346,39 +366,33 @@ static int gpu_ml_check_available(gfx_ml_optimization_data_t* data) {
 /**
  * GPU-accelerated matrix multiplication for neural network
  * Falls back to CPU if GPU not available
+ * 
+ * Note: This is a framework function for future GPU compute integration.
+ * Currently uses optimized CPU path. The function signature uses NN_INPUT_SIZE
+ * for the weight matrix dimension as it's designed for the hidden layer.
+ * For output layer operations, use nn_forward() which handles both layers correctly.
  */
 static void gpu_ml_matrix_multiply(int32_t* output, int32_t* input, 
                                     int32_t weights[][NN_INPUT_SIZE],
                                     int32_t* biases, int rows, int cols,
                                     gfx_ml_optimization_data_t* data) {
-    if (data->gpu_accelerated_ml && gpu_ml_check_available(data)) {
-        /* GPU acceleration path */
-        /* In a real implementation, this would use GPU compute shaders */
-        /* For now, use optimized CPU path with cache-friendly access */
-        for (int i = 0; i < rows; i++) {
-            int32_t sum = biases[i];
-            /* Unrolled loop for better performance */
-            int j = 0;
-            for (; j + 3 < cols; j += 4) {
-                sum += (input[j] * weights[i][j]) / NN_FIXED_POINT_SCALE;
-                sum += (input[j+1] * weights[i][j+1]) / NN_FIXED_POINT_SCALE;
-                sum += (input[j+2] * weights[i][j+2]) / NN_FIXED_POINT_SCALE;
-                sum += (input[j+3] * weights[i][j+3]) / NN_FIXED_POINT_SCALE;
-            }
-            for (; j < cols; j++) {
-                sum += (input[j] * weights[i][j]) / NN_FIXED_POINT_SCALE;
-            }
-            output[i] = sum;
+    (void)data;  /* Mark as used for future GPU integration */
+    
+    /* Optimized CPU path with cache-friendly access */
+    for (int i = 0; i < rows; i++) {
+        int32_t sum = biases[i];
+        /* Unrolled loop for better performance */
+        int j = 0;
+        for (; j + 3 < cols; j += 4) {
+            sum += (input[j] * weights[i][j]) / NN_FIXED_POINT_SCALE;
+            sum += (input[j+1] * weights[i][j+1]) / NN_FIXED_POINT_SCALE;
+            sum += (input[j+2] * weights[i][j+2]) / NN_FIXED_POINT_SCALE;
+            sum += (input[j+3] * weights[i][j+3]) / NN_FIXED_POINT_SCALE;
         }
-    } else {
-        /* CPU fallback path */
-        for (int i = 0; i < rows; i++) {
-            int32_t sum = biases[i];
-            for (int j = 0; j < cols; j++) {
-                sum += (input[j] * weights[i][j]) / NN_FIXED_POINT_SCALE;
-            }
-            output[i] = sum;
+        for (; j < cols; j++) {
+            sum += (input[j] * weights[i][j]) / NN_FIXED_POINT_SCALE;
         }
+        output[i] = sum;
     }
 }
 
@@ -874,10 +888,10 @@ static void gfx_ml_train_models(gfx_ml_optimization_data_t* data) {
             uint32_t nn_frame_time = (uint32_t)(data->neural_net->output.output[1] * 10);
             uint32_t nn_quality = (uint32_t)(data->neural_net->output.output[2] / 10);
             
-            /* Blend predictions (70% neural network, 30% simple) */
-            data->predicted_gpu_load = (nn_gpu_load * 7 + data->predicted_gpu_load * 3) / 10;
-            data->predicted_frame_time = (nn_frame_time * 7 + data->predicted_frame_time * 3) / 10;
-            data->suggested_quality = (nn_quality * 7 + data->suggested_quality * 3) / 10;
+            /* Blend predictions using defined ratios */
+            data->predicted_gpu_load = (nn_gpu_load * NN_BLEND_WEIGHT + data->predicted_gpu_load * SIMPLE_BLEND_WEIGHT) / BLEND_DIVISOR;
+            data->predicted_frame_time = (nn_frame_time * NN_BLEND_WEIGHT + data->predicted_frame_time * SIMPLE_BLEND_WEIGHT) / BLEND_DIVISOR;
+            data->suggested_quality = (nn_quality * NN_BLEND_WEIGHT + data->suggested_quality * SIMPLE_BLEND_WEIGHT) / BLEND_DIVISOR;
         }
     }
     
@@ -971,8 +985,14 @@ static int gfx_ml_optimization_init(plugin_descriptor_t* plugin) {
     
     /* Initialize performance history */
     data->history_capacity = MAX_HISTORY_ENTRIES;
-    data->history = (perf_history_entry_t*)kmalloc(
-        data->history_capacity * sizeof(perf_history_entry_t));
+    /* Check for potential overflow: MAX_HISTORY_ENTRIES * sizeof(perf_history_entry_t) */
+    /* sizeof(perf_history_entry_t) is 20 bytes, 1000 * 20 = 20000 which is well within uint32_t */
+    size_t history_alloc_size = (size_t)data->history_capacity * sizeof(perf_history_entry_t);
+    if (history_alloc_size > 0 && history_alloc_size / sizeof(perf_history_entry_t) == data->history_capacity) {
+        data->history = (perf_history_entry_t*)kmalloc(history_alloc_size);
+    } else {
+        data->history = NULL;  /* Overflow detected */
+    }
     if (data->history) {
         data->history_count = 0;
         data->history_dirty = 0;
@@ -1234,6 +1254,11 @@ static int gfx_ml_optimization_function(void* context, void* params) {
             
         case 10: /* Save history (value is buffer pointer, param_data[2] is size) */
             {
+                /* Validate buffer pointer - must be non-zero */
+                if (value == 0) {
+                    vga_write("GFX ML: Invalid buffer pointer for save\n");
+                    return PLUGIN_ERROR;
+                }
                 void* buffer = (void*)(uintptr_t)value;
                 uint32_t size = param_data[2];
                 if (save_history(data, buffer, size) == 0) {
@@ -1247,6 +1272,11 @@ static int gfx_ml_optimization_function(void* context, void* params) {
             
         case 11: /* Load history (value is buffer pointer, param_data[2] is size) */
             {
+                /* Validate buffer pointer - must be non-zero */
+                if (value == 0) {
+                    vga_write("GFX ML: Invalid buffer pointer for load\n");
+                    return PLUGIN_ERROR;
+                }
                 void* buffer = (void*)(uintptr_t)value;
                 uint32_t size = param_data[2];
                 if (load_history(data, buffer, size) == 0) {
@@ -1354,7 +1384,7 @@ static int gfx_ml_optimization_config(plugin_descriptor_t* plugin, const char* k
             fps = fps * 10 + (value[i] - '0');
             i++;
         }
-        if (fps > 0 && fps <= 1000) {
+        if (fps > 0 && fps <= MAX_TARGET_FPS) {
             data->target_fps = fps;
             vga_write("GFX ML: Target FPS set to ");
             vga_write_dec(fps);
