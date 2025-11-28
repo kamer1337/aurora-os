@@ -19,28 +19,28 @@
   - [ ] Verify VESA/VBE framebuffer on real hardware
   - [ ] Test keyboard and mouse drivers on physical devices
 
-- [ ] **TCP/IP Network Stack**
-  - [ ] Implement IP layer (IPv4)
-  - [ ] Implement TCP protocol
-  - [ ] Implement UDP protocol
-  - [ ] Add socket API for applications
+- [x] **TCP/IP Network Stack** ✅
+  - [x] Implement IP layer (IPv4)
+  - [x] Implement TCP protocol
+  - [x] Implement UDP protocol
+  - [x] Add socket API for applications
 
 ### Medium Priority
 
-- [ ] **Persistent Storage**
-  - [ ] Implement physical disk I/O (IDE/AHCI)
-  - [ ] Enable ext4 filesystem on real disks
+- [x] **Persistent Storage** ✅
+  - [x] Implement physical disk I/O (IDE/AHCI)
+  - [x] Enable ext4 filesystem on real disks
   - [ ] Add disk partition persistence
 
-- [ ] **Package Manager**
-  - [ ] Implement package installation from disk
-  - [ ] Add dependency resolution
+- [x] **Package Manager** ✅
+  - [x] Implement package installation from disk
+  - [x] Add dependency resolution
   - [ ] Create package repository infrastructure
 
-- [ ] **Web Browser**
-  - [ ] Basic HTML rendering
-  - [ ] HTTP/HTTPS client
-  - [ ] Integration with TCP/IP stack
+- [x] **Web Browser** ✅
+  - [x] Basic HTML rendering
+  - [x] HTTP/HTTPS client
+  - [x] Integration with TCP/IP stack
 
 ### Low Priority
 
@@ -127,6 +127,23 @@ All five development phases are complete:
   - AVB header parsing and validation
   - Hash computation for boot image verification
 
+- ✅ **TCP/IP Network Stack**
+  - Full IPv4/TCP/UDP/ICMP implementation
+  - Socket API for applications (create, bind, connect, send, receive, close)
+  
+- ✅ **Persistent Storage (AHCI/ext4)**
+  - SATA AHCI controller driver for physical disk I/O
+  - ext4 filesystem implementation for real disks
+  
+- ✅ **Package Manager**
+  - Package installation with dependency resolution
+  - Package search, update, upgrade, and removal operations
+  
+- ✅ **Web Browser**
+  - Multi-tab browsing with tab management
+  - Cookie/session management, download manager, extension support
+  - Custom HTML/CSS rendering with DevTools integration
+  
 See [FEATURES.md](FEATURES.md) for complete list of implemented features.
 
 ---
@@ -135,10 +152,10 @@ See [FEATURES.md](FEATURES.md) for complete list of implemented features.
 
 | Limitation | Workaround | Priority |
 |------------|------------|----------|
-| Ramdisk only (no persistent disk) | ext4 works for VMs | High |
-| No TCP/IP stack | Network bridge for VMs | High |
-| No package manager | Built-in apps only | Medium |
-| Basic USB support | Works for testing | Low |
+| ~~Ramdisk only (no persistent disk)~~ | ~~ext4 works for VMs~~ | ~~High~~ ✅ AHCI/ext4 implemented |
+| ~~No TCP/IP stack~~ | ~~Network bridge for VMs~~ | ~~High~~ ✅ TCP/IP implemented |
+| ~~No package manager~~ | ~~Built-in apps only~~ | ~~Medium~~ ✅ Package manager implemented |
+| Basic USB support | USB 3.0/3.1 framework exists but needs full implementation | Low |
 | No image wallpapers | Gradients and live wallpapers work | Low |
 
 ---
