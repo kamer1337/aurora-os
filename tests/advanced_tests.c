@@ -12,6 +12,29 @@
 #include "../kernel/drivers/vga.h"
 
 /**
+ * Helper function to print a decimal number
+ */
+static void print_decimal(uint64_t value) {
+    if (value == 0) {
+        vga_write("0");
+        return;
+    }
+    
+    char buf[20];
+    int i = 0;
+    uint64_t n = value;
+    while (n > 0) {
+        buf[i++] = '0' + (n % 10);
+        n /= 10;
+    }
+    while (i > 0) {
+        char c = buf[--i];
+        char s[2] = {c, '\0'};
+        vga_write(s);
+    }
+}
+
+/**
  * Test SMP functionality
  */
 static void test_smp(void) {
@@ -191,23 +214,7 @@ static void test_usb_storage(void) {
     vga_write("USB storage device count: ");
     if (count >= 0) {
         vga_write("PASS (");
-        /* Print count - simple decimal conversion */
-        if (count == 0) {
-            vga_write("0");
-        } else {
-            char buf[12];
-            int i = 0;
-            int n = count;
-            while (n > 0) {
-                buf[i++] = '0' + (n % 10);
-                n /= 10;
-            }
-            while (i > 0) {
-                char c = buf[--i];
-                char s[2] = {c, '\0'};
-                vga_write(s);
-            }
-        }
+        print_decimal((uint64_t)count);
         vga_write(" devices)\n");
     } else {
         vga_write("FAIL\n");
@@ -228,20 +235,8 @@ static void test_usb_storage(void) {
         /* Test capacity info */
         vga_write("  Capacity: ");
         uint64_t gb = usb_storage_get_capacity_gb(storage_dev);
-        /* Print capacity */
         if (gb > 0) {
-            char buf[20];
-            int i = 0;
-            uint64_t n = gb;
-            while (n > 0) {
-                buf[i++] = '0' + (n % 10);
-                n /= 10;
-            }
-            while (i > 0) {
-                char c = buf[--i];
-                char s[2] = {c, '\0'};
-                vga_write(s);
-            }
+            print_decimal(gb);
             vga_write(" GB\n");
         } else {
             vga_write("Unknown\n");

@@ -164,7 +164,9 @@ static int usb_storage_parse_endpoints(usb_storage_device_t* dev,
         return -1;
     }
     
-    /* Walk through descriptors looking for endpoints */
+    uint8_t found_mass_storage_interface = 0;
+    
+    /* Walk through descriptors looking for mass storage interface and endpoints */
     uint32_t offset = 0;
     while (offset < config_len) {
         uint8_t desc_len = config_data[offset];
@@ -174,8 +176,22 @@ static int usb_storage_parse_endpoints(usb_storage_device_t* dev,
             break;  /* Invalid descriptor length */
         }
         
-        /* Check for endpoint descriptor (type 5) */
-        if (desc_type == USB_DESC_ENDPOINT && desc_len >= 7) {
+        /* Check for interface descriptor (type 4) */
+        if (desc_type == USB_DESC_INTERFACE && desc_len >= 9) {
+            uint8_t iface_class = config_data[offset + 5];
+            uint8_t iface_subclass = config_data[offset + 6];
+            uint8_t iface_protocol = config_data[offset + 7];
+            
+            /* Check for mass storage class with SCSI subclass and BOT protocol */
+            if (iface_class == USB_CLASS_MASS_STORAGE &&
+                iface_subclass == USB_MSC_SUBCLASS_SCSI &&
+                iface_protocol == USB_MSC_PROTOCOL_BOT) {
+                found_mass_storage_interface = 1;
+            }
+        }
+        
+        /* Check for endpoint descriptor (type 5) - only after finding mass storage interface */
+        if (desc_type == USB_DESC_ENDPOINT && desc_len >= 7 && found_mass_storage_interface) {
             uint8_t ep_addr = config_data[offset + 2];
             uint8_t ep_attr = config_data[offset + 3];
             uint16_t ep_max_packet = config_data[offset + 4] | 
@@ -195,6 +211,11 @@ static int usb_storage_parse_endpoints(usb_storage_device_t* dev,
         }
         
         offset += desc_len;
+    }
+    
+    /* If device class is not mass storage at device level, we must have found it at interface level */
+    if (!found_mass_storage_interface && dev->usb_dev->descriptor.bDeviceClass != USB_CLASS_MASS_STORAGE) {
+        return -1;
     }
     
     /* Verify we found both endpoints */
@@ -404,11 +425,13 @@ usb_storage_device_t* usb_storage_attach(usb_device_t* usb_dev) {
         return NULL;
     }
     
-    /* Verify device class */
+    /* Verify device class
+     * USB_CLASS_MASS_STORAGE (8) = Direct mass storage device
+     * Class 0 = Class is defined at interface level, need to check interface descriptor
+     * For class 0 devices, we proceed and check the interface class during endpoint parsing
+     */
     if (usb_dev->descriptor.bDeviceClass != USB_CLASS_MASS_STORAGE &&
         usb_dev->descriptor.bDeviceClass != 0) {
-        /* Class 0 means class is interface-specific */
-        /* Would need to check interface descriptor */
         return NULL;
     }
     
@@ -424,8 +447,10 @@ usb_storage_device_t* usb_storage_attach(usb_device_t* usb_dev) {
     dev->lun_count = 1;
     dev->tag = 1;
     
-    /* Get configuration descriptor to find endpoints */
-    uint8_t config_buf[64];
+    /* Get configuration descriptor to find endpoints
+     * Use larger buffer to accommodate interface descriptors for class verification
+     */
+    uint8_t config_buf[256];
     int result = usb_get_config_descriptor(usb_dev, 0, config_buf, sizeof(config_buf));
     if (result != 0) {
         dev->usb_dev = NULL;
@@ -435,18 +460,26 @@ usb_storage_device_t* usb_storage_attach(usb_device_t* usb_dev) {
     
     /* Parse endpoints from configuration descriptor */
     if (usb_storage_parse_endpoints(dev, config_buf, sizeof(config_buf)) != 0) {
-        /* Use default endpoint addresses if parsing fails */
-        dev->bulk_in_ep = 0x81;   /* Default bulk IN */
-        dev->bulk_out_ep = 0x02;  /* Default bulk OUT */
+        /* Endpoint parsing failed - device is not compatible
+         * Do not use default endpoints as this could cause communication issues
+         */
+        dev->usb_dev = NULL;
+        dev->status = USB_STORAGE_STATUS_OFFLINE;
+        return NULL;
     }
     
-    /* Test if unit is ready */
+    /* Test if unit is ready with retries
+     * Note: USB timing is handled by the host controller; busy-wait
+     * provides minimal delay for device state stabilization
+     */
     for (int retry = 0; retry < 3; retry++) {
         result = usb_storage_test_unit_ready(dev);
         if (result == 0) {
             break;
         }
-        /* Small delay between retries */
+        /* Minimal delay between retries for device state stabilization
+         * The host controller handles USB timing requirements
+         */
         for (volatile int i = 0; i < 10000; i++);
     }
     
