@@ -321,4 +321,10 @@ uint8_t gui_get_window_transparency(window_t* window);
  */
 void gui_show_power_options(void);
 
+/**
+ * Check if desktop context menu is visible
+ * @return 1 if visible, 0 otherwise
+ */
+int gui_is_desktop_menu_visible(void);
+
 #endif // GUI_H
