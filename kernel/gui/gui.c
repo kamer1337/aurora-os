@@ -46,6 +46,13 @@ static int32_t cursor_x = 0;
 static int32_t cursor_y = 0;
 static uint8_t prev_mouse_buttons = 0;
 
+// Double-click detection state
+static uint32_t last_click_time = 0;
+static int32_t last_click_x = 0;
+static int32_t last_click_y = 0;
+#define DOUBLE_CLICK_TIME 500    // milliseconds (based on timer ticks at 100Hz = 50 ticks)
+#define DOUBLE_CLICK_DISTANCE 10 // pixels
+
 // Window dragging state
 static window_t* dragging_window = NULL;
 static int32_t drag_offset_x = 0;
@@ -95,6 +102,37 @@ static void gui_draw_start_menu(void);
 static void gui_draw_context_menu(void);
 static void gui_draw_desktop_icon(desktop_icon_t* icon);
 void gui_show_power_options(void);
+
+// External timer function for double-click timing
+extern uint32_t timer_get_ticks(void);
+
+// Helper function to check for double-click
+static int is_double_click(int32_t x, int32_t y) {
+    uint32_t current_time = timer_get_ticks();
+    
+    // Check time difference (at 100Hz, 50 ticks = 500ms)
+    uint32_t time_diff = current_time - last_click_time;
+    
+    // Check distance from last click
+    int32_t dx = x - last_click_x;
+    int32_t dy = y - last_click_y;
+    if (dx < 0) dx = -dx;
+    if (dy < 0) dy = -dy;
+    
+    // Update last click info
+    last_click_time = current_time;
+    last_click_x = x;
+    last_click_y = y;
+    
+    // Check if this qualifies as a double-click
+    if (time_diff < 50 && dx < DOUBLE_CLICK_DISTANCE && dy < DOUBLE_CLICK_DISTANCE) {
+        // Reset to prevent triple-click detection
+        last_click_time = 0;
+        return 1;
+    }
+    
+    return 0;
+}
 
 int gui_init(void) {
     if (gui_initialized) {
@@ -398,10 +436,11 @@ void gui_process_event(event_t* event) {
                         };
                         
                         if (gui_point_in_rect(event->x, event->y, &icon_rect)) {
-                            // Double-click detection would be better, but for now single click
-                            if (desktop_icons[i].has_app) {
+                            // Launch app on double-click
+                            if (desktop_icons[i].has_app && is_double_click(event->x, event->y)) {
                                 app_launch(desktop_icons[i].app_type);
                             }
+                            // Single click just selects the icon (visual feedback would go here)
                             return;
                         }
                     }
@@ -463,7 +502,16 @@ void gui_process_event(event_t* event) {
                                 gui_show_context_menu(window, event->x, event->y);
                                 break;
                             } else {
-                                // Left-click - start dragging
+                                // Left-click - check for double-click to maximize/restore
+                                if (is_double_click(event->x, event->y)) {
+                                    if (window->maximized) {
+                                        gui_restore_window(window);
+                                    } else {
+                                        gui_maximize_window(window);
+                                    }
+                                    break;
+                                }
+                                // Single click - start dragging
                                 clicked_window = window;
                                 dragging_window = window;
                                 drag_offset_x = event->x - window->bounds.x;
@@ -1102,7 +1150,20 @@ void gui_handle_input(void) {
                 .type = EVENT_MOUSE_DOWN,
                 .x = cursor_x,
                 .y = cursor_y,
-                .button = 0,
+                .button = 0,  // 0 = left button
+                .key = 0,
+                .data = NULL
+            };
+            gui_process_event(&event);
+        }
+        
+        // Right button pressed
+        if ((buttons & MOUSE_RIGHT_BUTTON) && !(prev_mouse_buttons & MOUSE_RIGHT_BUTTON)) {
+            event_t event = {
+                .type = EVENT_MOUSE_DOWN,
+                .x = cursor_x,
+                .y = cursor_y,
+                .button = 2,  // 2 = right button (for context menus)
                 .key = 0,
                 .data = NULL
             };
@@ -1116,6 +1177,19 @@ void gui_handle_input(void) {
                 .x = cursor_x,
                 .y = cursor_y,
                 .button = 0,
+                .key = 0,
+                .data = NULL
+            };
+            gui_process_event(&event);
+        }
+        
+        // Right button released
+        if (!(buttons & MOUSE_RIGHT_BUTTON) && (prev_mouse_buttons & MOUSE_RIGHT_BUTTON)) {
+            event_t event = {
+                .type = EVENT_MOUSE_UP,
+                .x = cursor_x,
+                .y = cursor_y,
+                .button = 2,
                 .key = 0,
                 .data = NULL
             };
