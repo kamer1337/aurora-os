@@ -114,11 +114,10 @@ menuentry "Install Android" {
     boot
 }
 
-# Placeholder for future Linux installation
-menuentry "Install Linux (Coming Soon)" {
-    echo "Linux installer integration coming soon..."
-    echo "Press any key to return to menu..."
-    read
+menuentry "Install Linux" {
+    echo "Starting Linux installer..."
+    multiboot /boot/aurora-kernel.bin boot_mode=linux_installer
+    boot
 }
 EOF
 
