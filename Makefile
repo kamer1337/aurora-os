@@ -96,6 +96,7 @@ directories:
 	@mkdir -p $(BUILD_DIR)/$(KERNEL_DIR)/smp
 	@mkdir -p $(BUILD_DIR)/$(KERNEL_DIR)/network
 	@mkdir -p $(BUILD_DIR)/$(KERNEL_DIR)/usb
+	@mkdir -p $(BUILD_DIR)/$(KERNEL_DIR)/android
 	@mkdir -p $(BUILD_DIR)/src/platform
 	@mkdir -p $(BUILD_DIR)/$(FS_DIR)/vfs
 	@mkdir -p $(BUILD_DIR)/$(FS_DIR)/ramdisk

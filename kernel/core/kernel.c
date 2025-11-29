@@ -246,21 +246,21 @@ void kernel_init(void) {
 /**
  * Main kernel loop
  */
-void kernel_main(uint32_t magic, uint32_t multiboot_addr) {
+void kernel_main(uint64_t magic, uint64_t multiboot_addr) {
     /* Verify multiboot magic number */
-    if (magic != MULTIBOOT_MAGIC) {
+    if ((uint32_t)magic != MULTIBOOT_MAGIC) {
         vga_init();
         vga_write("ERROR: Invalid multiboot magic number!\n");
         vga_write("Expected: ");
         vga_write_hex(MULTIBOOT_MAGIC);
         vga_write("\nReceived: ");
-        vga_write_hex(magic);
+        vga_write_hex((uint32_t)magic);
         vga_write("\n");
         /* Continue anyway for compatibility */
     }
     
-    /* Save multiboot info pointer */
-    g_multiboot_info = (multiboot_info_t*)multiboot_addr;
+    /* Save multiboot info pointer (identity mapped in first 4GB) */
+    g_multiboot_info = (multiboot_info_t*)(uintptr_t)multiboot_addr;
     
     kernel_init();
     

@@ -23,7 +23,7 @@ typedef struct process {
     uint32_t pid;
     uint32_t ppid;               /* Parent process ID */
     process_state_t state;
-    uint32_t* stack_ptr;
+    void* stack_ptr;             /* 64-bit compatible stack pointer */
     uint32_t priority;
     int32_t exit_status;         /* Exit status when terminated */
     uint32_t wait_target;        /* PID being waited for (0 = any child) */

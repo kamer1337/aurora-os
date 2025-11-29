@@ -139,14 +139,14 @@ process_t* process_create(void (*entry)(void), uint32_t priority) {
     process->wait_target = 0;
     process->next = NULL;
     
-    /* Setup stack pointer (stack grows downward) */
-    uint32_t* stack_top = (uint32_t*)((uint8_t*)stack + PROCESS_STACK_SIZE);
+    /* Setup stack pointer (stack grows downward) - 64-bit aligned */
+    uint64_t* stack_top = (uint64_t*)((uint8_t*)stack + PROCESS_STACK_SIZE);
     
-    /* Push initial context onto stack */
+    /* Push initial context onto stack - 64-bit entry point */
     stack_top--;
-    *stack_top = (uint32_t)entry; /* Entry point */
+    *stack_top = (uint64_t)(uintptr_t)entry; /* Entry point */
     
-    process->stack_ptr = (uint32_t*)stack_top;
+    process->stack_ptr = (void*)stack_top;
     
     /* Add to ready queue */
     enqueue_process(process);
@@ -176,8 +176,9 @@ void process_terminate(uint32_t pid) {
     
     /* Free process resources */
     if (process->stack_ptr) {
-        /* Calculate stack base from stack pointer */
-        uint32_t* stack_base = (uint32_t*)((uint32_t)process->stack_ptr & ~(PROCESS_STACK_SIZE - 1));
+        /* Calculate stack base from stack pointer - 64-bit compatible */
+        uintptr_t stack_addr = (uintptr_t)process->stack_ptr;
+        void* stack_base = (void*)(stack_addr & ~((uintptr_t)PROCESS_STACK_SIZE - 1));
         kfree(stack_base);
     }
     
@@ -237,18 +238,27 @@ void scheduler_init(void) {
 
 /**
  * CPU context structure for context switching
+ * Uses 64-bit registers for long mode compatibility
  */
 typedef struct {
-    uint32_t eax;
-    uint32_t ebx;
-    uint32_t ecx;
-    uint32_t edx;
-    uint32_t esi;
-    uint32_t edi;
-    uint32_t ebp;
-    uint32_t esp;
-    uint32_t eip;
-    uint32_t eflags;
+    uint64_t rax;
+    uint64_t rbx;
+    uint64_t rcx;
+    uint64_t rdx;
+    uint64_t rsi;
+    uint64_t rdi;
+    uint64_t rbp;
+    uint64_t rsp;
+    uint64_t r8;
+    uint64_t r9;
+    uint64_t r10;
+    uint64_t r11;
+    uint64_t r12;
+    uint64_t r13;
+    uint64_t r14;
+    uint64_t r15;
+    uint64_t rip;
+    uint64_t rflags;
 } cpu_context_t;
 
 /* Context storage for each process */
@@ -278,18 +288,26 @@ static void save_context(process_t* process) {
     
     cpu_context_t* ctx = &process_contexts[idx];
     
-    /* Save general purpose registers one at a time */
-    __asm__ volatile("movl %%eax, %0" : "=m"(ctx->eax));
-    __asm__ volatile("movl %%ebx, %0" : "=m"(ctx->ebx));
-    __asm__ volatile("movl %%ecx, %0" : "=m"(ctx->ecx));
-    __asm__ volatile("movl %%edx, %0" : "=m"(ctx->edx));
-    __asm__ volatile("movl %%esi, %0" : "=m"(ctx->esi));
-    __asm__ volatile("movl %%edi, %0" : "=m"(ctx->edi));
-    __asm__ volatile("movl %%ebp, %0" : "=m"(ctx->ebp));
-    __asm__ volatile("movl %%esp, %0" : "=m"(ctx->esp));
+    /* Save general purpose registers for 64-bit mode */
+    __asm__ volatile("movq %%rax, %0" : "=m"(ctx->rax));
+    __asm__ volatile("movq %%rbx, %0" : "=m"(ctx->rbx));
+    __asm__ volatile("movq %%rcx, %0" : "=m"(ctx->rcx));
+    __asm__ volatile("movq %%rdx, %0" : "=m"(ctx->rdx));
+    __asm__ volatile("movq %%rsi, %0" : "=m"(ctx->rsi));
+    __asm__ volatile("movq %%rdi, %0" : "=m"(ctx->rdi));
+    __asm__ volatile("movq %%rbp, %0" : "=m"(ctx->rbp));
+    __asm__ volatile("movq %%rsp, %0" : "=m"(ctx->rsp));
+    __asm__ volatile("movq %%r8, %0" : "=m"(ctx->r8));
+    __asm__ volatile("movq %%r9, %0" : "=m"(ctx->r9));
+    __asm__ volatile("movq %%r10, %0" : "=m"(ctx->r10));
+    __asm__ volatile("movq %%r11, %0" : "=m"(ctx->r11));
+    __asm__ volatile("movq %%r12, %0" : "=m"(ctx->r12));
+    __asm__ volatile("movq %%r13, %0" : "=m"(ctx->r13));
+    __asm__ volatile("movq %%r14, %0" : "=m"(ctx->r14));
+    __asm__ volatile("movq %%r15, %0" : "=m"(ctx->r15));
     
     /* Save flags */
-    __asm__ volatile("pushfl; popl %0" : "=m"(ctx->eflags));
+    __asm__ volatile("pushfq; popq %0" : "=m"(ctx->rflags));
 }
 
 /**
@@ -304,16 +322,24 @@ static void restore_context(process_t* process) {
     cpu_context_t* ctx = &process_contexts[idx];
     
     /* Restore flags */
-    __asm__ volatile("pushl %0; popfl" : : "m"(ctx->eflags));
+    __asm__ volatile("pushq %0; popfq" : : "m"(ctx->rflags));
     
-    /* Restore general purpose registers one at a time */
-    __asm__ volatile("movl %0, %%edi" : : "m"(ctx->edi));
-    __asm__ volatile("movl %0, %%esi" : : "m"(ctx->esi));
-    __asm__ volatile("movl %0, %%edx" : : "m"(ctx->edx));
-    __asm__ volatile("movl %0, %%ecx" : : "m"(ctx->ecx));
-    __asm__ volatile("movl %0, %%ebx" : : "m"(ctx->ebx));
-    __asm__ volatile("movl %0, %%ebp" : : "m"(ctx->ebp));
-    __asm__ volatile("movl %0, %%eax" : : "m"(ctx->eax));
+    /* Restore general purpose registers for 64-bit mode */
+    __asm__ volatile("movq %0, %%r15" : : "m"(ctx->r15));
+    __asm__ volatile("movq %0, %%r14" : : "m"(ctx->r14));
+    __asm__ volatile("movq %0, %%r13" : : "m"(ctx->r13));
+    __asm__ volatile("movq %0, %%r12" : : "m"(ctx->r12));
+    __asm__ volatile("movq %0, %%r11" : : "m"(ctx->r11));
+    __asm__ volatile("movq %0, %%r10" : : "m"(ctx->r10));
+    __asm__ volatile("movq %0, %%r9" : : "m"(ctx->r9));
+    __asm__ volatile("movq %0, %%r8" : : "m"(ctx->r8));
+    __asm__ volatile("movq %0, %%rdi" : : "m"(ctx->rdi));
+    __asm__ volatile("movq %0, %%rsi" : : "m"(ctx->rsi));
+    __asm__ volatile("movq %0, %%rdx" : : "m"(ctx->rdx));
+    __asm__ volatile("movq %0, %%rcx" : : "m"(ctx->rcx));
+    __asm__ volatile("movq %0, %%rbx" : : "m"(ctx->rbx));
+    __asm__ volatile("movq %0, %%rbp" : : "m"(ctx->rbp));
+    __asm__ volatile("movq %0, %%rax" : : "m"(ctx->rax));
 }
 
 /**
@@ -328,7 +354,7 @@ static void switch_context(process_t* from, process_t* to) {
     if (from && from->state != PROCESS_TERMINATED) {
         save_context(from);
         /* Store current stack pointer in process control block */
-        __asm__ volatile("movl %%esp, %0" : "=m"(from->stack_ptr));
+        __asm__ volatile("movq %%rsp, %0" : "=m"(from->stack_ptr));
     }
     
     /* Switch to new process */
@@ -337,12 +363,12 @@ static void switch_context(process_t* from, process_t* to) {
     
     /* Restore stack pointer from process control block */
     if (to->stack_ptr) {
-        __asm__ volatile("movl %0, %%esp" : : "m"(to->stack_ptr));
+        __asm__ volatile("movq %0, %%rsp" : : "m"(to->stack_ptr));
         
         /* Restore context of previously-run process */
         /* For new processes, the context was initialized at creation time */
         int idx = get_process_index(to);
-        if (idx >= 0 && process_contexts[idx].esp != 0) {
+        if (idx >= 0 && process_contexts[idx].rsp != 0) {
             restore_context(to);
         }
     }

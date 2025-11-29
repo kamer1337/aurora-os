@@ -2,6 +2,7 @@
  * Aurora OS - Paging Implementation
  * 
  * Advanced memory management with demand paging
+ * Supports both 32-bit and 64-bit modes
  */
 
 #include "paging.h"
@@ -69,30 +70,37 @@ void paging_init(void) {
 
 /**
  * Enable paging
+ * Note: In 64-bit long mode, paging is always enabled (set up by boot code)
  */
 void paging_enable(void) {
     if (!current_directory) {
         return;
     }
     
-    /* Load page directory into CR3 */
-    __asm__ volatile("mov %0, %%cr3" : : "r"(current_directory));
+    /* Load page directory into CR3 - use 64-bit register for 64-bit mode */
+    uint64_t cr3_val = (uint64_t)(uintptr_t)current_directory;
+    __asm__ volatile("mov %0, %%cr3" : : "r"(cr3_val) : "memory");
     
     /* Enable paging by setting bit 31 in CR0 */
-    uint32_t cr0;
+    uint64_t cr0;
     __asm__ volatile("mov %%cr0, %0" : "=r"(cr0));
     cr0 |= 0x80000000;
-    __asm__ volatile("mov %0, %%cr0" : : "r"(cr0));
+    __asm__ volatile("mov %0, %%cr0" : : "r"(cr0) : "memory");
 }
 
 /**
  * Disable paging
+ * Note: In 64-bit long mode, paging cannot be disabled
  */
 void paging_disable(void) {
+#ifndef __x86_64__
+    /* Only valid in 32-bit mode */
     uint32_t cr0;
     __asm__ volatile("mov %%cr0, %0" : "=r"(cr0));
     cr0 &= ~0x80000000;
-    __asm__ volatile("mov %0, %%cr0" : : "r"(cr0));
+    __asm__ volatile("mov %0, %%cr0" : : "r"(cr0) : "memory");
+#endif
+    /* In 64-bit mode, paging must stay enabled */
 }
 
 /**

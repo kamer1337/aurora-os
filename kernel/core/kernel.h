@@ -25,7 +25,7 @@ typedef uint32_t thread_id_t;
 
 /* Kernel initialization */
 void kernel_init(void);
-void kernel_main(uint32_t magic, uint32_t multiboot_addr);
+void kernel_main(uint64_t magic, uint64_t multiboot_addr);
 
 /* Driver initialization */
 void drivers_init(void);
