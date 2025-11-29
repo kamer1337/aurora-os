@@ -66,6 +66,32 @@ static window_t* context_menu_window = NULL;
 static int32_t context_menu_x = 0;
 static int32_t context_menu_y = 0;
 
+// Desktop right-click context menu state
+static uint8_t desktop_menu_visible = 0;
+static int32_t desktop_menu_x = 0;
+static int32_t desktop_menu_y = 0;
+static uint8_t desktop_submenu_visible = 0;  // "New" submenu
+static int32_t desktop_menu_selected_item = -1;  // Hover tracking
+
+// Desktop context menu dimensions
+#define DESKTOP_MENU_WIDTH 180
+#define DESKTOP_SUBMENU_WIDTH 160
+#define DESKTOP_MENU_ITEM_HEIGHT 30
+
+// Desktop context menu item indices
+#define DESKTOP_MENU_NEW 0
+#define DESKTOP_MENU_OPEN_WITH 1
+#define DESKTOP_MENU_OPEN_TERMINAL 2
+#define DESKTOP_MENU_REFRESH 3
+#define DESKTOP_MENU_ITEM_COUNT 4
+
+// New submenu item indices
+#define NEW_SUBMENU_FOLDER 0
+#define NEW_SUBMENU_TEXT_FILE 1
+#define NEW_SUBMENU_DOCUMENT 2
+#define NEW_SUBMENU_SPREADSHEET 3
+#define NEW_SUBMENU_ITEM_COUNT 4
+
 // Start menu animation state
 static float start_menu_animation = 0.0f;  // 0.0 = closed, 1.0 = open
 static uint8_t start_menu_animating = 0;
@@ -102,6 +128,10 @@ static const int32_t desktop_icon_count = 9;
 static void gui_draw_start_menu(void);
 static void gui_draw_context_menu(void);
 static void gui_draw_desktop_icon(desktop_icon_t* icon);
+static void gui_draw_desktop_context_menu(void);
+static void gui_show_desktop_context_menu(int32_t x, int32_t y);
+static void gui_hide_desktop_context_menu(void);
+static void gui_handle_desktop_menu_click(int32_t item_index, int32_t submenu_index);
 void gui_show_power_options(void);
 
 // External timer function for double-click timing
@@ -235,6 +265,11 @@ void gui_update(void) {
     // Draw context menu if visible
     if (context_menu_visible) {
         gui_draw_context_menu();
+    }
+    
+    // Draw desktop right-click context menu if visible
+    if (desktop_menu_visible) {
+        gui_draw_desktop_context_menu();
     }
     
     // Draw cursor last (on top of everything)
@@ -381,6 +416,53 @@ void gui_process_event(event_t* event) {
                 }
             }
             
+            // Check if clicked on desktop right-click context menu
+            if (desktop_menu_visible) {
+                uint32_t menu_width = DESKTOP_MENU_WIDTH;
+                uint32_t menu_height = DESKTOP_MENU_ITEM_COUNT * DESKTOP_MENU_ITEM_HEIGHT;
+                uint32_t submenu_width = DESKTOP_SUBMENU_WIDTH;
+                uint32_t submenu_height = NEW_SUBMENU_ITEM_COUNT * DESKTOP_MENU_ITEM_HEIGHT;
+                
+                // Check if clicked on submenu (if visible)
+                if (desktop_submenu_visible) {
+                    rect_t submenu_rect = {desktop_menu_x + (int32_t)menu_width, desktop_menu_y, submenu_width, submenu_height};
+                    if (gui_point_in_rect(event->x, event->y, &submenu_rect)) {
+                        // Clicked inside submenu - determine which item
+                        uint32_t relative_y = event->y - desktop_menu_y;
+                        uint32_t submenu_index = relative_y / DESKTOP_MENU_ITEM_HEIGHT;
+                        
+                        if (submenu_index < NEW_SUBMENU_ITEM_COUNT) {
+                            gui_handle_desktop_menu_click(DESKTOP_MENU_NEW, (int32_t)submenu_index);
+                        }
+                        gui_hide_desktop_context_menu();
+                        return;
+                    }
+                }
+                
+                // Check if clicked on main menu
+                rect_t menu_rect = {desktop_menu_x, desktop_menu_y, menu_width, menu_height};
+                if (gui_point_in_rect(event->x, event->y, &menu_rect)) {
+                    // Clicked inside desktop context menu
+                    uint32_t relative_y = event->y - desktop_menu_y;
+                    uint32_t item_index = relative_y / DESKTOP_MENU_ITEM_HEIGHT;
+                    
+                    if (item_index < DESKTOP_MENU_ITEM_COUNT) {
+                        if (item_index == DESKTOP_MENU_NEW) {
+                            // Toggle submenu
+                            desktop_submenu_visible = !desktop_submenu_visible;
+                            return;
+                        } else {
+                            gui_handle_desktop_menu_click((int32_t)item_index, -1);
+                            gui_hide_desktop_context_menu();
+                        }
+                    }
+                    return;
+                } else {
+                    // Clicked outside desktop context menu - close it
+                    gui_hide_desktop_context_menu();
+                }
+            }
+            
             // Check if clicked on taskbar
             {
                 framebuffer_info_t* fb = framebuffer_get_info();
@@ -445,6 +527,29 @@ void gui_process_event(event_t* event) {
                             // Single click just selects the icon (visual feedback would go here)
                             return;
                         }
+                    }
+                }
+            }
+            
+            // Check if right-clicked on desktop (not on window) - show desktop context menu
+            if (event->button == 2) {
+                framebuffer_info_t* fb = framebuffer_get_info();
+                if (fb && event->y < (int32_t)(fb->height - 40)) {
+                    // Check if click is on any visible window
+                    int on_window = 0;
+                    window_t* window = window_list;
+                    while (window) {
+                        if (window->visible && gui_point_in_rect(event->x, event->y, &window->bounds)) {
+                            on_window = 1;
+                            break;
+                        }
+                        window = window->next;
+                    }
+                    
+                    // If not on any window, show desktop context menu
+                    if (!on_window) {
+                        gui_show_desktop_context_menu(event->x, event->y);
+                        return;
                     }
                 }
             }
@@ -1535,6 +1640,10 @@ int gui_is_start_menu_visible(void) {
     return start_menu_visible;
 }
 
+int gui_is_desktop_menu_visible(void) {
+    return desktop_menu_visible;
+}
+
 window_t* gui_get_window_list(void) {
     return window_list;
 }
@@ -1705,4 +1814,189 @@ void gui_show_power_options(void) {
     
     gui_show_window(power_options_window);
     gui_focus_window(power_options_window);
+}
+
+// Desktop right-click context menu functions
+
+// Helper function to create a file creation confirmation dialog
+static void gui_show_file_created_dialog(const char* title, const char* message, const char* filename) {
+    window_t* dialog = gui_create_window(title, 350, 250, 300, 150);
+    if (dialog) {
+        dialog->bg_color = (color_t){240, 240, 245, 255};
+        gui_create_label(dialog, message, 20, 40);
+        gui_create_label(dialog, filename, 30, 70);
+        gui_create_button(dialog, "OK", 110, 100, 80, 35);
+        gui_show_window(dialog);
+        gui_focus_window(dialog);
+    }
+}
+
+static void gui_show_desktop_context_menu(int32_t x, int32_t y) {
+    desktop_menu_x = x;
+    desktop_menu_y = y;
+    desktop_menu_visible = 1;
+    desktop_submenu_visible = 0;
+    desktop_menu_selected_item = -1;
+    
+    // Hide other menus
+    gui_hide_context_menu();
+    if (start_menu_visible && !start_menu_animating) {
+        start_menu_animating = 1;
+        start_menu_opening = 0;
+    }
+}
+
+static void gui_hide_desktop_context_menu(void) {
+    desktop_menu_visible = 0;
+    desktop_submenu_visible = 0;
+    desktop_menu_selected_item = -1;
+}
+
+static void gui_draw_desktop_context_menu(void) {
+    if (!desktop_menu_visible) return;
+    
+    uint32_t menu_width = DESKTOP_MENU_WIDTH;
+    uint32_t item_height = DESKTOP_MENU_ITEM_HEIGHT;
+    uint32_t menu_height = DESKTOP_MENU_ITEM_COUNT * item_height;
+    
+    // Menu items
+    const char* items[] = {
+        "New               >",
+        "Open with...",
+        "Open in Terminal",
+        "Refresh"
+    };
+    
+    // Draw menu background with shadow
+    gui_draw_shadow(desktop_menu_x, desktop_menu_y, menu_width, menu_height, 3, 5);
+    framebuffer_draw_rect(desktop_menu_x, desktop_menu_y, menu_width, menu_height,
+                        (color_t){50, 50, 55, 255});
+    
+    // Draw menu border
+    framebuffer_draw_rect_outline(desktop_menu_x, desktop_menu_y, 
+                                 menu_width, menu_height,
+                                 (color_t){80, 80, 85, 255});
+    
+    // Draw menu items
+    uint32_t item_y = desktop_menu_y;
+    
+    for (int i = 0; i < DESKTOP_MENU_ITEM_COUNT; i++) {
+        // Highlight item if hovered (based on item being "New" and submenu visible)
+        color_t item_bg = (color_t){50, 50, 55, 255};
+        if (i == DESKTOP_MENU_NEW && desktop_submenu_visible) {
+            item_bg = (color_t){70, 100, 150, 255};  // Highlighted
+        }
+        
+        framebuffer_draw_rect(desktop_menu_x + 1, item_y + 1, menu_width - 2, item_height - 1, item_bg);
+        
+        // Draw item text
+        font_manager_draw_string(desktop_menu_x + 10, item_y + 8, items[i],
+                              COLOR_WHITE, item_bg);
+        
+        // Draw separator line after each item except last
+        if (i < DESKTOP_MENU_ITEM_COUNT - 1) {
+            framebuffer_draw_hline(desktop_menu_x, desktop_menu_x + menu_width - 1,
+                                 item_y + item_height, 
+                                 (color_t){70, 70, 75, 255});
+        }
+        
+        item_y += item_height;
+    }
+    
+    // Draw submenu if visible (for "New" option)
+    if (desktop_submenu_visible) {
+        uint32_t submenu_x = desktop_menu_x + menu_width;
+        uint32_t submenu_y = desktop_menu_y;
+        uint32_t submenu_width = DESKTOP_SUBMENU_WIDTH;
+        uint32_t submenu_height = NEW_SUBMENU_ITEM_COUNT * item_height;
+        
+        const char* submenu_items[] = {
+            "New Folder",
+            "Text File (.txt)",
+            "Document (.doc)",
+            "Spreadsheet (.xls)"
+        };
+        
+        // Draw submenu background with shadow
+        gui_draw_shadow(submenu_x, submenu_y, submenu_width, submenu_height, 3, 5);
+        framebuffer_draw_rect(submenu_x, submenu_y, submenu_width, submenu_height,
+                            (color_t){50, 50, 55, 255});
+        
+        // Draw submenu border
+        framebuffer_draw_rect_outline(submenu_x, submenu_y, 
+                                     submenu_width, submenu_height,
+                                     (color_t){80, 80, 85, 255});
+        
+        // Draw submenu items
+        item_y = submenu_y;
+        for (int i = 0; i < NEW_SUBMENU_ITEM_COUNT; i++) {
+            // Draw item text
+            font_manager_draw_string(submenu_x + 10, item_y + 8, submenu_items[i],
+                                  COLOR_WHITE, (color_t){50, 50, 55, 255});
+            
+            // Draw separator line after each item except last
+            if (i < NEW_SUBMENU_ITEM_COUNT - 1) {
+                framebuffer_draw_hline(submenu_x, submenu_x + submenu_width - 1,
+                                     item_y + item_height, 
+                                     (color_t){70, 70, 75, 255});
+            }
+            
+            item_y += item_height;
+        }
+    }
+}
+
+static void gui_handle_desktop_menu_click(int32_t item_index, int32_t submenu_index) {
+    switch (item_index) {
+        case DESKTOP_MENU_NEW:
+            // Handle submenu selection
+            if (submenu_index >= 0) {
+                switch (submenu_index) {
+                    case NEW_SUBMENU_FOLDER:
+                        gui_show_file_created_dialog("New Folder", 
+                            "New folder created on desktop", "Name: New Folder");
+                        break;
+                    case NEW_SUBMENU_TEXT_FILE:
+                        gui_show_file_created_dialog("New Text File",
+                            "Text file created on desktop", "Name: New File.txt");
+                        break;
+                    case NEW_SUBMENU_DOCUMENT:
+                        gui_show_file_created_dialog("New Document",
+                            "Document created on desktop", "Name: New Document.doc");
+                        break;
+                    case NEW_SUBMENU_SPREADSHEET:
+                        gui_show_file_created_dialog("New Spreadsheet",
+                            "Spreadsheet created on desktop", "Name: New Spreadsheet.xls");
+                        break;
+                }
+            }
+            break;
+            
+        case DESKTOP_MENU_OPEN_WITH:
+            // Show "Open with" dialog
+            {
+                window_t* dialog = gui_create_window("Open with...", 300, 200, 350, 250);
+                if (dialog) {
+                    dialog->bg_color = (color_t){240, 240, 245, 255};
+                    gui_create_label(dialog, "Select an application:", 20, 30);
+                    gui_create_button(dialog, "Text Editor", 50, 60, 250, 35);
+                    gui_create_button(dialog, "Image Viewer", 50, 105, 250, 35);
+                    gui_create_button(dialog, "File Manager", 50, 150, 250, 35);
+                    gui_create_button(dialog, "Cancel", 135, 200, 80, 35);
+                    gui_show_window(dialog);
+                    gui_focus_window(dialog);
+                }
+            }
+            break;
+            
+        case DESKTOP_MENU_OPEN_TERMINAL:
+            // Launch terminal application
+            app_launch(APP_TERMINAL);
+            break;
+            
+        case DESKTOP_MENU_REFRESH:
+            // Refresh the desktop (just redraw for now)
+            gui_update();
+            break;
+    }
 }
