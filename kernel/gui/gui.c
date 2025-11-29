@@ -50,8 +50,9 @@ static uint8_t prev_mouse_buttons = 0;
 static uint32_t last_click_time = 0;
 static int32_t last_click_x = 0;
 static int32_t last_click_y = 0;
-#define DOUBLE_CLICK_TIME 500    // milliseconds (based on timer ticks at 100Hz = 50 ticks)
-#define DOUBLE_CLICK_DISTANCE 10 // pixels
+#define DOUBLE_CLICK_TIME_MS 500    // milliseconds
+#define DOUBLE_CLICK_TICKS 50       // at 100Hz timer, 50 ticks = 500ms
+#define DOUBLE_CLICK_DISTANCE 10    // pixels
 
 // Window dragging state
 static window_t* dragging_window = NULL;
@@ -125,7 +126,7 @@ static int is_double_click(int32_t x, int32_t y) {
     last_click_y = y;
     
     // Check if this qualifies as a double-click
-    if (time_diff < 50 && dx < DOUBLE_CLICK_DISTANCE && dy < DOUBLE_CLICK_DISTANCE) {
+    if (time_diff < DOUBLE_CLICK_TICKS && dx < DOUBLE_CLICK_DISTANCE && dy < DOUBLE_CLICK_DISTANCE) {
         // Reset to prevent triple-click detection
         last_click_time = 0;
         return 1;

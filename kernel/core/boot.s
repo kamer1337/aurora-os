@@ -66,9 +66,9 @@ pt_table:
 gdt64:
     .quad 0                          /* Null descriptor */
 gdt64_code:
-    .quad 0x00AF9A000000FFFF         /* Code segment: DPL=0, L=1, D=0 */
+    .quad 0x00209A0000000000         /* Code segment: L=1, D=0, DPL=0, P=1 */
 gdt64_data:
-    .quad 0x00AF92000000FFFF         /* Data segment: DPL=0 */
+    .quad 0x0000920000000000         /* Data segment: DPL=0, P=1 */
 gdt64_end:
 
 gdt64_pointer:

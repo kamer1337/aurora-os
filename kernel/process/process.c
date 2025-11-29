@@ -259,6 +259,7 @@ typedef struct {
     uint64_t r15;
     uint64_t rip;
     uint64_t rflags;
+    uint8_t initialized;  /* Flag to indicate context has been saved */
 } cpu_context_t;
 
 /* Context storage for each process */
@@ -308,6 +309,9 @@ static void save_context(process_t* process) {
     
     /* Save flags */
     __asm__ volatile("pushfq; popq %0" : "=m"(ctx->rflags));
+    
+    /* Mark context as initialized */
+    ctx->initialized = 1;
 }
 
 /**
@@ -368,7 +372,7 @@ static void switch_context(process_t* from, process_t* to) {
         /* Restore context of previously-run process */
         /* For new processes, the context was initialized at creation time */
         int idx = get_process_index(to);
-        if (idx >= 0 && process_contexts[idx].rsp != 0) {
+        if (idx >= 0 && process_contexts[idx].initialized) {
             restore_context(to);
         }
     }
