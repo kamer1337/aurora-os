@@ -73,6 +73,11 @@ static int32_t desktop_menu_y = 0;
 static uint8_t desktop_submenu_visible = 0;  // "New" submenu
 static int32_t desktop_menu_selected_item = -1;  // Hover tracking
 
+// Desktop context menu dimensions
+#define DESKTOP_MENU_WIDTH 180
+#define DESKTOP_SUBMENU_WIDTH 160
+#define DESKTOP_MENU_ITEM_HEIGHT 30
+
 // Desktop context menu item indices
 #define DESKTOP_MENU_NEW 0
 #define DESKTOP_MENU_OPEN_WITH 1
@@ -413,19 +418,18 @@ void gui_process_event(event_t* event) {
             
             // Check if clicked on desktop right-click context menu
             if (desktop_menu_visible) {
-                uint32_t menu_width = 180;
-                uint32_t menu_height = DESKTOP_MENU_ITEM_COUNT * 30;
-                uint32_t submenu_width = 160;
-                uint32_t submenu_height = NEW_SUBMENU_ITEM_COUNT * 30;
+                uint32_t menu_width = DESKTOP_MENU_WIDTH;
+                uint32_t menu_height = DESKTOP_MENU_ITEM_COUNT * DESKTOP_MENU_ITEM_HEIGHT;
+                uint32_t submenu_width = DESKTOP_SUBMENU_WIDTH;
+                uint32_t submenu_height = NEW_SUBMENU_ITEM_COUNT * DESKTOP_MENU_ITEM_HEIGHT;
                 
                 // Check if clicked on submenu (if visible)
                 if (desktop_submenu_visible) {
                     rect_t submenu_rect = {desktop_menu_x + (int32_t)menu_width, desktop_menu_y, submenu_width, submenu_height};
                     if (gui_point_in_rect(event->x, event->y, &submenu_rect)) {
                         // Clicked inside submenu - determine which item
-                        uint32_t item_height = 30;
                         uint32_t relative_y = event->y - desktop_menu_y;
-                        uint32_t submenu_index = relative_y / item_height;
+                        uint32_t submenu_index = relative_y / DESKTOP_MENU_ITEM_HEIGHT;
                         
                         if (submenu_index < NEW_SUBMENU_ITEM_COUNT) {
                             gui_handle_desktop_menu_click(DESKTOP_MENU_NEW, (int32_t)submenu_index);
@@ -439,9 +443,8 @@ void gui_process_event(event_t* event) {
                 rect_t menu_rect = {desktop_menu_x, desktop_menu_y, menu_width, menu_height};
                 if (gui_point_in_rect(event->x, event->y, &menu_rect)) {
                     // Clicked inside desktop context menu
-                    uint32_t item_height = 30;
                     uint32_t relative_y = event->y - desktop_menu_y;
-                    uint32_t item_index = relative_y / item_height;
+                    uint32_t item_index = relative_y / DESKTOP_MENU_ITEM_HEIGHT;
                     
                     if (item_index < DESKTOP_MENU_ITEM_COUNT) {
                         if (item_index == DESKTOP_MENU_NEW) {
@@ -1815,6 +1818,19 @@ void gui_show_power_options(void) {
 
 // Desktop right-click context menu functions
 
+// Helper function to create a file creation confirmation dialog
+static void gui_show_file_created_dialog(const char* title, const char* message, const char* filename) {
+    window_t* dialog = gui_create_window(title, 350, 250, 300, 150);
+    if (dialog) {
+        dialog->bg_color = (color_t){240, 240, 245, 255};
+        gui_create_label(dialog, message, 20, 40);
+        gui_create_label(dialog, filename, 30, 70);
+        gui_create_button(dialog, "OK", 110, 100, 80, 35);
+        gui_show_window(dialog);
+        gui_focus_window(dialog);
+    }
+}
+
 static void gui_show_desktop_context_menu(int32_t x, int32_t y) {
     desktop_menu_x = x;
     desktop_menu_y = y;
@@ -1839,8 +1855,8 @@ static void gui_hide_desktop_context_menu(void) {
 static void gui_draw_desktop_context_menu(void) {
     if (!desktop_menu_visible) return;
     
-    uint32_t menu_width = 180;
-    uint32_t item_height = 30;
+    uint32_t menu_width = DESKTOP_MENU_WIDTH;
+    uint32_t item_height = DESKTOP_MENU_ITEM_HEIGHT;
     uint32_t menu_height = DESKTOP_MENU_ITEM_COUNT * item_height;
     
     // Menu items
@@ -1891,7 +1907,7 @@ static void gui_draw_desktop_context_menu(void) {
     if (desktop_submenu_visible) {
         uint32_t submenu_x = desktop_menu_x + menu_width;
         uint32_t submenu_y = desktop_menu_y;
-        uint32_t submenu_width = 160;
+        uint32_t submenu_width = DESKTOP_SUBMENU_WIDTH;
         uint32_t submenu_height = NEW_SUBMENU_ITEM_COUNT * item_height;
         
         const char* submenu_items[] = {
@@ -1937,57 +1953,20 @@ static void gui_handle_desktop_menu_click(int32_t item_index, int32_t submenu_in
             if (submenu_index >= 0) {
                 switch (submenu_index) {
                     case NEW_SUBMENU_FOLDER:
-                        // Create a "New Folder Created" dialog
-                        {
-                            window_t* dialog = gui_create_window("New Folder", 350, 250, 300, 150);
-                            if (dialog) {
-                                dialog->bg_color = (color_t){240, 240, 245, 255};
-                                gui_create_label(dialog, "New folder created on desktop", 20, 40);
-                                gui_create_label(dialog, "Name: New Folder", 40, 70);
-                                gui_create_button(dialog, "OK", 110, 100, 80, 35);
-                                gui_show_window(dialog);
-                                gui_focus_window(dialog);
-                            }
-                        }
+                        gui_show_file_created_dialog("New Folder", 
+                            "New folder created on desktop", "Name: New Folder");
                         break;
                     case NEW_SUBMENU_TEXT_FILE:
-                        {
-                            window_t* dialog = gui_create_window("New Text File", 350, 250, 300, 150);
-                            if (dialog) {
-                                dialog->bg_color = (color_t){240, 240, 245, 255};
-                                gui_create_label(dialog, "Text file created on desktop", 25, 40);
-                                gui_create_label(dialog, "Name: New File.txt", 40, 70);
-                                gui_create_button(dialog, "OK", 110, 100, 80, 35);
-                                gui_show_window(dialog);
-                                gui_focus_window(dialog);
-                            }
-                        }
+                        gui_show_file_created_dialog("New Text File",
+                            "Text file created on desktop", "Name: New File.txt");
                         break;
                     case NEW_SUBMENU_DOCUMENT:
-                        {
-                            window_t* dialog = gui_create_window("New Document", 350, 250, 300, 150);
-                            if (dialog) {
-                                dialog->bg_color = (color_t){240, 240, 245, 255};
-                                gui_create_label(dialog, "Document created on desktop", 25, 40);
-                                gui_create_label(dialog, "Name: New Document.doc", 30, 70);
-                                gui_create_button(dialog, "OK", 110, 100, 80, 35);
-                                gui_show_window(dialog);
-                                gui_focus_window(dialog);
-                            }
-                        }
+                        gui_show_file_created_dialog("New Document",
+                            "Document created on desktop", "Name: New Document.doc");
                         break;
                     case NEW_SUBMENU_SPREADSHEET:
-                        {
-                            window_t* dialog = gui_create_window("New Spreadsheet", 350, 250, 300, 150);
-                            if (dialog) {
-                                dialog->bg_color = (color_t){240, 240, 245, 255};
-                                gui_create_label(dialog, "Spreadsheet created on desktop", 15, 40);
-                                gui_create_label(dialog, "Name: New Spreadsheet.xls", 25, 70);
-                                gui_create_button(dialog, "OK", 110, 100, 80, 35);
-                                gui_show_window(dialog);
-                                gui_focus_window(dialog);
-                            }
-                        }
+                        gui_show_file_created_dialog("New Spreadsheet",
+                            "Spreadsheet created on desktop", "Name: New Spreadsheet.xls");
                         break;
                 }
             }
