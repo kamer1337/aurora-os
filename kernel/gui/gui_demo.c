@@ -27,6 +27,9 @@ static void button2_click(widget_t* widget, int32_t x, int32_t y) {
     // Another button handler
 }
 
+// External function declaration
+extern void keyboard_shortcuts_init(void);
+
 void gui_demo_init(void) {
     // Initialize GUI system
     if (gui_init() != 0) {
@@ -35,6 +38,9 @@ void gui_demo_init(void) {
     
     // Initialize input handling (mouse and keyboard)
     gui_init_input();
+    
+    // Initialize keyboard shortcuts for desktop functionality
+    keyboard_shortcuts_init();
     
     // Create a welcome window
     window_t* welcome_win = gui_create_window("Welcome to Aurora OS", 150, 100, 500, 350);

@@ -70,15 +70,22 @@ done
 echo -e "${BLUE}Aurora OS - QEMU Testing${NC}"
 echo "=========================="
 
-# Check for QEMU
-if ! command -v qemu-system-i386 &> /dev/null; then
-    echo -e "${RED}Error: qemu-system-i386 not found${NC}"
+# Check for QEMU (try x86_64 first for 64-bit kernel, fall back to i386)
+QEMU_BIN=""
+if command -v qemu-system-x86_64 &> /dev/null; then
+    QEMU_BIN="qemu-system-x86_64"
+elif command -v qemu-system-i386 &> /dev/null; then
+    QEMU_BIN="qemu-system-i386"
+else
+    echo -e "${RED}Error: QEMU not found${NC}"
     echo "Please install QEMU:"
     echo "  Ubuntu/Debian: sudo apt-get install qemu-system-x86"
     echo "  Fedora/RHEL: sudo dnf install qemu-system-x86"
     echo "  macOS: brew install qemu"
     exit 1
 fi
+
+echo "Using QEMU: $QEMU_BIN"
 
 # Determine boot method
 if [ "$USE_KERNEL_DIRECT" = "yes" ]; then
@@ -92,7 +99,7 @@ if [ "$USE_KERNEL_DIRECT" = "yes" ]; then
     echo -e "${GREEN}Booting kernel directly...${NC}"
     echo "Memory: $MEMORY"
     
-    qemu-system-i386 \
+    $QEMU_BIN \
         -kernel "$KERNEL_BIN" \
         -m "$MEMORY" \
         -display "$DISPLAY_MODE" \
@@ -116,7 +123,7 @@ else
     echo "Memory: $MEMORY"
     
     # Enable VGA graphics for VESA testing
-    qemu-system-i386 \
+    $QEMU_BIN \
         -cdrom "$ISO_FILE" \
         -m "$MEMORY" \
         -vga std \
