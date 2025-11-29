@@ -160,7 +160,7 @@ Aurora OS uses GRUB as its bootloader with the following options:
 3. **Aurora OS (800x600)**: Boot with lower resolution
 4. **Aurora OS with Linux VM Support**: Boot with Linux VM features enabled
 5. **Linux Kernel (via Aurora VM)**: Boot directly into Linux kernel via Aurora VM
-6. **Install Linux**: Access Linux installer (coming soon)
+6. **Install Linux**: Access Linux installer ⭐ NEW
 
 ## Architecture
 

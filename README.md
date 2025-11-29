@@ -240,7 +240,7 @@ Aurora OS now includes advanced workspace and virtualization features supporting
 - Aurora OS with Android VM support enabled ⭐ NEW
 - Direct Linux kernel boot via Aurora VM
 - Direct Android boot via Aurora VM ⭐ NEW
-- Linux installer access (coming soon)
+- Linux installer access ⭐ NEW
 - Android installer access ⭐ NEW
 
 For detailed documentation:
