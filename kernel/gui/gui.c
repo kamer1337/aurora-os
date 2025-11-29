@@ -127,7 +127,8 @@ static int is_double_click(int32_t x, int32_t y) {
     
     // Check if this qualifies as a double-click
     if (time_diff < DOUBLE_CLICK_TICKS && dx < DOUBLE_CLICK_DISTANCE && dy < DOUBLE_CLICK_DISTANCE) {
-        // Reset to prevent triple-click detection
+        // Reset to prevent triple-click from being interpreted as another double-click.
+        // After a successful double-click, the next click starts fresh.
         last_click_time = 0;
         return 1;
     }

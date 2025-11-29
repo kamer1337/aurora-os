@@ -118,18 +118,18 @@ _start:
     jz .no_long_mode
     
     /* Set up identity paging for first 2MB */
-    /* Clear page tables */
+    /* Clear page tables (each table is 4KB = 4096 bytes = 1024 dwords) */
     movl $pml4_table, %edi
     xorl %eax, %eax
-    movl $4096, %ecx
+    movl $1024, %ecx                 /* 1024 dwords = 4096 bytes */
     rep stosl
     
     movl $pdpt_table, %edi
-    movl $4096, %ecx
+    movl $1024, %ecx
     rep stosl
     
     movl $pd_table, %edi
-    movl $4096, %ecx
+    movl $1024, %ecx
     rep stosl
     
     /* Set up PML4 -> PDPT */

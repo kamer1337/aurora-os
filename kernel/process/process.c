@@ -262,7 +262,11 @@ typedef struct {
     uint8_t initialized;  /* Flag to indicate context has been saved */
 } cpu_context_t;
 
-/* Context storage for each process */
+/* Context storage for each process
+ * Note: Array is zero-initialized, so 'initialized' flag is 0 for new processes.
+ * This means new processes will not have their context restored on first run,
+ * they will execute from their entry point on the stack.
+ */
 static cpu_context_t process_contexts[MAX_PROCESSES];
 
 /**
