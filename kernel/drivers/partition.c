@@ -29,6 +29,10 @@ typedef struct {
     partition_t partitions[MAX_PARTITIONS];  /* Partition entries (max 7 to fit in 512 bytes) */
 } persistent_partition_table_t;
 
+/* Compile-time check to ensure structure fits in a sector */
+_Static_assert(sizeof(persistent_partition_table_t) <= SECTOR_SIZE, 
+               "Partition table structure exceeds 512-byte sector size");
+
 /* Global disk information */
 static disk_info_t disks[MAX_DISKS];
 static int initialized = 0;

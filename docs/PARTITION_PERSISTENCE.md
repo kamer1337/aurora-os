@@ -33,7 +33,7 @@ typedef struct {
     uint32_t version;                    // Table version (currently 1)
     uint32_t checksum;                   // CRC32 checksum
     uint8_t table_type;                  // PART_TABLE_MBR or PART_TABLE_GPT
-    uint8_t partition_count;             // Number of partitions (0-16)
+    uint8_t partition_count;             // Number of partitions (0-7)
     uint8_t reserved[6];                 // Reserved for alignment
     partition_t partitions[MAX_PARTITIONS (8)];  // Partition entries
 } persistent_partition_table_t;

@@ -226,8 +226,8 @@ void test_maximum_partitions_persistence(void) {
     storage_init();
     partition_scan_disk(0);
     
-    // Create maximum number of partitions (7 to fit in 512 bytes)
-    const int max_to_test = 7;
+    // Create maximum number of partitions
+    const int max_to_test = MAX_PARTITIONS;
     for (int i = 0; i < max_to_test; i++) {
         uint32_t start_lba = 2048 + (i * 100000);
         int part_id = partition_create(0, start_lba, 50000, PART_TYPE_LINUX);
