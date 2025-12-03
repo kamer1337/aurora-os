@@ -3,10 +3,35 @@
  */
 
 #include "partition.h"
+#include "storage.h"
 #include <stddef.h>
 
 /* Maximum supported disks */
 #define MAX_DISKS 4
+
+/* Partition table location on disk (LBA 1) */
+#define PARTITION_TABLE_LBA 1
+
+/* Aurora OS partition table magic signature */
+#define AURORA_PART_MAGIC 0x41555250  /* "AURP" */
+
+/* Sector size */
+#define SECTOR_SIZE 512
+
+/* Persistent partition table structure (must fit in 512 bytes) */
+typedef struct {
+    uint32_t magic;                 /* Magic signature */
+    uint32_t version;               /* Table version */
+    uint32_t checksum;              /* CRC32 checksum */
+    uint8_t table_type;             /* MBR or GPT */
+    uint8_t partition_count;        /* Number of partitions */
+    uint8_t reserved[6];            /* Reserved for alignment */
+    partition_t partitions[MAX_PARTITIONS];  /* Partition entries (max 7 to fit in 512 bytes) */
+} persistent_partition_table_t;
+
+/* Compile-time check to ensure structure fits in a sector */
+_Static_assert(sizeof(persistent_partition_table_t) <= SECTOR_SIZE, 
+               "Partition table structure exceeds 512-byte sector size");
 
 /* Global disk information */
 static disk_info_t disks[MAX_DISKS];
@@ -19,6 +44,47 @@ static void safe_strcpy(char* dest, const char* src, size_t max_len) {
         dest[i] = src[i];
     }
     dest[i] = '\0';
+}
+
+/**
+ * Calculate simple CRC32 checksum
+ */
+static uint32_t calculate_checksum(const uint8_t* data, size_t length) {
+    uint32_t crc = 0xFFFFFFFF;
+    
+    for (size_t i = 0; i < length; i++) {
+        crc ^= data[i];
+        for (int j = 0; j < 8; j++) {
+            if (crc & 1) {
+                crc = (crc >> 1) ^ 0xEDB88320;
+            } else {
+                crc = crc >> 1;
+            }
+        }
+    }
+    
+    return ~crc;
+}
+
+/**
+ * Clear memory block
+ */
+static void memset_zero(void* ptr, size_t size) {
+    uint8_t* p = (uint8_t*)ptr;
+    for (size_t i = 0; i < size; i++) {
+        p[i] = 0;
+    }
+}
+
+/**
+ * Copy memory block
+ */
+static void memcpy_block(void* dest, const void* src, size_t size) {
+    uint8_t* d = (uint8_t*)dest;
+    const uint8_t* s = (const uint8_t*)src;
+    for (size_t i = 0; i < size; i++) {
+        d[i] = s[i];
+    }
 }
 
 /**
@@ -114,6 +180,14 @@ int partition_create(uint8_t disk_id, uint32_t start_lba, uint32_t size_sectors,
     
     disk->partition_count++;
     
+    /* Persist partition table to disk */
+    int result = partition_write_table(disk_id);
+    if (result != 0) {
+        /* Rollback on write failure */
+        disk->partition_count--;
+        return -5;  /* Failed to persist */
+    }
+    
     return disk->partition_count - 1;  /* Return partition ID */
 }
 
@@ -138,6 +212,14 @@ int partition_delete(uint8_t disk_id, uint8_t partition_id) {
     
     disk->partition_count--;
     
+    /* Persist partition table to disk */
+    int result = partition_write_table(disk_id);
+    if (result != 0) {
+        /* Rollback on write failure */
+        disk->partition_count++;
+        return -3;  /* Failed to persist */
+    }
+    
     return 0;
 }
 
@@ -156,6 +238,7 @@ int partition_resize(uint8_t disk_id, uint8_t partition_id, uint32_t new_size_se
     }
     
     partition_t* part = &disk->partitions[partition_id];
+    uint32_t old_size = part->size_sectors;
     
     /* Check if new size fits */
     if (part->start_lba + new_size_sectors > disk->total_sectors) {
@@ -166,6 +249,15 @@ int partition_resize(uint8_t disk_id, uint8_t partition_id, uint32_t new_size_se
     
     part->size_sectors = new_size_sectors;
     part->size_bytes = (uint64_t)new_size_sectors * disk->sector_size;
+    
+    /* Persist partition table to disk */
+    int result = partition_write_table(disk_id);
+    if (result != 0) {
+        /* Rollback on write failure */
+        part->size_sectors = old_size;
+        part->size_bytes = (uint64_t)old_size * disk->sector_size;
+        return -4;  /* Failed to persist */
+    }
     
     return 0;
 }
@@ -205,7 +297,11 @@ int partition_create_mbr(uint8_t disk_id) {
     disk->partition_count = 0;
     disk->table_type = PART_TABLE_MBR;
     
-    /* In a real implementation, would write MBR to disk */
+    /* Persist empty partition table to disk */
+    int result = partition_write_table(disk_id);
+    if (result != 0) {
+        return -2;  /* Failed to persist */
+    }
     
     return 0;
 }
@@ -224,7 +320,11 @@ int partition_create_gpt(uint8_t disk_id) {
     disk->partition_count = 0;
     disk->table_type = PART_TABLE_GPT;
     
-    /* In a real implementation, would write GPT to disk */
+    /* Persist empty partition table to disk */
+    int result = partition_write_table(disk_id);
+    if (result != 0) {
+        return -2;  /* Failed to persist */
+    }
     
     return 0;
 }
@@ -237,9 +337,51 @@ int partition_read_table(uint8_t disk_id) {
         return -1;
     }
     
-    /* In a real implementation, would read partition table from disk */
-    /* For now, use partition_scan_disk */
-    return partition_scan_disk(disk_id);
+    /* Get storage device */
+    storage_device_t* device = storage_get_device(disk_id);
+    if (!device) {
+        return -2;  /* No storage device */
+    }
+    
+    /* Allocate buffer for reading partition table */
+    uint8_t buffer[512];
+    
+    /* Read partition table from LBA 1 */
+    if (storage_read_sector(device, PARTITION_TABLE_LBA, buffer) != 0) {
+        return -3;  /* Read error */
+    }
+    
+    /* Parse persistent partition table */
+    persistent_partition_table_t* table = (persistent_partition_table_t*)buffer;
+    
+    /* Verify magic signature */
+    if (table->magic != AURORA_PART_MAGIC) {
+        /* No valid partition table found, initialize empty */
+        disks[disk_id].partition_count = 0;
+        disks[disk_id].table_type = PART_TABLE_MBR;
+        return 0;
+    }
+    
+    /* Calculate and verify checksum */
+    uint32_t saved_checksum = table->checksum;
+    table->checksum = 0;
+    uint32_t calculated_checksum = calculate_checksum(buffer, SECTOR_SIZE);
+    
+    if (saved_checksum != calculated_checksum) {
+        return -4;  /* Checksum mismatch */
+    }
+    
+    /* Load partition table into memory */
+    disk_info_t* disk = &disks[disk_id];
+    disk->table_type = table->table_type;
+    disk->partition_count = table->partition_count;
+    
+    /* Copy partition entries */
+    for (int i = 0; i < table->partition_count && i < MAX_PARTITIONS; i++) {
+        memcpy_block(&disk->partitions[i], &table->partitions[i], sizeof(partition_t));
+    }
+    
+    return 0;
 }
 
 /**
@@ -250,7 +392,41 @@ int partition_write_table(uint8_t disk_id) {
         return -1;
     }
     
-    /* In a real implementation, would write partition table to disk */
+    /* Get storage device */
+    storage_device_t* device = storage_get_device(disk_id);
+    if (!device) {
+        return -2;  /* No storage device */
+    }
+    
+    /* Prepare persistent partition table */
+    uint8_t buffer[512];
+    memset_zero(buffer, 512);
+    
+    persistent_partition_table_t* table = (persistent_partition_table_t*)buffer;
+    disk_info_t* disk = &disks[disk_id];
+    
+    /* Set header fields */
+    table->magic = AURORA_PART_MAGIC;
+    table->version = 1;
+    table->table_type = disk->table_type;
+    table->partition_count = disk->partition_count;
+    
+    /* Copy partition entries */
+    for (int i = 0; i < disk->partition_count && i < MAX_PARTITIONS; i++) {
+        memcpy_block(&table->partitions[i], &disk->partitions[i], sizeof(partition_t));
+    }
+    
+    /* Calculate checksum */
+    table->checksum = 0;
+    table->checksum = calculate_checksum(buffer, SECTOR_SIZE);
+    
+    /* Write partition table to LBA 1 */
+    if (storage_write_sector(device, PARTITION_TABLE_LBA, buffer) != 0) {
+        return -3;  /* Write error */
+    }
+    
+    /* Flush cache to ensure data is written */
+    storage_flush_cache(device);
     
     return 0;
 }
