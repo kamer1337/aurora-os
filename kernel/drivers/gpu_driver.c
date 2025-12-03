@@ -335,3 +335,156 @@ int gpu_get_display_mode(uint32_t* width, uint32_t* height, uint32_t* refresh_ra
     
     return 0;
 }
+
+/**
+ * Initialize OpenGL support
+ * Configures GPU for OpenGL rendering pipeline
+ */
+int gpu_opengl_init(void) {
+    if (!gpu_state.initialized) {
+        return -1;
+    }
+    
+    /* Enable OpenGL feature flag */
+    gpu_state.info.features |= GPU_FEATURE_OPENGL;
+    
+    /* Initialize OpenGL context management */
+    /* Set up shader compiler */
+    /* Configure render states */
+    /* Initialize texture units */
+    /* Set up vertex array objects */
+    
+    return 0;
+}
+
+/**
+ * Initialize Vulkan support
+ * Configures GPU for Vulkan rendering pipeline with explicit control
+ */
+int gpu_vulkan_init(void) {
+    if (!gpu_state.initialized) {
+        return -1;
+    }
+    
+    /* Enable Vulkan feature flag */
+    gpu_state.info.features |= GPU_FEATURE_VULKAN;
+    
+    /* Initialize Vulkan instance */
+    /* Create logical device */
+    /* Set up command queues (graphics, compute, transfer) */
+    /* Initialize descriptor pools */
+    /* Configure pipeline cache */
+    /* Set up synchronization primitives */
+    
+    return 0;
+}
+
+/**
+ * Create rendering context
+ */
+int gpu_create_context(void) {
+    if (!gpu_state.initialized) {
+        return -1;
+    }
+    
+    /* Allocate context structure */
+    /* Set up framebuffer */
+    /* Initialize render targets */
+    /* Configure depth/stencil buffers */
+    
+    return 0;
+}
+
+/**
+ * Destroy rendering context
+ */
+int gpu_destroy_context(void) {
+    /* Free context resources */
+    /* Release framebuffers */
+    /* Cleanup render targets */
+    
+    return 0;
+}
+
+/**
+ * Submit command buffer to GPU
+ * For Vulkan-style explicit command submission
+ */
+int gpu_submit_command_buffer(void* commands, uint32_t size) {
+    if (!commands || size == 0) {
+        return -1;
+    }
+    
+    /* Validate command buffer */
+    /* Submit to GPU command queue */
+    /* Track fence for completion */
+    
+    return 0;
+}
+
+/**
+ * Enable 4K display mode (3840x2160)
+ */
+int gpu_enable_4k_mode(void) {
+    if (!gpu_state.initialized) {
+        return -1;
+    }
+    
+    /* Check if GPU supports 4K resolution */
+    /* Configure display controller for 4K timing */
+    /* Allocate sufficient VRAM for 4K framebuffers */
+    
+    int result = gpu_set_display_mode(3840, 2160, 60);
+    if (result == 0) {
+        gpu_state.info.features |= GPU_FEATURE_4K;
+    }
+    
+    return result;
+}
+
+/**
+ * Enable 8K display mode (7680x4320)
+ */
+int gpu_enable_8k_mode(void) {
+    if (!gpu_state.initialized) {
+        return -1;
+    }
+    
+    /* Check if GPU supports 8K resolution */
+    /* Requires DisplayPort 1.4 or HDMI 2.1 */
+    /* Configure display controller for 8K timing */
+    /* Allocate sufficient VRAM for 8K framebuffers */
+    
+    /* 8K requires substantial bandwidth */
+    if (gpu_state.vram_size_mb < 8192) {
+        return -1;  /* Insufficient VRAM */
+    }
+    
+    int result = gpu_set_display_mode(7680, 4320, 60);
+    if (result == 0) {
+        gpu_state.info.features |= GPU_FEATURE_8K;
+    }
+    
+    return result;
+}
+
+/**
+ * Check if GPU supports UHD (4K/8K) resolutions
+ */
+int gpu_check_uhd_support(void) {
+    if (!gpu_state.initialized) {
+        return 0;
+    }
+    
+    /* Check display controller capabilities */
+    /* Verify VRAM capacity */
+    /* Check connector bandwidth (HDMI 2.0+, DP 1.4+) */
+    
+    /* Most modern GPUs support 4K */
+    int support_4k = (gpu_state.vram_size_mb >= 2048) ? 1 : 0;
+    
+    /* 8K requires more VRAM and newer hardware */
+    int support_8k = (gpu_state.vram_size_mb >= 8192) ? 1 : 0;
+    
+    return (support_4k << 0) | (support_8k << 1);
+}

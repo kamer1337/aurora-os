@@ -4,6 +4,14 @@ CC = gcc
 AS = nasm
 LD = ld
 
+# Cross-compilation support for ARM
+ARM_CC = arm-none-eabi-gcc
+ARM_AS = arm-none-eabi-as
+ARM_LD = arm-none-eabi-ld
+ARM64_CC = aarch64-linux-gnu-gcc
+ARM64_AS = aarch64-linux-gnu-as
+ARM64_LD = aarch64-linux-gnu-ld
+
 # Directories
 KERNEL_DIR = kernel
 BUILD_DIR = build
@@ -16,8 +24,24 @@ ENABLE_ML_PLUGIN = 1
 ENABLE_QUANTUM_PLUGIN = 1
 ENABLE_SYSTEM_OPT_PLUGIN = 1
 
-# Architecture selection (32 or 64)
+# Architecture selection (32, 64, arm, arm64)
 ARCH = 64
+TARGET_PLATFORM = x86_64
+
+# Architecture-specific compiler selection
+ifeq ($(ARCH),arm)
+    CC = $(ARM_CC)
+    AS = $(ARM_AS)
+    LD = $(ARM_LD)
+    TARGET_PLATFORM = arm
+endif
+
+ifeq ($(ARCH),arm64)
+    CC = $(ARM64_CC)
+    AS = $(ARM64_AS)
+    LD = $(ARM64_LD)
+    TARGET_PLATFORM = aarch64
+endif
 
 # Compiler flags
 ifeq ($(ARCH),64)
