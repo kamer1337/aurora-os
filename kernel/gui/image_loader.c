@@ -10,6 +10,10 @@
 #include "../../filesystem/vfs/vfs.h"
 #include <stddef.h>
 
+// Constants
+#define MAX_IMAGE_FILE_SIZE (10 * 1024 * 1024)  // 10MB max
+#define MAX_IMAGE_DIMENSION 4096                 // 4096 pixels max
+
 // BMP file header structures
 #pragma pack(push, 1)
 typedef struct {
@@ -126,7 +130,8 @@ int image_load_bmp(const uint8_t* data, uint32_t size, image_data_t* out_image) 
     }
     
     // Validate dimensions
-    if (info_header.width <= 0 || height <= 0 || info_header.width > 4096 || height > 4096) {
+    if (info_header.width <= 0 || height <= 0 || 
+        info_header.width > MAX_IMAGE_DIMENSION || height > MAX_IMAGE_DIMENSION) {
         return -1;
     }
     
@@ -208,7 +213,7 @@ int image_load_file(const char* path, image_data_t* out_image) {
     }
     
     uint32_t file_size = stat.size;
-    if (file_size == 0 || file_size > 10 * 1024 * 1024) {  // Max 10MB
+    if (file_size == 0 || file_size > MAX_IMAGE_FILE_SIZE) {
         vfs_close(fd);
         return -1;
     }

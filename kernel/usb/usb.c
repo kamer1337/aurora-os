@@ -446,17 +446,27 @@ void usb_hotplug_notify(usb_device_t* device, usb_hotplug_event_t event) {
 /**
  * Poll USB ports for device insertion/removal
  * Should be called periodically from the main loop or timer
+ * 
+ * Note: This is a basic implementation that scans for new devices.
+ * Full hot-plug support requires:
+ * 1. Port status change detection via interrupts or polling
+ * 2. Device state tracking to detect detachment
+ * 3. Graceful cleanup of detached device resources
  */
 int usb_poll_devices(void) {
     /* Check each device slot for state changes */
     for (uint32_t i = 0; i < MAX_USB_DEVICES; i++) {
         usb_device_t* device = &usb_devices[i];
         
-        /* Check if previously attached device is now detached */
+        /* Check if previously attached device is now detached
+         * In a real implementation, we would:
+         * - Read port status registers to detect disconnect
+         * - Check device response to detect unresponsive devices
+         * - Call usb_hotplug_notify with USB_EVENT_DEVICE_DETACHED
+         * - Clean up device resources and mark slot as available
+         */
         if (device->state != USB_STATE_DETACHED && device->address != 0) {
-            /* In a real implementation, we would check port status here
-             * For now, we assume devices stay attached
-             */
+            /* Port status checking would go here */
         }
     }
     
