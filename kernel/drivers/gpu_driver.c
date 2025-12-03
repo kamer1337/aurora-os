@@ -456,7 +456,7 @@ int gpu_enable_8k_mode(void) {
     /* Allocate sufficient VRAM for 8K framebuffers */
     
     /* 8K requires substantial bandwidth */
-    if (gpu_state.vram_size_mb < 8192) {
+    if (gpu_state.vram_size_mb < MIN_VRAM_8K_MB) {
         return -1;  /* Insufficient VRAM */
     }
     
@@ -481,10 +481,10 @@ int gpu_check_uhd_support(void) {
     /* Check connector bandwidth (HDMI 2.0+, DP 1.4+) */
     
     /* Most modern GPUs support 4K */
-    int support_4k = (gpu_state.vram_size_mb >= 2048) ? 1 : 0;
+    int support_4k = (gpu_state.vram_size_mb >= MIN_VRAM_4K_MB) ? 1 : 0;
     
     /* 8K requires more VRAM and newer hardware */
-    int support_8k = (gpu_state.vram_size_mb >= 8192) ? 1 : 0;
+    int support_8k = (gpu_state.vram_size_mb >= MIN_VRAM_8K_MB) ? 1 : 0;
     
     return (support_4k << 0) | (support_8k << 1);
 }

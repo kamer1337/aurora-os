@@ -25,6 +25,9 @@ static boot_opt_config_t boot_opt = {
 static uint64_t boot_stage_start = 0;
 static uint64_t boot_stage_end = 0;
 
+/* Time conversion constants */
+#define NS_TO_MS_DIVISOR 1000000  /* Nanoseconds to milliseconds */
+
 /**
  * Initialize boot optimizations
  * @return 0 on success, -1 on failure
@@ -136,8 +139,8 @@ int boot_measure_time(void) {
     /* Calculate boot time from timestamps */
     if (boot_stage_end > boot_stage_start) {
         uint64_t elapsed = boot_stage_end - boot_stage_start;
-        /* Convert to milliseconds (assuming TSC or similar timer) */
-        boot_opt.current_boot_time_ms = (uint32_t)(elapsed / 1000000);  /* ns to ms */
+        /* Convert to milliseconds */
+        boot_opt.current_boot_time_ms = (uint32_t)(elapsed / NS_TO_MS_DIVISOR);
         
         /* Check if we met the target */
         if (boot_opt.current_boot_time_ms <= boot_opt.target_boot_time_ms) {

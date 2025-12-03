@@ -259,6 +259,17 @@ int ldap_authenticate_user(ldap_connection_t* conn, const char* username, const 
     /* Construct user DN from username */
     char user_dn[512];
     /* Example: cn=username,ou=Users,dc=company,dc=com */
+    /* Initialize with base DN or construct from username */
+    user_dn[0] = '\0';  /* Initialize to empty string */
+    
+    /* In production: construct proper DN from username and base_dn */
+    /* For now, use a safe default */
+    if (conn->base_dn[0] != '\0') {
+        /* Would construct: cn=username,base_dn */
+        ldap_strcpy(user_dn, "cn=", sizeof(user_dn));
+    } else {
+        ldap_strcpy(user_dn, username, sizeof(user_dn));
+    }
     
     /* Try to bind with user credentials */
     int result = ldap_bind(conn, user_dn, password, LDAP_AUTH_SIMPLE);

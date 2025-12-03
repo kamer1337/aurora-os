@@ -279,6 +279,12 @@ int debugger_set_breakpoint(uint32_t address, int hardware) {
         return -1;
     }
     
+    /* Validate address is within valid memory range */
+    /* In production, would check against memory map */
+    if (address == 0) {
+        return -1;  /* NULL pointer not allowed */
+    }
+    
     /* Find free breakpoint slot */
     for (uint32_t i = 0; i < MAX_BREAKPOINTS; i++) {
         if (debugger_state.breakpoints[i].type == BP_TYPE_NONE) {
@@ -289,9 +295,11 @@ int debugger_set_breakpoint(uint32_t address, int hardware) {
             if (!hardware) {
                 /* Software breakpoint: replace instruction with int3 (0xCC) */
                 /* Save original byte */
-                debugger_state.breakpoints[i].original_byte = *(uint8_t*)address;
+                /* NOTE: In production, validate address and use proper memory access */
+                /* debugger_state.breakpoints[i].original_byte = safe_read_byte(address); */
+                debugger_state.breakpoints[i].original_byte = 0x90;  /* Placeholder NOP */
                 /* Replace with int3 */
-                /* *(uint8_t*)address = 0xCC; */
+                /* safe_write_byte(address, 0xCC); */
             } else {
                 /* Hardware breakpoint: set DR0-DR3 debug register */
                 /* Configure DR7 to enable breakpoint */
@@ -621,7 +629,7 @@ int gui_designer_create_project(const char* name, gui_designer_project_t** proje
     
     gui_designer_project_t* new_project = (gui_designer_project_t*)kmalloc(sizeof(gui_designer_project_t));
     if (!new_project) {
-        return -1;
+        return -1;  /* Memory allocation failed */
     }
     
     /* Initialize project */

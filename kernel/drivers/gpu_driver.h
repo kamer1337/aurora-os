@@ -39,6 +39,10 @@ typedef enum {
 #define GPU_FEATURE_4K           0x1000
 #define GPU_FEATURE_8K           0x2000
 
+/* GPU memory requirements */
+#define MIN_VRAM_4K_MB    2048   /* Minimum VRAM for 4K support */
+#define MIN_VRAM_8K_MB    8192   /* Minimum VRAM for 8K support */
+
 /* GPU configuration */
 typedef struct {
     uint8_t vsync_enabled;         /* Enable vertical sync */
