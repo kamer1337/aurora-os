@@ -9,11 +9,14 @@
 #include "desktop_config.h"
 #include "framebuffer.h"
 #include "gui.h"
+#include "image_loader.h"
 #include "../memory/memory.h"
 
 // Global wallpaper configuration
 static wallpaper_config_t config;
 static uint8_t initialized = 0;
+static image_data_t current_image;
+static uint8_t image_loaded = 0;
 
 // Helper to create a color
 static color_t make_color(uint8_t r, uint8_t g, uint8_t b, uint8_t a) {
@@ -44,6 +47,9 @@ int wallpaper_manager_init(void) {
         return 0;
     }
     
+    // Initialize image loader
+    image_loader_init();
+    
     // Set default configuration
     config.mode = WALLPAPER_MODE_GRADIENT_V;
     config.solid_color = make_color(40, 150, 230, 255);
@@ -55,11 +61,16 @@ int wallpaper_manager_init(void) {
     config.live_enabled = 0;
     config.image_path = NULL;
     
+    image_loaded = 0;
     initialized = 1;
     return 0;
 }
 
 void wallpaper_manager_shutdown(void) {
+    if (image_loaded) {
+        image_free(&current_image);
+        image_loaded = 0;
+    }
     initialized = 0;
 }
 
@@ -194,6 +205,28 @@ int wallpaper_manager_set_live(wallpaper_type_t type) {
     return 0;
 }
 
+int wallpaper_manager_set_image(const char* image_path) {
+    if (!initialized) {
+        wallpaper_manager_init();
+    }
+    
+    if (!image_path) {
+        return -1;
+    }
+    
+    // Free previous image if loaded
+    if (image_loaded) {
+        image_free(&current_image);
+        image_loaded = 0;
+    }
+    
+    config.mode = WALLPAPER_MODE_IMAGE;
+    config.image_path = image_path;
+    
+    wallpaper_manager_apply_config(&config);
+    return 0;
+}
+
 const char* wallpaper_manager_get_gradient_name(gradient_style_t style) {
     if (style < 0 || style >= GRADIENT_STYLE_CUSTOM) {
         return "Unknown";
@@ -291,24 +324,21 @@ void wallpaper_manager_draw(uint32_t width, uint32_t height) {
             break;
             
         case WALLPAPER_MODE_IMAGE:
-            // Image loading and drawing implementation
-            // This would require:
-            // 1. Image decoder (BMP, PNG, JPEG support)
-            // 2. VFS integration to load image file
-            // 3. Scaling/stretching to fit screen
-            // 4. Color conversion to framebuffer format
-            //
-            // Example implementation:
-            // if (config.image_path) {
-            //     image_t* img = image_load(config.image_path);
-            //     if (img) {
-            //         image_draw_scaled(img, 0, 0, width, height);
-            //         image_free(img);
-            //         break;
-            //     }
-            // }
-            // Fall back to solid color if image loading fails
-            framebuffer_draw_rect(0, 0, width, height, config.solid_color);
+            // Draw image wallpaper
+            if (config.image_path && !image_loaded) {
+                // Try to load image
+                if (image_load_file(config.image_path, &current_image) == 0) {
+                    image_loaded = 1;
+                }
+            }
+            
+            if (image_loaded) {
+                // Draw the loaded image scaled to fit screen
+                image_draw(&current_image, 0, 0, width, height);
+            } else {
+                // Fall back to solid color if image loading fails
+                framebuffer_draw_rect(0, 0, width, height, config.solid_color);
+            }
             break;
             
         default:

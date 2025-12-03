@@ -129,6 +129,13 @@ int wallpaper_manager_set_custom_gradient(color_t start, color_t end, wallpaper_
 int wallpaper_manager_set_live(wallpaper_type_t type);
 
 /**
+ * Set image wallpaper from file
+ * @param image_path Path to image file (BMP or PNG)
+ * @return 0 on success, -1 on failure
+ */
+int wallpaper_manager_set_image(const char* image_path);
+
+/**
  * Get gradient style name
  * @param style Gradient style
  * @return Style name string

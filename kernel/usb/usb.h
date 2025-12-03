@@ -147,6 +147,22 @@ typedef struct {
     int (*submit_transfer)(usb_transfer_t* transfer);
 } usb_hc_ops_t;
 
+/* USB hot-plug event types */
+typedef enum {
+    USB_EVENT_DEVICE_ATTACHED,
+    USB_EVENT_DEVICE_DETACHED
+} usb_hotplug_event_t;
+
+/* USB hot-plug callback function type */
+typedef void (*usb_hotplug_callback_t)(usb_device_t* device, usb_hotplug_event_t event, void* user_data);
+
+/* USB hot-plug callback registration structure */
+typedef struct usb_hotplug_handler {
+    usb_hotplug_callback_t callback;
+    void* user_data;
+    struct usb_hotplug_handler* next;
+} usb_hotplug_handler_t;
+
 /* USB subsystem initialization */
 void usb_init(void);
 
@@ -178,5 +194,11 @@ int usb_hid_attach(usb_device_t* device);
 /* USB mass storage driver */
 void usb_msd_init(void);
 int usb_msd_attach(usb_device_t* device);
+
+/* USB hot-plug support */
+int usb_hotplug_register_callback(usb_hotplug_callback_t callback, void* user_data);
+int usb_hotplug_unregister_callback(usb_hotplug_callback_t callback);
+void usb_hotplug_notify(usb_device_t* device, usb_hotplug_event_t event);
+int usb_poll_devices(void);
 
 #endif /* AURORA_USB_H */
