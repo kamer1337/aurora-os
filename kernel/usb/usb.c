@@ -17,6 +17,11 @@ static uint8_t next_address = 1;
 /* Host controller operations */
 static usb_hc_ops_t* hc_ops = NULL;
 
+/* Hot-plug support */
+#define MAX_HOTPLUG_HANDLERS 8
+static usb_hotplug_handler_t hotplug_handlers[MAX_HOTPLUG_HANDLERS];
+static uint32_t hotplug_handler_count = 0;
+
 /* UHCI registers (simplified) */
 #define UHCI_USBCMD     0x00
 #define UHCI_USBSTS     0x02
@@ -38,6 +43,14 @@ void usb_init(void) {
         usb_devices[i].next = NULL;
         usb_devices[i].driver_data = NULL;
     }
+    
+    /* Initialize hot-plug handler table */
+    for (uint32_t i = 0; i < MAX_HOTPLUG_HANDLERS; i++) {
+        hotplug_handlers[i].callback = NULL;
+        hotplug_handlers[i].user_data = NULL;
+        hotplug_handlers[i].next = NULL;
+    }
+    hotplug_handler_count = 0;
     
     /* Initialize USB drivers */
     usb_hid_init();
@@ -371,5 +384,85 @@ int usb_msd_attach(usb_device_t* device) {
         return -1;
     }
     
+    /* Notify hot-plug handlers of attachment */
+    usb_hotplug_notify(device, USB_EVENT_DEVICE_ATTACHED);
+    
     return 0;
 }
+
+/**
+ * Register a hot-plug callback handler
+ */
+int usb_hotplug_register_callback(usb_hotplug_callback_t callback, void* user_data) {
+    if (!callback || hotplug_handler_count >= MAX_HOTPLUG_HANDLERS) {
+        return -1;
+    }
+    
+    hotplug_handlers[hotplug_handler_count].callback = callback;
+    hotplug_handlers[hotplug_handler_count].user_data = user_data;
+    hotplug_handlers[hotplug_handler_count].next = NULL;
+    hotplug_handler_count++;
+    
+    return 0;
+}
+
+/**
+ * Unregister a hot-plug callback handler
+ */
+int usb_hotplug_unregister_callback(usb_hotplug_callback_t callback) {
+    if (!callback) {
+        return -1;
+    }
+    
+    for (uint32_t i = 0; i < hotplug_handler_count; i++) {
+        if (hotplug_handlers[i].callback == callback) {
+            /* Shift remaining handlers down */
+            for (uint32_t j = i; j < hotplug_handler_count - 1; j++) {
+                hotplug_handlers[j] = hotplug_handlers[j + 1];
+            }
+            hotplug_handler_count--;
+            return 0;
+        }
+    }
+    
+    return -1;
+}
+
+/**
+ * Notify all registered hot-plug handlers of a device event
+ */
+void usb_hotplug_notify(usb_device_t* device, usb_hotplug_event_t event) {
+    if (!device) {
+        return;
+    }
+    
+    for (uint32_t i = 0; i < hotplug_handler_count; i++) {
+        if (hotplug_handlers[i].callback) {
+            hotplug_handlers[i].callback(device, event, hotplug_handlers[i].user_data);
+        }
+    }
+}
+
+/**
+ * Poll USB ports for device insertion/removal
+ * Should be called periodically from the main loop or timer
+ */
+int usb_poll_devices(void) {
+    /* Check each device slot for state changes */
+    for (uint32_t i = 0; i < MAX_USB_DEVICES; i++) {
+        usb_device_t* device = &usb_devices[i];
+        
+        /* Check if previously attached device is now detached */
+        if (device->state != USB_STATE_DETACHED && device->address != 0) {
+            /* In a real implementation, we would check port status here
+             * For now, we assume devices stay attached
+             */
+        }
+    }
+    
+    /* Scan for new devices */
+    uhci_detect_devices();
+    
+    return 0;
+}
+
