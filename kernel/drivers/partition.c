@@ -15,7 +15,10 @@
 /* Aurora OS partition table magic signature */
 #define AURORA_PART_MAGIC 0x41555250  /* "AURP" */
 
-/* Persistent partition table structure */
+/* Sector size */
+#define SECTOR_SIZE 512
+
+/* Persistent partition table structure (must fit in 512 bytes) */
 typedef struct {
     uint32_t magic;                 /* Magic signature */
     uint32_t version;               /* Table version */
@@ -23,7 +26,7 @@ typedef struct {
     uint8_t table_type;             /* MBR or GPT */
     uint8_t partition_count;        /* Number of partitions */
     uint8_t reserved[6];            /* Reserved for alignment */
-    partition_t partitions[MAX_PARTITIONS];  /* Partition entries */
+    partition_t partitions[MAX_PARTITIONS];  /* Partition entries (max 7 to fit in 512 bytes) */
 } persistent_partition_table_t;
 
 /* Global disk information */
@@ -358,7 +361,7 @@ int partition_read_table(uint8_t disk_id) {
     /* Calculate and verify checksum */
     uint32_t saved_checksum = table->checksum;
     table->checksum = 0;
-    uint32_t calculated_checksum = calculate_checksum(buffer, sizeof(persistent_partition_table_t));
+    uint32_t calculated_checksum = calculate_checksum(buffer, SECTOR_SIZE);
     
     if (saved_checksum != calculated_checksum) {
         return -4;  /* Checksum mismatch */
@@ -411,7 +414,7 @@ int partition_write_table(uint8_t disk_id) {
     
     /* Calculate checksum */
     table->checksum = 0;
-    table->checksum = calculate_checksum(buffer, sizeof(persistent_partition_table_t));
+    table->checksum = calculate_checksum(buffer, SECTOR_SIZE);
     
     /* Write partition table to LBA 1 */
     if (storage_write_sector(device, PARTITION_TABLE_LBA, buffer) != 0) {

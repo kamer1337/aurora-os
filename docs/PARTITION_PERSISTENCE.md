@@ -20,7 +20,7 @@ Aurora OS now includes a robust partition persistence layer that automatically s
 ### 3. Storage Format
 - Partition table stored at LBA 1 (sector 1) of each disk
 - 512-byte sector format
-- Supports up to 16 partitions per disk
+- Supports up to 7 partitions per disk
 - Compatible with both MBR and GPT table types
 
 ## Architecture
@@ -35,7 +35,7 @@ typedef struct {
     uint8_t table_type;                  // PART_TABLE_MBR or PART_TABLE_GPT
     uint8_t partition_count;             // Number of partitions (0-16)
     uint8_t reserved[6];                 // Reserved for alignment
-    partition_t partitions[MAX_PARTITIONS];  // Partition entries
+    partition_t partitions[MAX_PARTITIONS (8)];  // Partition entries
 } persistent_partition_table_t;
 ```
 
@@ -233,7 +233,7 @@ if (result != 0) {
 
 ### Current Limitations
 
-1. **Single Sector**: Partition table limited to 512 bytes (16 partitions max)
+1. **Single Sector**: Partition table limited to 512 bytes (7 partitions max)
 2. **LBA 1 Only**: Only supports one partition table per disk
 3. **No Backup**: No secondary/backup partition table (unlike GPT)
 4. **No Journaling**: Changes are not journaled
@@ -366,7 +366,7 @@ mutex_unlock(&partition_mutex);
 - Initial implementation
 - CRC32 checksum support
 - Automatic persistence
-- Support for up to 16 partitions
+- Support for up to 7 partitions
 - MBR and GPT table type support
 - Rollback on write failure
 - Comprehensive test suite

@@ -22,7 +22,7 @@
 #define PART_TABLE_GPT       1
 
 /* Maximum partitions */
-#define MAX_PARTITIONS       16
+#define MAX_PARTITIONS       7  /* Fits in 512-byte sector with header */
 
 /* Partition status */
 #define PART_STATUS_INACTIVE 0x00

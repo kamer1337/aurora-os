@@ -7,6 +7,7 @@
 #include "../kernel/drivers/partition.h"
 #include "../kernel/drivers/storage.h"
 #include <stdint.h>
+#include <stddef.h>
 
 static int tests_passed = 0;
 static int tests_failed = 0;
@@ -49,9 +50,9 @@ void test_partition_persistence(void) {
     const partition_t* orig_part2 = partition_get_info(0, 1);
     const partition_t* orig_part3 = partition_get_info(0, 2);
     
-    TEST_ASSERT(orig_part1 != 0, "First partition info retrieved");
-    TEST_ASSERT(orig_part2 != 0, "Second partition info retrieved");
-    TEST_ASSERT(orig_part3 != 0, "Third partition info retrieved");
+    TEST_ASSERT(orig_part1 != NULL, "First partition info retrieved");
+    TEST_ASSERT(orig_part2 != NULL, "Second partition info retrieved");
+    TEST_ASSERT(orig_part3 != NULL, "Third partition info retrieved");
     
     // Write partition table to disk (this happens automatically in partition_create)
     // We test explicit write here
@@ -75,9 +76,9 @@ void test_partition_persistence(void) {
     const partition_t* loaded_part2 = partition_get_info(0, 1);
     const partition_t* loaded_part3 = partition_get_info(0, 2);
     
-    TEST_ASSERT(loaded_part1 != 0, "First partition restored");
-    TEST_ASSERT(loaded_part2 != 0, "Second partition restored");
-    TEST_ASSERT(loaded_part3 != 0, "Third partition restored");
+    TEST_ASSERT(loaded_part1 != NULL, "First partition restored");
+    TEST_ASSERT(loaded_part2 != NULL, "Second partition restored");
+    TEST_ASSERT(loaded_part3 != NULL, "Third partition restored");
     
     // Check first partition details
     TEST_ASSERT(loaded_part1->start_lba == 2048, "Partition 1 start LBA restored");
@@ -225,8 +226,8 @@ void test_maximum_partitions_persistence(void) {
     storage_init();
     partition_scan_disk(0);
     
-    // Create maximum number of partitions (up to 16)
-    const int max_to_test = 8;  // Test with 8 partitions for reasonable test time
+    // Create maximum number of partitions (7 to fit in 512 bytes)
+    const int max_to_test = 7;
     for (int i = 0; i < max_to_test; i++) {
         uint32_t start_lba = 2048 + (i * 100000);
         int part_id = partition_create(0, start_lba, 50000, PART_TYPE_LINUX);
@@ -245,7 +246,7 @@ void test_maximum_partitions_persistence(void) {
     // Verify each partition
     for (int i = 0; i < max_to_test; i++) {
         const partition_t* part = partition_get_info(0, i);
-        TEST_ASSERT(part != 0, "Partition info retrieved");
+        TEST_ASSERT(part != NULL, "Partition info retrieved");
         
         uint32_t expected_start = 2048 + (i * 100000);
         TEST_ASSERT(part->start_lba == expected_start, "Partition start LBA correct");
