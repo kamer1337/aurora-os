@@ -6,6 +6,7 @@
  */
 
 #include "uefi_support.h"
+#include <stddef.h>
 
 // UEFI support state
 static uefi_state_t uefi_state = {

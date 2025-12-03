@@ -8,6 +8,7 @@
 #define LDAP_AD_H
 
 #include <stdint.h>
+#include <stddef.h>
 
 /* LDAP protocol version */
 #define LDAP_VERSION_2  2
