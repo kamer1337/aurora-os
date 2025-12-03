@@ -34,6 +34,14 @@ typedef enum {
 #define GPU_FEATURE_FREESYNC     0x0080
 #define GPU_FEATURE_GSYNC        0x0100
 #define GPU_FEATURE_HDR          0x0200
+#define GPU_FEATURE_OPENGL       0x0400
+#define GPU_FEATURE_VULKAN       0x0800
+#define GPU_FEATURE_4K           0x1000
+#define GPU_FEATURE_8K           0x2000
+
+/* GPU memory requirements */
+#define MIN_VRAM_4K_MB    2048   /* Minimum VRAM for 4K support */
+#define MIN_VRAM_8K_MB    8192   /* Minimum VRAM for 8K support */
 
 /* GPU configuration */
 typedef struct {
@@ -99,5 +107,17 @@ int gpu_free_vram(uint32_t handle);
 /* Display control */
 int gpu_set_display_mode(uint32_t width, uint32_t height, uint32_t refresh_rate);
 int gpu_get_display_mode(uint32_t* width, uint32_t* height, uint32_t* refresh_rate);
+
+/* OpenGL/Vulkan support */
+int gpu_opengl_init(void);
+int gpu_vulkan_init(void);
+int gpu_create_context(void);
+int gpu_destroy_context(void);
+int gpu_submit_command_buffer(void* commands, uint32_t size);
+
+/* 4K/8K display support */
+int gpu_enable_4k_mode(void);
+int gpu_enable_8k_mode(void);
+int gpu_check_uhd_support(void);
 
 #endif // GPU_DRIVER_H
