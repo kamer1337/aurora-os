@@ -67,7 +67,7 @@ static inline void platform_memset(void* ptr, int value, size_t num) {
 /**
  * Copy memory from source to destination
  */
-static inline void platform_memcpy(void* dest, const void* src, size_t num) {
+static inline void __attribute__((noinline)) platform_memcpy(void* dest, const void* src, size_t num) {
     uint8_t* d = (uint8_t*)dest;
     const uint8_t* s = (const uint8_t*)src;
     for (size_t i = 0; i < num; i++) {

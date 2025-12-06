@@ -827,4 +827,84 @@ void aurora_vm_gdb_stop(AuroraVM *vm);
  */
 int aurora_vm_gdb_handle(AuroraVM *vm);
 
+/* ===== VM Snapshot API ===== */
+
+/**
+ * VM Snapshot structure for save/restore
+ */
+typedef struct {
+    /* CPU state */
+    uint32_t registers[AURORA_VM_NUM_REGISTERS];
+    uint32_t pc;
+    uint32_t sp;
+    uint32_t fp;
+    uint32_t flags;
+    
+    /* Memory snapshot */
+    uint8_t memory[AURORA_VM_MEMORY_SIZE];
+    aurora_page_t pages[AURORA_VM_NUM_PAGES];
+    
+    /* Heap state */
+    aurora_heap_t heap;
+    
+    /* Device state */
+    aurora_display_t display;
+    aurora_keyboard_t keyboard;
+    aurora_mouse_t mouse;
+    aurora_timer_t timer;
+    
+    /* Runtime state */
+    bool running;
+    int exit_code;
+    
+    /* Metadata */
+    uint32_t magic;         /* Magic number for validation */
+    uint32_t version;       /* Snapshot format version */
+    uint64_t timestamp;     /* Creation timestamp */
+    char description[256];  /* User description */
+} aurora_vm_snapshot_t;
+
+/**
+ * Create a snapshot of VM state
+ * @param vm VM instance
+ * @param snapshot Output snapshot
+ * @param description Optional description
+ * @return 0 on success, -1 on failure
+ */
+int aurora_vm_snapshot_create(const AuroraVM *vm, aurora_vm_snapshot_t *snapshot, 
+                              const char *description);
+
+/**
+ * Restore VM state from snapshot
+ * @param vm VM instance
+ * @param snapshot Input snapshot
+ * @return 0 on success, -1 on failure
+ */
+int aurora_vm_snapshot_restore(AuroraVM *vm, const aurora_vm_snapshot_t *snapshot);
+
+/**
+ * Save snapshot to memory buffer
+ * @param snapshot Snapshot to save
+ * @param buffer Output buffer
+ * @param size Buffer size
+ * @return Bytes written or -1 on error
+ */
+int aurora_vm_snapshot_save(const aurora_vm_snapshot_t *snapshot, uint8_t *buffer, size_t size);
+
+/**
+ * Load snapshot from memory buffer
+ * @param snapshot Output snapshot
+ * @param buffer Input buffer
+ * @param size Buffer size
+ * @return 0 on success, -1 on failure
+ */
+int aurora_vm_snapshot_load(aurora_vm_snapshot_t *snapshot, const uint8_t *buffer, size_t size);
+
+/**
+ * Validate snapshot integrity
+ * @param snapshot Snapshot to validate
+ * @return true if valid, false otherwise
+ */
+bool aurora_vm_snapshot_validate(const aurora_vm_snapshot_t *snapshot);
+
 #endif /* AURORA_VM_H */
