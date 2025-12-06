@@ -12,8 +12,8 @@ set(CMAKE_C_COMPILER gcc)
 set(CMAKE_ASM_COMPILER nasm)
 set(CMAKE_LINKER ld)
 
-# Compiler flags
-set(CMAKE_C_FLAGS "-Wall -Wextra -nostdlib -ffreestanding -m32 -fno-pie")
+# Compiler flags - GCC 15.2 compatible with optimizations
+set(CMAKE_C_FLAGS "-Wall -Wextra -Wno-attributes -nostdlib -ffreestanding -m32 -fno-pie -O3 -march=native -fno-strict-aliasing")
 set(CMAKE_ASM_FLAGS "-f elf32")
 set(CMAKE_EXE_LINKER_FLAGS "-m elf_i386 -nostdlib")
 
@@ -53,14 +53,11 @@ file(GLOB_RECURSE KERNEL_SOURCES
     "kernel/usb/*.c"
 )
 
+# VFS sources
 file(GLOB VFS_SOURCES
     "filesystem/vfs/*.c"
     "filesystem/ramdisk/*.c"
     "filesystem/journal/*.c"
-)
-
-file(GLOB TEST_SOURCES
-    "tests/*.c"
 )
 
 set(ASM_SOURCES "kernel/core/boot.s")
@@ -70,7 +67,6 @@ add_executable(aurora-kernel
     ${ASM_SOURCES}
     ${KERNEL_SOURCES}
     ${VFS_SOURCES}
-    ${TEST_SOURCES}
 )
 
 # Set linker script
@@ -91,11 +87,7 @@ add_custom_target(run
     COMMENT "Running in QEMU"
 )
 
-add_custom_target(test
-    COMMAND ${CMAKE_SOURCE_DIR}/scripts/run_qemu.sh -k
-    DEPENDS aurora-kernel
-    COMMENT "Running kernel tests in QEMU"
-)
+# Test target removed - use Makefile for testing
 
 # Plugin-specific targets
 add_custom_target(plugins-info

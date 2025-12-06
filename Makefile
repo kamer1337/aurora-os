@@ -43,14 +43,14 @@ ifeq ($(ARCH),arm64)
     TARGET_PLATFORM = aarch64
 endif
 
-# Compiler flags
+# Compiler flags - GCC 15.2 compatible with optimizations
 ifeq ($(ARCH),64)
-CFLAGS = -Wall -Wextra -nostdlib -ffreestanding -m64 -fno-pie -mcmodel=large
+CFLAGS = -Wall -Wextra -Wno-attributes -nostdlib -ffreestanding -m64 -fno-pie -mcmodel=large -O3 -march=native -fno-strict-aliasing -finline-functions -fomit-frame-pointer
 ASFLAGS = -f elf64
 LDFLAGS = -m elf_x86_64 -nostdlib
 LINKER_SCRIPT = linker64.ld
 else
-CFLAGS = -Wall -Wextra -nostdlib -ffreestanding -m32 -fno-pie
+CFLAGS = -Wall -Wextra -Wno-attributes -nostdlib -ffreestanding -m32 -fno-pie -O3 -march=native -fno-strict-aliasing -finline-functions -fomit-frame-pointer
 ASFLAGS = -f elf32
 LDFLAGS = -m elf_i386 -nostdlib
 LINKER_SCRIPT = linker.ld
