@@ -13,7 +13,7 @@ set(CMAKE_ASM_COMPILER nasm)
 set(CMAKE_LINKER ld)
 
 # Compiler flags - GCC 15.2 compatible with optimizations
-set(CMAKE_C_FLAGS "-Wall -Wextra -Wno-attributes -nostdlib -ffreestanding -m32 -fno-pie -O3 -march=native -fno-strict-aliasing")
+set(CMAKE_C_FLAGS "-Wall -Wextra -Wno-attributes -nostdlib -ffreestanding -m32 -fno-pie -O2 -fno-strict-aliasing -fno-builtin")
 set(CMAKE_ASM_FLAGS "-f elf32")
 set(CMAKE_EXE_LINKER_FLAGS "-m elf_i386 -nostdlib")
 

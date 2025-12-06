@@ -2407,3 +2407,152 @@ int aurora_vm_gdb_process_packet(AuroraVM *vm, const char *packet,
     /* Format as proper RSP packet */
     return gdb_format_packet(raw_response, response, response_size);
 }
+
+/* ============================================================================
+ * VM SNAPSHOT IMPLEMENTATION
+ * ============================================================================ */
+
+#define AURORA_SNAPSHOT_MAGIC   0x41555256  /* "AURV" */
+#define AURORA_SNAPSHOT_VERSION 1
+
+int aurora_vm_snapshot_create(const AuroraVM *vm, aurora_vm_snapshot_t *snapshot,
+                              const char *description) {
+    if (!vm || !snapshot) return -1;
+    
+    /* Clear snapshot */
+    platform_memset(snapshot, 0, sizeof(aurora_vm_snapshot_t));
+    
+    /* Set metadata */
+    snapshot->magic = AURORA_SNAPSHOT_MAGIC;
+    snapshot->version = AURORA_SNAPSHOT_VERSION;
+    snapshot->timestamp = 0;  /* Would use real timestamp */
+    
+    if (description) {
+        platform_strncpy(snapshot->description, description, 
+                        sizeof(snapshot->description) - 1);
+    }
+    
+    /* Save CPU state */
+    for (uint32_t i = 0; i < AURORA_VM_NUM_REGISTERS; i++) {
+        snapshot->registers[i] = vm->cpu.registers[i];
+    }
+    snapshot->pc = vm->cpu.pc;
+    snapshot->sp = vm->cpu.sp;
+    snapshot->fp = vm->cpu.fp;
+    snapshot->flags = vm->cpu.flags;
+    
+    /* Save memory */
+    platform_memcpy(snapshot->memory, vm->memory, AURORA_VM_MEMORY_SIZE);
+    platform_memcpy(snapshot->pages, vm->pages, 
+                   sizeof(aurora_page_t) * AURORA_VM_NUM_PAGES);
+    
+    /* Save heap state */
+    snapshot->heap = vm->heap;
+    
+    /* Save device state */
+    snapshot->display = vm->display;
+    snapshot->keyboard = vm->keyboard;
+    snapshot->mouse = vm->mouse;
+    snapshot->timer = vm->timer;
+    
+    /* Save runtime state */
+    snapshot->running = vm->running;
+    snapshot->exit_code = vm->exit_code;
+    
+    return 0;
+}
+
+int aurora_vm_snapshot_restore(AuroraVM *vm, const aurora_vm_snapshot_t *snapshot) {
+    if (!vm || !snapshot) return -1;
+    
+    /* Validate snapshot */
+    if (!aurora_vm_snapshot_validate(snapshot)) {
+        return -1;
+    }
+    
+    /* Restore CPU state */
+    for (uint32_t i = 0; i < AURORA_VM_NUM_REGISTERS; i++) {
+        vm->cpu.registers[i] = snapshot->registers[i];
+    }
+    vm->cpu.pc = snapshot->pc;
+    vm->cpu.sp = snapshot->sp;
+    vm->cpu.fp = snapshot->fp;
+    vm->cpu.flags = snapshot->flags;
+    
+    /* Restore memory */
+    platform_memcpy(vm->memory, snapshot->memory, AURORA_VM_MEMORY_SIZE);
+    platform_memcpy(vm->pages, snapshot->pages,
+                   sizeof(aurora_page_t) * AURORA_VM_NUM_PAGES);
+    
+    /* Restore heap state */
+    vm->heap = snapshot->heap;
+    
+    /* Restore device state */
+    vm->display = snapshot->display;
+    vm->keyboard = snapshot->keyboard;
+    vm->mouse = snapshot->mouse;
+    vm->timer = snapshot->timer;
+    
+    /* Restore runtime state */
+    vm->running = snapshot->running;
+    vm->exit_code = snapshot->exit_code;
+    
+    return 0;
+}
+
+int aurora_vm_snapshot_save(const aurora_vm_snapshot_t *snapshot, uint8_t *buffer, size_t size) {
+    if (!snapshot || !buffer) return -1;
+    
+    /* Check buffer size */
+    size_t required_size = sizeof(aurora_vm_snapshot_t);
+    if (size < required_size) return -1;
+    
+    /* Validate snapshot */
+    if (!aurora_vm_snapshot_validate(snapshot)) {
+        return -1;
+    }
+    
+    /* Copy snapshot to buffer */
+    platform_memcpy(buffer, snapshot, required_size);
+    
+    return (int)required_size;
+}
+
+int aurora_vm_snapshot_load(aurora_vm_snapshot_t *snapshot, const uint8_t *buffer, size_t size) {
+    if (!snapshot || !buffer) return -1;
+    
+    /* Check buffer size */
+    size_t required_size = sizeof(aurora_vm_snapshot_t);
+    if (size < required_size) return -1;
+    
+    /* Copy buffer to snapshot */
+    platform_memcpy(snapshot, buffer, required_size);
+    
+    /* Validate loaded snapshot */
+    if (!aurora_vm_snapshot_validate(snapshot)) {
+        return -1;
+    }
+    
+    return 0;
+}
+
+bool aurora_vm_snapshot_validate(const aurora_vm_snapshot_t *snapshot) {
+    if (!snapshot) return false;
+    
+    /* Check magic number */
+    if (snapshot->magic != AURORA_SNAPSHOT_MAGIC) {
+        return false;
+    }
+    
+    /* Check version */
+    if (snapshot->version != AURORA_SNAPSHOT_VERSION) {
+        return false;
+    }
+    
+    /* Basic sanity checks */
+    if (snapshot->pc >= AURORA_VM_MEMORY_SIZE) return false;
+    if (snapshot->sp >= AURORA_VM_MEMORY_SIZE) return false;
+    if (snapshot->fp >= AURORA_VM_MEMORY_SIZE) return false;
+    
+    return true;
+}
