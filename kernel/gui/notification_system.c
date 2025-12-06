@@ -36,6 +36,10 @@ static void notif_memset(void* ptr, int value, size_t size) {
 }
 
 static void notif_strcpy(char* dest, const char* src, size_t max_len) {
+    if (!src) {
+        dest[0] = '\0';
+        return;
+    }
     size_t i = 0;
     while (src[i] && i < max_len - 1) {
         dest[i] = src[i];
@@ -94,6 +98,7 @@ uint32_t notification_show(
     notif->icon = notification_get_color(type);
     
     /* Get current time (stub - would use real timer) */
+    /* TODO: Implement get_system_ticks() and integrate with timer subsystem */
     notif->created_time = 0;  /* Would use get_system_ticks() */
     notif->expire_time = timeout_ms > 0 ? notif->created_time + timeout_ms : 0;
     
@@ -159,6 +164,7 @@ void notification_dismiss_all(void) {
 }
 
 void notification_system_update(uint32_t delta_ms) {
+    /* TODO: Implement get_system_ticks() for proper timing */
     uint64_t current_time = 0;  /* Would use get_system_ticks() */
     
     notification_t** prev = &g_notif_system.notifications;
