@@ -6,6 +6,7 @@
 
 #include "timer.h"
 #include "../core/port_io.h"
+#include "../core/timing_system.h"
 
 /* Timer state */
 static volatile uint32_t timer_ticks = 0;
@@ -37,6 +38,9 @@ void timer_init(uint32_t frequency) {
  */
 void timer_handler(void) {
     timer_ticks++;
+    
+    /* Update timing system on each timer tick */
+    timing_system_update();
 }
 
 /**
