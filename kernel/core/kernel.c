@@ -9,6 +9,7 @@
 #include "nfr.h"
 #include "pe_loader.h"
 #include "dll_loader.h"
+#include "timing_system.h"
 #include "winapi/winapi.h"
 #include "winapi/kernel32.h"
 #include "../memory/memory.h"
@@ -70,6 +71,10 @@ void drivers_init(void) {
     /* Initialize timer (100 Hz) */
     timer_init(100);
     vga_write("Timer driver initialized\n");
+    
+    /* Initialize timing system */
+    timing_system_init();
+    vga_write("Timing system initialized\n");
 }
 
 /**

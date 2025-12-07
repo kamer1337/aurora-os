@@ -7,6 +7,7 @@
 #include "framebuffer.h"
 #include "../memory/memory.h"
 #include "../core/kernel.h"
+#include "../core/timing_system.h"
 
 /* Global notification system */
 static notification_system_t g_notif_system = {0};
@@ -97,9 +98,8 @@ uint32_t notification_show(
     notif->timeout_ms = timeout_ms;
     notif->icon = notification_get_color(type);
     
-    /* Get current time (stub - would use real timer) */
-    /* TODO: Implement get_system_ticks() and integrate with timer subsystem */
-    notif->created_time = 0;  /* Would use get_system_ticks() */
+    /* Get current time from timing system */
+    notif->created_time = get_system_ticks();
     notif->expire_time = timeout_ms > 0 ? notif->created_time + timeout_ms : 0;
     
     /* Visual properties */
@@ -164,8 +164,8 @@ void notification_dismiss_all(void) {
 }
 
 void notification_system_update(uint32_t delta_ms) {
-    /* TODO: Implement get_system_ticks() for proper timing */
-    uint64_t current_time = 0;  /* Would use get_system_ticks() */
+    /* Get current time from timing system */
+    uint64_t current_time = get_system_ticks();
     
     notification_t** prev = &g_notif_system.notifications;
     notification_t* current = g_notif_system.notifications;
