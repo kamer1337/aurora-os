@@ -21,6 +21,18 @@ typedef struct {
 static timing_state_t g_timing_state = {0};
 
 /**
+ * Calculate elapsed ticks handling wraparound
+ */
+static inline uint32_t calculate_elapsed_ticks(uint32_t current, uint32_t last) {
+    if (current >= last) {
+        return current - last;
+    } else {
+        /* Handle 32-bit wraparound */
+        return (0xFFFFFFFF - last) + current + 1;
+    }
+}
+
+/**
  * Initialize timing system
  */
 void timing_system_init(void) {
@@ -34,8 +46,8 @@ void timing_system_init(void) {
     g_timing_state.ticks_us = 0;
     g_timing_state.update_count = 0;
     
-    /* Assume timer is initialized with 1000 Hz (1ms per tick) */
-    g_timing_state.timer_frequency = 1000;
+    /* Timer is initialized with 100 Hz (10ms per tick) in kernel.c */
+    g_timing_state.timer_frequency = 100;
     
     g_timing_state.initialized = true;
 }
@@ -52,20 +64,15 @@ void timing_system_update(void) {
     /* Get current raw ticks */
     uint32_t current_ticks = timer_get_ticks();
     
-    /* Calculate elapsed ticks (handle wraparound) */
-    uint32_t elapsed;
-    if (current_ticks >= g_timing_state.last_raw_ticks) {
-        elapsed = current_ticks - g_timing_state.last_raw_ticks;
-    } else {
-        /* Handle 32-bit wraparound */
-        elapsed = (0xFFFFFFFF - g_timing_state.last_raw_ticks) + current_ticks + 1;
-    }
+    /* Calculate elapsed ticks */
+    uint32_t elapsed = calculate_elapsed_ticks(current_ticks, g_timing_state.last_raw_ticks);
     
-    /* Convert to milliseconds (assuming 1000 Hz timer) */
-    g_timing_state.ticks_ms += elapsed;
+    /* Convert to milliseconds (100 Hz = 10ms per tick) */
+    uint32_t ms_per_tick = 1000 / g_timing_state.timer_frequency;
+    g_timing_state.ticks_ms += (uint64_t)elapsed * ms_per_tick;
     
-    /* Convert to microseconds (1ms = 1000us) */
-    g_timing_state.ticks_us += (uint64_t)elapsed * 1000;
+    /* Convert to microseconds */
+    g_timing_state.ticks_us += (uint64_t)elapsed * ms_per_tick * 1000;
     
     /* Update last tick value */
     g_timing_state.last_raw_ticks = current_ticks;
@@ -84,15 +91,11 @@ uint64_t get_system_ticks(void) {
     uint32_t current_ticks = timer_get_ticks();
     
     /* Calculate elapsed since last update */
-    uint32_t elapsed;
-    if (current_ticks >= g_timing_state.last_raw_ticks) {
-        elapsed = current_ticks - g_timing_state.last_raw_ticks;
-    } else {
-        elapsed = (0xFFFFFFFF - g_timing_state.last_raw_ticks) + current_ticks + 1;
-    }
+    uint32_t elapsed = calculate_elapsed_ticks(current_ticks, g_timing_state.last_raw_ticks);
     
-    /* Return total milliseconds */
-    return g_timing_state.ticks_ms + elapsed;
+    /* Convert to milliseconds and return total */
+    uint32_t ms_per_tick = 1000 / g_timing_state.timer_frequency;
+    return g_timing_state.ticks_ms + ((uint64_t)elapsed * ms_per_tick);
 }
 
 /**
@@ -110,11 +113,17 @@ uint64_t timing_get_microseconds(void) {
         timing_system_init();
     }
     
-    /* Get current milliseconds */
-    uint64_t ms = get_system_ticks();
+    /* Get current timer ticks */
+    uint32_t current_ticks = timer_get_ticks();
     
-    /* Convert to microseconds */
-    return ms * 1000;
+    /* Calculate elapsed since last update */
+    uint32_t elapsed = calculate_elapsed_ticks(current_ticks, g_timing_state.last_raw_ticks);
+    
+    /* Convert to microseconds and return total */
+    uint32_t ms_per_tick = 1000 / g_timing_state.timer_frequency;
+    uint64_t elapsed_us = (uint64_t)elapsed * ms_per_tick * 1000;
+    
+    return g_timing_state.ticks_us + elapsed_us;
 }
 
 /**
@@ -139,14 +148,19 @@ void timing_sleep_us(uint32_t microseconds) {
         microseconds %= 1000;
     }
     
-    /* For remaining microseconds, busy-wait */
+    /* For remaining microseconds, busy-wait with cached start time */
     if (microseconds > 0) {
         uint64_t start = timing_get_microseconds();
         uint64_t target = start + microseconds;
         
-        /* Busy-wait (not ideal, but necessary for sub-millisecond precision) */
-        while (timing_get_microseconds() < target) {
-            /* Spin */
+        /* Busy-wait (optimized to minimize function calls) */
+        while (1) {
+            uint64_t current = timing_get_microseconds();
+            if (current >= target) {
+                break;
+            }
+            /* Yield CPU briefly to prevent excessive spinning */
+            __asm__ __volatile__("pause");
         }
     }
 }
