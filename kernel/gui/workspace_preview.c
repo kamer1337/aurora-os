@@ -8,6 +8,7 @@
 #include "virtual_desktop.h"
 #include "../memory/memory.h"
 #include "../core/kernel.h"
+#include "../core/timing_system.h"
 
 /* Global workspace preview manager */
 static workspace_preview_manager_t g_preview_mgr = {0};
@@ -91,7 +92,7 @@ void workspace_preview_update_all(void) {
             g_preview_mgr.previews[i].dirty = false;
         }
     }
-    g_preview_mgr.last_update = 0;  /* Would use get_system_ticks() */
+    g_preview_mgr.last_update = get_system_ticks();
 }
 
 void workspace_preview_update(uint32_t workspace_id) {
