@@ -88,7 +88,11 @@ ASM_SOURCES = $(KERNEL_DIR)/core/boot.s
 VFS_SOURCES = $(wildcard $(FS_DIR)/vfs/*.c) \
               $(wildcard $(FS_DIR)/ramdisk/*.c) \
               $(wildcard $(FS_DIR)/journal/*.c) \
-              $(wildcard $(FS_DIR)/cache/*.c)
+              $(wildcard $(FS_DIR)/cache/*.c) \
+              $(wildcard $(FS_DIR)/fat32/*.c) \
+              $(wildcard $(FS_DIR)/ntfs/*.c) \
+              $(wildcard $(FS_DIR)/aurorafs/*.c) \
+              $(wildcard $(FS_DIR)/network/*.c)
 
 TEST_SOURCES = $(filter-out $(TEST_DIR)/aurora_os_vm_integration_test.c $(TEST_DIR)/test_fp_simd.c $(TEST_DIR)/roadmap_priority_tests.c $(TEST_DIR)/test_math_lib.c, $(wildcard $(TEST_DIR)/*.c))
 
@@ -126,6 +130,10 @@ directories:
 	@mkdir -p $(BUILD_DIR)/$(FS_DIR)/ramdisk
 	@mkdir -p $(BUILD_DIR)/$(FS_DIR)/journal
 	@mkdir -p $(BUILD_DIR)/$(FS_DIR)/cache
+	@mkdir -p $(BUILD_DIR)/$(FS_DIR)/fat32
+	@mkdir -p $(BUILD_DIR)/$(FS_DIR)/ntfs
+	@mkdir -p $(BUILD_DIR)/$(FS_DIR)/aurorafs
+	@mkdir -p $(BUILD_DIR)/$(FS_DIR)/network
 	@mkdir -p $(BUILD_DIR)/$(TEST_DIR)
 
 $(BUILD_DIR)/%.o: %.c
