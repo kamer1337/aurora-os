@@ -8,11 +8,13 @@
 #include "gui.h"
 #include "framebuffer.h"
 #include "../memory/memory.h"
+#include "../security/user_manager.h"
 
 // Global settings
 static system_settings_t g_settings;
 static window_t* g_settings_window = NULL;
 static settings_category_t g_current_category = SETTINGS_DISPLAY;
+static int user_list_scroll_offset = 0;
 
 // Initialize default settings
 static void init_default_settings(void) {
@@ -113,16 +115,69 @@ static void render_settings_content(window_t* window) {
             break;
             
         case SETTINGS_USER:
-            framebuffer_draw_string(content_x + 20, y, "Username:", label_color, (color_t){0, 0, 0, 0});
+            // Draw user profile management section
+            framebuffer_draw_string(content_x + 20, y, "User Profile Management", title_color, (color_t){0, 0, 0, 0});
+            y += 35;
+            
+            // Current user info
+            framebuffer_draw_string(content_x + 20, y, "Current User:", label_color, (color_t){0, 0, 0, 0});
             framebuffer_draw_string(content_x + 200, y, g_settings.user.username, value_color, (color_t){0, 0, 0, 0});
-            y += 30;
+            y += 25;
             framebuffer_draw_string(content_x + 20, y, "Full Name:", label_color, (color_t){0, 0, 0, 0});
             framebuffer_draw_string(content_x + 200, y, g_settings.user.full_name, value_color, (color_t){0, 0, 0, 0});
-            y += 30;
+            y += 25;
             framebuffer_draw_string(content_x + 20, y, "Auto Login:", label_color, (color_t){0, 0, 0, 0});
             framebuffer_draw_string(content_x + 200, y, 
                         g_settings.user.auto_login ? "Enabled" : "Disabled", 
                         value_color, (color_t){0, 0, 0, 0});
+            
+            y += 40;
+            
+            // User accounts list
+            framebuffer_draw_string(content_x + 20, y, "All User Accounts:", label_color, (color_t){0, 0, 0, 0});
+            y += 25;
+            
+            // Draw user list
+            user_account_t* users[MAX_USERS];
+            int user_count = user_list_all(users, MAX_USERS);
+            
+            for (int i = user_list_scroll_offset; i < user_count && i < user_list_scroll_offset + 8; i++) {
+                if (users[i] && users[i]->is_active) {
+                    // Draw username
+                    color_t user_color = users[i]->is_admin ? 
+                                        (color_t){255, 150, 100, 255} : value_color;
+                    framebuffer_draw_string(content_x + 30, y, users[i]->username, 
+                                          user_color, (color_t){0, 0, 0, 0});
+                    
+                    // Draw admin badge if applicable
+                    if (users[i]->is_admin) {
+                        framebuffer_draw_string(content_x + 150, y, "[Admin]", 
+                                              (color_t){255, 100, 100, 255}, (color_t){0, 0, 0, 0});
+                    }
+                    
+                    y += 20;
+                }
+            }
+            
+            y += 20;
+            
+            // Action buttons
+            framebuffer_draw_string(content_x + 20, y, "Actions:", label_color, (color_t){0, 0, 0, 0});
+            y += 25;
+            
+            // Draw button placeholders
+            color_t btn_color = {60, 100, 180, 255};
+            framebuffer_draw_rect(content_x + 30, y, 120, 30, btn_color);
+            framebuffer_draw_string(content_x + 40, y + 8, "Create User", 
+                                  (color_t){255, 255, 255, 255}, (color_t){0, 0, 0, 0});
+            
+            framebuffer_draw_rect(content_x + 160, y, 120, 30, btn_color);
+            framebuffer_draw_string(content_x + 170, y + 8, "Delete User", 
+                                  (color_t){255, 255, 255, 255}, (color_t){0, 0, 0, 0});
+            
+            framebuffer_draw_rect(content_x + 290, y, 150, 30, btn_color);
+            framebuffer_draw_string(content_x + 300, y + 8, "Switch Account", 
+                                  (color_t){255, 255, 255, 255}, (color_t){0, 0, 0, 0});
             break;
             
         case SETTINGS_ABOUT:
@@ -211,6 +266,40 @@ static void settings_click(widget_t* widget, int32_t x, int32_t y) {
                 g_current_category = (settings_category_t)category;
                 gui_update();
             }
+        }
+    }
+    
+    // Handle user management button clicks
+    if (g_current_category == SETTINGS_USER) {
+        int content_x = window->bounds.x + 200;
+        int content_y = window->bounds.y + 60;
+        
+        // Button area starts around y + 340 based on render layout
+        int button_y = content_y + 340;
+        
+        // Create User button
+        if (x >= content_x + 30 && x < content_x + 150 &&
+            y >= button_y && y < button_y + 30) {
+            // Create new user - simplified for now
+            uint32_t new_uid;
+            if (user_create("newuser", "password", 0, &new_uid) == 0) {
+                user_save_database();
+            }
+            gui_update();
+        }
+        // Delete User button
+        else if (x >= content_x + 160 && x < content_x + 280 &&
+                 y >= button_y && y < button_y + 30) {
+            // Delete user - would need user selection first
+            // Placeholder for now
+            gui_update();
+        }
+        // Switch Account button
+        else if (x >= content_x + 290 && x < content_x + 440 &&
+                 y >= button_y && y < button_y + 30) {
+            // Switch account - would need account selection first
+            // Placeholder for now
+            gui_update();
         }
     }
 }

@@ -11,10 +11,13 @@
 #include "font_manager.h"
 #include "desktop_config.h"
 #include "live_wallpaper.h"
+#include "desktop_widgets.h"
+#include "window_snap.h"
 #include "../memory/memory.h"
 #include "../drivers/mouse.h"
 #include "../drivers/keyboard.h"
 #include "../drivers/timer.h"
+#include "../security/user_manager.h"
 #include <stddef.h>
 
 // String functions (minimal implementations)
@@ -183,6 +186,15 @@ int gui_init(void) {
     // Initialize live wallpaper system
     live_wallpaper_init();
     
+    // Initialize desktop widgets system
+    desktop_widgets_init();
+    
+    // Initialize window snapping
+    window_snap_init();
+    
+    // Initialize user manager
+    user_manager_init();
+    
     window_list = NULL;
     focused_window = NULL;
     gui_initialized = 1;
@@ -197,6 +209,12 @@ int gui_init(void) {
 }
 
 void gui_shutdown(void) {
+    // Shutdown desktop widgets
+    desktop_widgets_shutdown();
+    
+    // Shutdown user manager
+    user_manager_shutdown();
+    
     // Shutdown live wallpaper
     live_wallpaper_shutdown();
     
@@ -222,6 +240,9 @@ void gui_update(void) {
         live_wallpaper_update(16, cursor_x, cursor_y);  // ~60 FPS (16ms per frame)
     }
     
+    // Update desktop widgets
+    desktop_widgets_update();
+    
     // Update start menu animation
     if (start_menu_animating) {
         if (start_menu_opening) {
@@ -244,6 +265,9 @@ void gui_update(void) {
     
     // Redraw desktop background
     gui_draw_desktop();
+    
+    // Draw desktop widgets (before windows so they stay behind)
+    desktop_widgets_render();
     
     // Draw all windows
     window_t* window = window_list;
@@ -657,12 +681,28 @@ void gui_process_event(event_t* event) {
                         widget = widget->next;
                     }
                 }
+                
+                // Check if click is on a desktop widget (if no window was clicked)
+                if (!clicked_window && !dragging_window) {
+                    if (desktop_widgets_handle_click(event->x, event->y)) {
+                        break;  // Desktop widget handled the click
+                    }
+                }
             }
             break;
             
         case EVENT_MOUSE_UP:
             // Stop dragging
-            dragging_window = NULL;
+            if (dragging_window) {
+                // Check for window snapping when drag ends
+                snap_position_t snap_pos = window_snap_check(dragging_window, 
+                    dragging_window->bounds.x, dragging_window->bounds.y);
+                if (snap_pos != SNAP_NONE) {
+                    window_snap_apply(dragging_window, snap_pos);
+                }
+                dragging_window = NULL;
+                window_snap_hide_preview();
+            }
             break;
             
         case EVENT_MOUSE_MOVE:
@@ -674,6 +714,15 @@ void gui_process_event(event_t* event) {
                 // Keep window on screen
                 if (dragging_window->bounds.x < 0) dragging_window->bounds.x = 0;
                 if (dragging_window->bounds.y < 0) dragging_window->bounds.y = 0;
+                
+                // Check for snap preview while dragging
+                snap_position_t snap_pos = window_snap_check(dragging_window,
+                    dragging_window->bounds.x, dragging_window->bounds.y);
+                if (snap_pos != SNAP_NONE) {
+                    window_snap_show_preview(snap_pos);
+                } else {
+                    window_snap_hide_preview();
+                }
             }
             break;
             
@@ -682,6 +731,14 @@ void gui_process_event(event_t* event) {
             break;
             
         case EVENT_KEY_DOWN:
+            // Handle window snapping shortcuts (Win+Arrow keys)
+            // Check if focused window exists for snapping
+            if (focused_window && !start_menu_visible) {
+                if (window_snap_handle_shortcut(focused_window, event->key)) {
+                    break;  // Shortcut was handled
+                }
+            }
+            
             // Handle keyboard navigation for start menu
             if (start_menu_visible) {
                 switch (event->key) {
