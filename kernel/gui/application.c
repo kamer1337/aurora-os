@@ -15,6 +15,8 @@
 #include "calculator.h"
 #include "goals_manager.h"
 #include "linux_installer.h"
+#include "settings_app.h"
+#include "desktop_widgets.h"
 #include "../memory/memory.h"
 #include "../drivers/storage.h"
 #include <stddef.h>
@@ -495,29 +497,15 @@ static int launch_terminal(void) {
 }
 
 static int launch_settings(void) {
-    // Use the desktop configuration system instead
-    desktop_config_show_settings();
-    
-    // Also create the traditional settings window
-    window_t* window = gui_create_window("System Settings", 180, 100, 550, 500);
-    if (!window) return -1;
+    // Launch the new comprehensive settings application
+    window_t* window = launch_settings_app();
+    if (!window) {
+        return -1;
+    }
     
     applications[APP_SETTINGS].window = window;
-    
-    /* Add settings categories */
-    gui_create_label(window, "System Settings", 20, 20);
-    gui_create_label(window, "Configure your Aurora OS system", 20, 45);
-    
-    /* Desktop Appearance Button */
-    gui_create_button(window, "Desktop Appearance", 30, 80, 180, 35);
-    
-    /* Display Settings Section */
-    gui_create_label(window, "Display Settings", 30, 130);
-    gui_create_label(window, "  Resolution: 1920x1080x32", 50, 155);
-    gui_create_label(window, "  Color Depth: 32-bit RGBA", 50, 175);
-    
-    /* Storage Settings Section */
-    gui_create_label(window, "Storage Settings", 30, 210);
+    return 0;
+}
     storage_init();
     int device_count = storage_detect_devices();
     
