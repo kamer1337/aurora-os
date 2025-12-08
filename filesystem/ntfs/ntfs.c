@@ -18,6 +18,9 @@ static bool g_ntfs_mounted = false;
 /* Buffer for sector reads */
 static uint8_t sector_buffer[NTFS_SECTOR_SIZE];
 
+/* Constants for data run parsing */
+#define SIGN_BIT_MASK 0x80
+
 /* Forward declarations */
 static int ntfs_mount(const char* device);
 static int ntfs_unmount(void);
@@ -170,7 +173,7 @@ static uint64_t ntfs_parse_data_runs(uint8_t* run_list, uint64_t vcn,
     }
     
     /* Sign extend if necessary */
-    if (offset_bytes > 0 && (run_list[offset_bytes - 1] & 0x80)) {
+    if (offset_bytes > 0 && (run_list[offset_bytes - 1] & SIGN_BIT_MASK)) {
         for (int i = offset_bytes; i < 8; i++) {
             run_offset |= 0xFFLL << (i * 8);
         }

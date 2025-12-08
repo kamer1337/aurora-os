@@ -74,7 +74,7 @@ uint32_t fat32_get_fat_entry(fat32_mount_t* mount, uint32_t cluster) {
     
     /* Extract FAT entry (28 bits, mask off top 4 bits) */
     uint32_t entry = *(uint32_t*)(sector_buffer + entry_offset);
-    return entry & 0x0FFFFFFF;
+    return entry & FAT32_EOC_MAX;  /* Use defined constant instead of magic number */
 }
 
 /**
@@ -90,7 +90,7 @@ int fat32_set_fat_entry(fat32_mount_t* mount, uint32_t cluster, uint32_t value) 
     
     /* Update FAT entry (preserve top 4 bits) */
     uint32_t* entry_ptr = (uint32_t*)(sector_buffer + entry_offset);
-    *entry_ptr = (*entry_ptr & 0xF0000000) | (value & 0x0FFFFFFF);
+    *entry_ptr = (*entry_ptr & 0xF0000000) | (value & FAT32_EOC_MAX);  /* Use defined constant */
     
     /* Write FAT sector back */
     /* In real implementation, would call storage driver */

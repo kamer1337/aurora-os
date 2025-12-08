@@ -307,13 +307,16 @@ static inode_t* nfs_lookup(const char* path) {
 
 /**
  * Create file
+ * NOTE: The file_type_t parameter is currently not used as NFS file type
+ * mapping is handled at the protocol level. In a complete implementation,
+ * this should be mapped to NFS file attributes.
  */
 static int nfs_create(const char* path, file_type_t type) {
     if (!g_nfs_connected || !path) {
         return -1;
     }
     
-    (void)type;  /* NFS handles file type internally */
+    (void)type;  /* TODO: Map file_type_t to NFS attributes */
     
     /* Create file on NFS server */
     

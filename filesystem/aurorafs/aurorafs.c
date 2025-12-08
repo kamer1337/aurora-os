@@ -369,8 +369,8 @@ int aurorafs_dedup_add_block(aurorafs_mount_t* mount, const uint8_t* hash,
         return -1;
     }
     
-    /* Initialize entry */
-    for (int i = 0; i < AURORAFS_HASH_SIZE; i++) {
+    /* Initialize entry - copy hash */
+    for (size_t i = 0; i < AURORAFS_HASH_SIZE; i++) {
         entry->hash[i] = hash[i];
     }
     entry->physical_block = physical_block;
@@ -575,6 +575,9 @@ int aurorafs_rollback_snapshot(aurorafs_mount_t* mount, uint64_t snapshot_id) {
 
 /**
  * Encrypt block using AES-256
+ * NOTE: This is a simplified STUB implementation for demonstration.
+ * TODO: Replace with proper AES-256-CBC or AES-256-GCM implementation
+ * using a cryptographic library like OpenSSL or mbedTLS.
  */
 int aurorafs_encrypt_block(aurorafs_mount_t* mount, const void* input, 
                            void* output, size_t size, const uint8_t* key) {
@@ -582,8 +585,8 @@ int aurorafs_encrypt_block(aurorafs_mount_t* mount, const void* input,
         return -1;
     }
     
-    /* Simplified AES-256 encryption stub */
-    /* Real implementation would use proper AES-256-CBC or AES-256-GCM */
+    /* SECURITY WARNING: This is NOT secure encryption! */
+    /* Simplified XOR stub - real implementation required */
     for (size_t i = 0; i < size; i++) {
         ((uint8_t*)output)[i] = ((const uint8_t*)input)[i] ^ key[i % 32];
     }
@@ -593,6 +596,9 @@ int aurorafs_encrypt_block(aurorafs_mount_t* mount, const void* input,
 
 /**
  * Decrypt block using AES-256
+ * NOTE: This is a simplified STUB implementation for demonstration.
+ * TODO: Replace with proper AES-256-CBC or AES-256-GCM implementation
+ * using a cryptographic library like OpenSSL or mbedTLS.
  */
 int aurorafs_decrypt_block(aurorafs_mount_t* mount, const void* input, 
                            void* output, size_t size, const uint8_t* key) {
@@ -600,8 +606,8 @@ int aurorafs_decrypt_block(aurorafs_mount_t* mount, const void* input,
         return -1;
     }
     
-    /* Simplified AES-256 decryption stub */
-    /* Real implementation would use proper AES-256-CBC or AES-256-GCM */
+    /* SECURITY WARNING: This is NOT secure decryption! */
+    /* Simplified XOR stub - real implementation required */
     for (size_t i = 0; i < size; i++) {
         ((uint8_t*)output)[i] = ((const uint8_t*)input)[i] ^ key[i % 32];
     }
@@ -611,6 +617,9 @@ int aurorafs_decrypt_block(aurorafs_mount_t* mount, const void* input,
 
 /**
  * Derive encryption key from master key
+ * NOTE: This is a simplified STUB implementation for demonstration.
+ * TODO: Replace with proper key derivation function like PBKDF2, Argon2,
+ * or scrypt using a cryptographic library.
  */
 int aurorafs_derive_key(const uint8_t* master_key, const uint8_t* salt, 
                         uint8_t* derived_key) {
@@ -618,7 +627,8 @@ int aurorafs_derive_key(const uint8_t* master_key, const uint8_t* salt,
         return -1;
     }
     
-    /* Simplified key derivation - real implementation would use PBKDF2 or Argon2 */
+    /* SECURITY WARNING: This is NOT secure key derivation! */
+    /* Simplified XOR stub - real implementation with PBKDF2/Argon2 required */
     for (int i = 0; i < 32; i++) {
         derived_key[i] = master_key[i] ^ salt[i];
     }
