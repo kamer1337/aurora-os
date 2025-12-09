@@ -878,14 +878,15 @@ static lsm_module_t selinux_module = {
  * Provides mandatory access control (MAC) based on security contexts
  */
 int selinux_stub_init(void) {
+    /* Set module name first */
+    lsm_strcpy(selinux_module.name, "selinux", 32);
+    
     /* Set up SELinux hooks */
     selinux_module.hooks[LSM_HOOK_TASK_CREATE] = selinux_hook_task_create;
     selinux_module.hooks[LSM_HOOK_FILE_OPEN] = selinux_hook_file_open;
     selinux_module.hooks[LSM_HOOK_FILE_READ] = selinux_hook_file_open;
     selinux_module.hooks[LSM_HOOK_FILE_WRITE] = selinux_hook_file_open;
     selinux_module.hooks[LSM_HOOK_CAPABLE] = selinux_hook_capable;
-    
-    lsm_strcpy(selinux_module.name, "selinux", 32);
     
     /* Initialize SELinux state */
     selinux_state.enabled = 1;
@@ -1026,14 +1027,15 @@ static lsm_module_t apparmor_module = {
  * Provides path-based mandatory access control
  */
 int apparmor_stub_init(void) {
+    /* Set module name first */
+    lsm_strcpy(apparmor_module.name, "apparmor", 32);
+    
     /* Set up AppArmor hooks */
     apparmor_module.hooks[LSM_HOOK_FILE_OPEN] = apparmor_hook_file_open;
     apparmor_module.hooks[LSM_HOOK_FILE_READ] = apparmor_hook_file_open;
     apparmor_module.hooks[LSM_HOOK_FILE_WRITE] = apparmor_hook_file_open;
     apparmor_module.hooks[LSM_HOOK_FILE_EXEC] = apparmor_hook_file_exec;
     apparmor_module.hooks[LSM_HOOK_CAPABLE] = apparmor_hook_capable;
-    
-    lsm_strcpy(apparmor_module.name, "apparmor", 32);
     
     /* Initialize AppArmor state */
     apparmor_state.enabled = 1;

@@ -30,12 +30,22 @@ static encrypted_partition_t* find_encrypted_partition(uint8_t disk_id, uint8_t 
  * XTS (XEX-based tweaked-codebook mode) is designed for sector-based encryption
  * 
  * This implements a simplified XTS mode suitable for disk encryption
+ * NOTE: XTS requires a 64-byte key (two 32-byte keys)
  */
 static void aes_xts_encrypt_sector(const uint8_t* key, uint64_t sector_num,
                                    const uint8_t* input, uint8_t* output, size_t length) {
-    /* XTS uses two keys: one for encryption, one for tweak */
+    /* XTS uses two keys: key1 for encryption, key2 for tweak
+     * For a 32-byte input key, we derive both from the same key material */
     const uint8_t* key1 = key;  /* First 32 bytes */
-    const uint8_t* key2 = key + 32;  /* Second 32 bytes (if available) */
+    
+    /* For systems with only 32-byte keys, derive key2 from key1 */
+    uint8_t derived_key2[32];
+    for (int i = 0; i < 32; i++) {
+        /* Simple key expansion - in production use proper KDF */
+        derived_key2[i] = key1[i] ^ (uint8_t)(i + 0x5C);
+        derived_key2[i] = ((derived_key2[i] << 3) | (derived_key2[i] >> 5)) ^ key1[(i * 7) % 32];
+    }
+    const uint8_t* key2 = derived_key2;
     
     /* Generate tweak value from sector number */
     uint8_t tweak[16] = {0};
@@ -109,12 +119,20 @@ static void aes_xts_encrypt_sector(const uint8_t* key, uint64_t sector_num,
 /**
  * AES-256-XTS sector decryption
  * Reverses the XTS encryption process
+ * NOTE: XTS requires a 64-byte key (two 32-byte keys)
  */
 static void aes_xts_decrypt_sector(const uint8_t* key, uint64_t sector_num,
                                    const uint8_t* input, uint8_t* output, size_t length) {
     /* XTS decryption is similar to encryption but with reversed AES */
     const uint8_t* key1 = key;
-    const uint8_t* key2 = key + 32;
+    
+    /* Derive key2 from key1 (same derivation as encryption) */
+    uint8_t derived_key2[32];
+    for (int i = 0; i < 32; i++) {
+        derived_key2[i] = key1[i] ^ (uint8_t)(i + 0x5C);
+        derived_key2[i] = ((derived_key2[i] << 3) | (derived_key2[i] >> 5)) ^ key1[(i * 7) % 32];
+    }
+    const uint8_t* key2 = derived_key2;
     
     /* Generate same tweak value */
     uint8_t tweak[16] = {0};

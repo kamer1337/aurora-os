@@ -608,7 +608,10 @@ int aurorafs_encrypt_block(aurorafs_mount_t* mount, const void* input,
     /* Process each 16-byte block */
     size_t blocks = (size + 15) / 16;
     for (size_t block = 0; block < blocks; block++) {
-        size_t block_size = (block == blocks - 1) ? (size - block * 16) : 16;
+        size_t block_size = 16;
+        if (block == blocks - 1 && size % 16 != 0) {
+            block_size = size % 16;
+        }
         
         /* XOR input with previous ciphertext (CBC mode) */
         uint8_t xor_block[16] = {0};
@@ -683,7 +686,10 @@ int aurorafs_decrypt_block(aurorafs_mount_t* mount, const void* input,
     /* Process each 16-byte block */
     size_t blocks = (size + 15) / 16;
     for (size_t block = 0; block < blocks; block++) {
-        size_t block_size = (block == blocks - 1) ? (size - block * 16) : 16;
+        size_t block_size = 16;
+        if (block == blocks - 1 && size % 16 != 0) {
+            block_size = size % 16;
+        }
         
         /* Copy current ciphertext block */
         uint8_t cipher_block[16] = {0};
