@@ -120,4 +120,14 @@ int gpu_enable_4k_mode(void);
 int gpu_enable_8k_mode(void);
 int gpu_check_uhd_support(void);
 
+/* Enhanced GPU management */
+int gpu_get_temperature(int* temp_celsius);
+int gpu_get_fan_speed(int* speed_percent);
+int gpu_set_fan_speed(int speed_percent);
+int gpu_get_utilization(int* gpu_percent, int* vram_percent);
+int gpu_enable_hardware_acceleration(void);
+int gpu_disable_hardware_acceleration(void);
+int gpu_sync(void);
+int gpu_reset(void);
+
 #endif // GPU_DRIVER_H

@@ -469,22 +469,223 @@ int gpu_enable_8k_mode(void) {
 }
 
 /**
- * Check if GPU supports UHD (4K/8K) resolutions
+ * Get GPU temperature
+ * Reads current GPU temperature in Celsius
  */
-int gpu_check_uhd_support(void) {
-    if (!gpu_state.initialized) {
-        return 0;
+int gpu_get_temperature(int* temp_celsius) {
+    if (!temp_celsius) {
+        return -1;
     }
     
-    /* Check display controller capabilities */
-    /* Verify VRAM capacity */
-    /* Check connector bandwidth (HDMI 2.0+, DP 1.4+) */
+    if (!gpu_state.initialized) {
+        return -1;
+    }
     
-    /* Most modern GPUs support 4K */
-    int support_4k = (gpu_state.vram_size_mb >= MIN_VRAM_4K_MB) ? 1 : 0;
+    /* In real implementation, would read from:
+     * - Intel: MSR or MMIO thermal registers
+     * - NVIDIA: NVML API or register access
+     * - AMD: ADL API or register access
+     */
     
-    /* 8K requires more VRAM and newer hardware */
-    int support_8k = (gpu_state.vram_size_mb >= MIN_VRAM_8K_MB) ? 1 : 0;
+    /* Simulate temperature based on power state */
+    switch (gpu_state.info.power_state) {
+        case GPU_POWER_OFF:
+            *temp_celsius = 25;  /* Ambient temperature */
+            break;
+        case GPU_POWER_STANDBY:
+            *temp_celsius = 35;
+            break;
+        case GPU_POWER_IDLE:
+            *temp_celsius = 45;
+            break;
+        case GPU_POWER_ACTIVE:
+            *temp_celsius = 65;
+            break;
+        case GPU_POWER_BOOST:
+            *temp_celsius = 80;
+            break;
+        default:
+            *temp_celsius = 50;
+    }
     
-    return (support_4k << 0) | (support_8k << 1);
+    return 0;
 }
+
+/**
+ * Get GPU fan speed
+ * Returns current fan speed as percentage (0-100)
+ */
+int gpu_get_fan_speed(int* speed_percent) {
+    if (!speed_percent) {
+        return -1;
+    }
+    
+    if (!gpu_state.initialized) {
+        return -1;
+    }
+    
+    /* Fan speed typically correlates with temperature and load */
+    int temp = 0;
+    gpu_get_temperature(&temp);
+    
+    /* Simple fan curve */
+    if (temp < 40) {
+        *speed_percent = 20;  /* Idle fan speed */
+    } else if (temp < 60) {
+        *speed_percent = 40 + ((temp - 40) * 2);  /* Ramp up */
+    } else {
+        *speed_percent = 80 + ((temp - 60) / 2);  /* High speed */
+    }
+    
+    if (*speed_percent > 100) {
+        *speed_percent = 100;
+    }
+    
+    return 0;
+}
+
+/**
+ * Set GPU fan speed
+ * Sets manual fan speed (0-100%) or auto mode (-1)
+ */
+int gpu_set_fan_speed(int speed_percent) {
+    if (!gpu_state.initialized) {
+        return -1;
+    }
+    
+    /* Validate range */
+    if (speed_percent != -1 && (speed_percent < 0 || speed_percent > 100)) {
+        return -1;
+    }
+    
+    /* In real implementation, would:
+     * - Write to fan control registers
+     * - Set PWM duty cycle
+     * - Configure automatic fan curve
+     */
+    
+    return 0;
+}
+
+/**
+ * Get GPU utilization
+ * Returns GPU usage percentage (0-100)
+ */
+int gpu_get_utilization(int* gpu_percent, int* vram_percent) {
+    if (!gpu_percent && !vram_percent) {
+        return -1;
+    }
+    
+    if (!gpu_state.initialized) {
+        return -1;
+    }
+    
+    /* In real implementation, would read performance counters */
+    if (gpu_percent) {
+        /* Estimate based on power state */
+        switch (gpu_state.info.power_state) {
+            case GPU_POWER_OFF:
+            case GPU_POWER_STANDBY:
+                *gpu_percent = 0;
+                break;
+            case GPU_POWER_IDLE:
+                *gpu_percent = 5;
+                break;
+            case GPU_POWER_ACTIVE:
+                *gpu_percent = 50;
+                break;
+            case GPU_POWER_BOOST:
+                *gpu_percent = 95;
+                break;
+            default:
+                *gpu_percent = 25;
+        }
+    }
+    
+    if (vram_percent) {
+        /* Calculate VRAM usage percentage */
+        if (gpu_state.info.vram_size_mb > 0) {
+            *vram_percent = (gpu_state.info.vram_used_mb * 100) / gpu_state.info.vram_size_mb;
+        } else {
+            *vram_percent = 0;
+        }
+    }
+    
+    return 0;
+}
+
+/**
+ * Enable GPU hardware acceleration
+ */
+int gpu_enable_hardware_acceleration(void) {
+    if (!gpu_state.initialized) {
+        return -1;
+    }
+    
+    gpu_state.hardware_acceleration = 1;
+    
+    /* In real implementation, would:
+     * - Enable command submission
+     * - Configure shader units
+     * - Enable texture units
+     * - Set up render pipelines
+     */
+    
+    return 0;
+}
+
+/**
+ * Disable GPU hardware acceleration (software fallback)
+ */
+int gpu_disable_hardware_acceleration(void) {
+    if (!gpu_state.initialized) {
+        return -1;
+    }
+    
+    gpu_state.hardware_acceleration = 0;
+    
+    return 0;
+}
+
+/**
+ * Sync GPU operations (wait for idle)
+ */
+int gpu_sync(void) {
+    if (!gpu_state.initialized) {
+        return -1;
+    }
+    
+    /* In real implementation, would:
+     * - Check command queue status
+     * - Wait for all pending operations
+     * - Poll fence/semaphore values
+     * - Ensure memory coherency
+     */
+    
+    return 0;
+}
+
+/**
+ * Reset GPU to default state
+ */
+int gpu_reset(void) {
+    if (!gpu_state.initialized) {
+        return -1;
+    }
+    
+    /* In real implementation, would:
+     * - Stop all command queues
+     * - Reset hardware registers
+     * - Clear VRAM
+     * - Reinitialize controller
+     * - Restore default configuration
+     */
+    
+    /* Reset configuration to defaults */
+    gpu_state.config = default_gpu_config;
+    gpu_state.info.vram_used_mb = 0;
+    gpu_state.info.power_state = GPU_POWER_IDLE;
+    
+    return 0;
+}
+
