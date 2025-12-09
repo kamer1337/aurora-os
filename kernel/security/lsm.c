@@ -1049,3 +1049,140 @@ int apparmor_stub_init(void) {
     
     return result;
 }
+
+/* ============================================================================
+ * Enhanced LSM Management Functions
+ * ============================================================================ */
+
+/**
+ * Get number of registered security modules
+ */
+int lsm_get_module_count(void) {
+    return lsm_module_count;
+}
+
+/**
+ * List all registered security modules
+ * Returns a string with module names separated by spaces
+ */
+int lsm_list_modules(char* buffer, size_t buffer_size) {
+    if (!buffer || buffer_size == 0) {
+        return LSM_ERROR;
+    }
+    
+    size_t pos = 0;
+    for (int i = 0; i < LSM_MAX_MODULES && pos < buffer_size - 1; i++) {
+        if (lsm_modules[i]) {
+            /* Add module name */
+            const char* name = lsm_modules[i]->name;
+            size_t name_len = 0;
+            while (name[name_len] && name_len < 31) name_len++;
+            
+            /* Check if we have space */
+            if (pos + name_len + 2 > buffer_size) {
+                break;
+            }
+            
+            /* Copy name */
+            for (size_t j = 0; j < name_len; j++) {
+                buffer[pos++] = name[j];
+            }
+            
+            /* Add status indicator */
+            buffer[pos++] = lsm_modules[i]->enabled ? '+' : '-';
+            buffer[pos++] = ' ';
+        }
+    }
+    
+    if (pos > 0) {
+        buffer[pos - 1] = '\0';  /* Remove trailing space */
+    } else {
+        buffer[0] = '\0';
+    }
+    
+    return LSM_ALLOW;
+}
+
+/**
+ * Get module status information
+ */
+int lsm_get_module_status(const char* name, int* enabled, int* hook_count) {
+    if (!name) {
+        return LSM_ERROR;
+    }
+    
+    lsm_module_t* module = lsm_find_module(name);
+    if (!module) {
+        return LSM_ERROR;
+    }
+    
+    if (enabled) {
+        *enabled = module->enabled;
+    }
+    
+    if (hook_count) {
+        int count = 0;
+        for (int i = 0; i < LSM_HOOK_COUNT; i++) {
+            if (module->hooks[i]) {
+                count++;
+            }
+        }
+        *hook_count = count;
+    }
+    
+    return LSM_ALLOW;
+}
+
+/**
+ * Set enforcing mode for a security module
+ * This is a helper for modules that support permissive/enforcing modes
+ */
+int lsm_set_enforcing_mode(const char* module_name, int enforcing) {
+    if (!module_name) {
+        return LSM_ERROR;
+    }
+    
+    /* Check for SELinux */
+    if (lsm_strcmp(module_name, "selinux") == 0) {
+        selinux_state.enforcing = enforcing ? 1 : 0;
+        if (audit_enabled()) {
+            audit_log(enforcing ? "SELinux set to enforcing mode" : 
+                                "SELinux set to permissive mode");
+        }
+        return LSM_ALLOW;
+    }
+    
+    /* Check for AppArmor */
+    if (lsm_strcmp(module_name, "apparmor") == 0) {
+        apparmor_state.default_profile.mode = enforcing ? 
+            APPARMOR_ENFORCE : APPARMOR_COMPLAIN;
+        if (audit_enabled()) {
+            audit_log(enforcing ? "AppArmor set to enforce mode" : 
+                                "AppArmor set to complain mode");
+        }
+        return LSM_ALLOW;
+    }
+    
+    return LSM_ERROR;  /* Module not found or doesn't support this */
+}
+
+/**
+ * Get enforcing mode for a security module
+ */
+int lsm_get_enforcing_mode(const char* module_name) {
+    if (!module_name) {
+        return -1;
+    }
+    
+    /* Check for SELinux */
+    if (lsm_strcmp(module_name, "selinux") == 0) {
+        return selinux_state.enforcing;
+    }
+    
+    /* Check for AppArmor */
+    if (lsm_strcmp(module_name, "apparmor") == 0) {
+        return (apparmor_state.default_profile.mode == APPARMOR_ENFORCE) ? 1 : 0;
+    }
+    
+    return -1;  /* Module not found or doesn't support this */
+}
