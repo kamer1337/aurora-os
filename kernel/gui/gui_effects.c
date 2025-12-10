@@ -150,6 +150,9 @@ void gui_draw_gradient_radial(int32_t x, int32_t y, uint32_t radius,
                                color_t color1, color_t color2) {
     if (radius == 0) return;
     
+    // Limit radius for performance (max 256px radius = 512x512 region max)
+    if (radius > 256) radius = 256;
+    
     int32_t r_squared = (int32_t)(radius * radius);
     
     for (int32_t dy = -(int32_t)radius; dy <= (int32_t)radius; dy++) {
@@ -326,6 +329,7 @@ float gui_ease(float t, ease_type_t ease_type) {
         
         case EASE_ELASTIC: {
             // Elastic easing: overshoots with oscillation
+            // Simplified implementation without pow function
             if (t == 0.0f) return 0.0f;
             if (t == 1.0f) return 1.0f;
             
@@ -846,20 +850,34 @@ sprite_t* gui_create_icon(uint32_t size, color_t base_color, uint32_t icon_type)
                     break;
                     
                 case 3:  // Folder icon (simplified)
-                    if (y < size / 3 && x >= size / 4 && x < 3 * size / 4) {
-                        // Tab part - lighter color (safe calculation, cannot overflow)
-                        pixel_color.r = (uint8_t)(base_color.r + (255 - base_color.r) / 5);
-                        pixel_color.g = base_color.g;
-                        pixel_color.b = base_color.b;
-                    } else if (y >= size / 3 && x >= size / 8 && x < 7 * size / 8) {
-                        pixel_color.a = 255;
-                    } else {
-                        pixel_color.a = 0;
+                    {
+                        // Folder proportions
+                        uint32_t tab_height = size / 3;
+                        uint32_t tab_left = size / 4;
+                        uint32_t tab_right = 3 * size / 4;
+                        uint32_t body_left = size / 8;
+                        uint32_t body_right = 7 * size / 8;
+                        
+                        if (y < tab_height && x >= tab_left && x < tab_right) {
+                            // Tab part - lighter color (safe calculation, cannot overflow)
+                            pixel_color.r = (uint8_t)(base_color.r + (255 - base_color.r) / 5);
+                            pixel_color.g = base_color.g;
+                            pixel_color.b = base_color.b;
+                        } else if (y >= tab_height && x >= body_left && x < body_right) {
+                            pixel_color.a = 255;
+                        } else {
+                            pixel_color.a = 0;
+                        }
                     }
                     break;
                     
                 case 4:  // Star shape (approximated)
                     {
+                        // Star pattern constants
+                        const float STAR_MIN_SCALE = 0.6f;   // Minimum star radius factor
+                        const float STAR_VARIATION = 0.4f;   // Amount of radius variation
+                        const float STAR_NORM = 2.0f;        // Normalization factor
+                        
                         // Simplified star pattern - no division by zero risk
                         float star_radius;
                         if (dx == 0 && dy == 0) {
@@ -867,7 +885,7 @@ sprite_t* gui_create_icon(uint32_t size, color_t base_color, uint32_t icon_type)
                         } else {
                             // Simple radial variation based on position
                             float angle_factor = (float)(fabs_custom((float)dx) + fabs_custom((float)dy));
-                            star_radius = max_dist * (0.6f + 0.4f * (angle_factor / (2.0f * max_dist)));
+                            star_radius = max_dist * (STAR_MIN_SCALE + STAR_VARIATION * (angle_factor / (STAR_NORM * max_dist)));
                         }
                         
                         if (dist <= star_radius) {
