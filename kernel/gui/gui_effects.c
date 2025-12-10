@@ -843,8 +843,11 @@ sprite_t* gui_create_icon(uint32_t size, color_t base_color, uint32_t icon_type)
                     
                 case 3:  // Folder icon (simplified)
                     if (y < size / 3 && x >= size / 4 && x < 3 * size / 4) {
-                        pixel_color.r = (uint8_t)(base_color.r * 1.2f);
-                        if (pixel_color.r < base_color.r) pixel_color.r = 255;
+                        // Tab part - lighter color
+                        uint16_t new_r = base_color.r + (255 - base_color.r) / 5;
+                        pixel_color.r = new_r > 255 ? 255 : (uint8_t)new_r;
+                        pixel_color.g = base_color.g;
+                        pixel_color.b = base_color.b;
                     } else if (y >= size / 3 && x >= size / 8 && x < 7 * size / 8) {
                         pixel_color.a = 255;
                     } else {
@@ -969,7 +972,32 @@ void gui_draw_icon_5d(sprite_t* sprite, int32_t x, int32_t y,
     } else if (scale == 1.0f) {
         gui_draw_sprite_alpha(sprite, x + offset_x, y + offset_y, base_alpha);
     } else {
-        // Draw scaled with alpha
-        gui_draw_sprite_scaled(sprite, x + offset_x, y + offset_y, scale, scale);
+        // Draw scaled - need to manually apply alpha during scaling
+        uint32_t scaled_width = (uint32_t)(sprite->width * scale);
+        uint32_t scaled_height = (uint32_t)(sprite->height * scale);
+        
+        for (uint32_t py = 0; py < scaled_height; py++) {
+            for (uint32_t px = 0; px < scaled_width; px++) {
+                // Nearest neighbor sampling
+                uint32_t src_x = (uint32_t)(px / scale);
+                uint32_t src_y = (uint32_t)(py / scale);
+                
+                if (src_x < sprite->width && src_y < sprite->height) {
+                    uint32_t pixel = sprite->pixels[src_y * sprite->width + src_x];
+                    
+                    // Extract RGBA and apply base_alpha
+                    color_t color;
+                    color.r = (pixel >> 24) & 0xFF;
+                    color.g = (pixel >> 16) & 0xFF;
+                    color.b = (pixel >> 8) & 0xFF;
+                    uint8_t src_alpha = pixel & 0xFF;
+                    color.a = (uint8_t)((src_alpha * base_alpha) / 255);
+                    
+                    if (color.a > 0) {
+                        gui_draw_pixel_alpha(x + offset_x + px, y + offset_y + py, color);
+                    }
+                }
+            }
+        }
     }
 }
