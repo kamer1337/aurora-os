@@ -41,6 +41,29 @@ void gui_draw_gradient(int32_t x, int32_t y, uint32_t width, uint32_t height,
                        color_t color1, color_t color2);
 
 /**
+ * Draw a horizontal gradient rectangle
+ * @param x X position
+ * @param y Y position
+ * @param width Width
+ * @param height Height
+ * @param color1 Start color (left)
+ * @param color2 End color (right)
+ */
+void gui_draw_gradient_horizontal(int32_t x, int32_t y, uint32_t width, uint32_t height,
+                                   color_t color1, color_t color2);
+
+/**
+ * Draw a radial gradient (circular gradient from center)
+ * @param x Center X position
+ * @param y Center Y position
+ * @param radius Radius of gradient
+ * @param color1 Center color
+ * @param color2 Edge color
+ */
+void gui_draw_gradient_radial(int32_t x, int32_t y, uint32_t radius,
+                               color_t color1, color_t color2);
+
+/**
  * Draw a rounded rectangle
  * @param x X position
  * @param y Y position
@@ -51,6 +74,18 @@ void gui_draw_gradient(int32_t x, int32_t y, uint32_t width, uint32_t height,
  */
 void gui_draw_rounded_rect(int32_t x, int32_t y, uint32_t width, uint32_t height,
                            uint32_t radius, color_t color);
+
+/**
+ * Draw a rounded rectangle with alpha transparency
+ * @param x X position
+ * @param y Y position
+ * @param width Width
+ * @param height Height
+ * @param radius Corner radius
+ * @param color Fill color (with alpha channel)
+ */
+void gui_draw_rounded_rect_alpha(int32_t x, int32_t y, uint32_t width, uint32_t height,
+                                  uint32_t radius, color_t color);
 
 /**
  * Alpha blend two colors
@@ -255,5 +290,56 @@ void gui_draw_sprite_scaled(sprite_t* sprite, int32_t x, int32_t y, float scale_
  * @param sprite Pointer to sprite
  */
 void gui_destroy_sprite(sprite_t* sprite);
+
+/**
+ * Layered Window Rendering - 5D Depth
+ */
+
+/**
+ * Draw a window with depth offset (for layered rendering)
+ * @param x X position
+ * @param y Y position
+ * @param width Width
+ * @param height Height
+ * @param depth_offset Depth offset (0.0-1.0, 0=front, 1=back)
+ * @param color Window color
+ * @param title Window title (can be NULL)
+ */
+void gui_draw_window_with_depth(int32_t x, int32_t y, uint32_t width, uint32_t height,
+                                 float depth_offset, color_t color, const char* title);
+
+/**
+ * 5D Icon System with Depth
+ */
+
+/**
+ * Icon depth levels for 5D rendering
+ */
+typedef enum {
+    ICON_DEPTH_FOREGROUND,  // Front-most (scale 1.0)
+    ICON_DEPTH_NORMAL,      // Normal depth (scale 0.9)
+    ICON_DEPTH_BACKGROUND,  // Background (scale 0.8)
+    ICON_DEPTH_FAR          // Far background (scale 0.7)
+} icon_depth_level_t;
+
+/**
+ * Create a simple icon sprite (generates a basic icon)
+ * @param size Icon size (width and height)
+ * @param base_color Base color for the icon
+ * @param icon_type Type indicator (0-9 for different icon shapes)
+ * @return Pointer to created sprite
+ */
+sprite_t* gui_create_icon(uint32_t size, color_t base_color, uint32_t icon_type);
+
+/**
+ * Draw an icon with 5D depth effects
+ * @param sprite Icon sprite
+ * @param x X position
+ * @param y Y position
+ * @param depth Depth level
+ * @param hover Whether icon is being hovered
+ */
+void gui_draw_icon_5d(sprite_t* sprite, int32_t x, int32_t y, 
+                      icon_depth_level_t depth, uint8_t hover);
 
 #endif // GUI_EFFECTS_H

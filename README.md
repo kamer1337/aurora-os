@@ -12,6 +12,8 @@ To develop a modern, secure, and highly efficient operating system that surpasse
 
 > **10 screenshots** demonstrating Aurora OS features at Full HD resolution (1920x1080)
 
+📖 **New**: See [SCREENSHOT_DESCRIPTIONS.md](SCREENSHOT_DESCRIPTIONS.md) for detailed visual descriptions of enhanced 5D rendering features!
+
 ### 📸 Core Desktop Experience
 
 | Screenshot | Description |
@@ -53,14 +55,23 @@ To develop a modern, secure, and highly efficient operating system that surpasse
 - Focus management and smooth overlapping
 
 **Visual Effects:**
-- **3D**: Enhanced shadows, vivid gradients, 12px rounded corners, alpha blending
+- **3D**: Enhanced shadows, vivid gradients (vertical, horizontal, radial), 12px rounded corners, alpha blending
 - **4D**: Animation system with 9 easing functions (linear, quad in/out, cubic in/out, bounce, elastic, back)
-- **5D**: Particle systems, glow effects, glass/blur effects, interactive icons
+- **5D**: Particle systems, glow effects, glass/blur effects, interactive icons, layered window depth
+
+**Enhanced 5D Rendering System:**
+- **Layered Windows**: Book-style depth rendering with perspective scaling (5 depth levels)
+- **Icon Depth System**: 4-level depth hierarchy with hover effects and particle emission
+- **Advanced Gradients**: Vertical, horizontal, and radial gradients with smooth interpolation
+- **Alpha Transparency**: Rounded rectangles with per-pixel alpha blending
+- **Depth-Aware Shadows**: Multi-layer shadows with intensity correlated to depth
+- **Interactive Effects**: Hover glow, particle emissions, and scale transformations
 
 **5D Icon System:**
 - Hover glow effects with customizable intensity
-- Depth-based perspective scaling (0.0-1.0 range)
+- Depth-based perspective scaling (4 levels: foreground, normal, background, far)
 - Particle emission on interaction
+- Procedural icon generation (10 types: circle, square, diamond, folder, star, etc.)
 - Glass effect integration for system tray
 
 </details>
@@ -73,6 +84,23 @@ To develop a modern, secure, and highly efficient operating system that surpasse
 | Visual Effects | 6 | Full HD 1920x1080 | 3D/4D/5D effects, parallax, particles |
 
 *Note: All screenshots demonstrate the fully implemented GUI framework. VGA/VESA BIOS support required for graphical modes.*
+
+### 📚 Enhanced 5D Rendering Documentation
+
+Aurora OS features an advanced **Enhanced 5D Rendering System** that creates depth-aware, interactive visual experiences:
+
+- **[ENHANCED_5D_RENDERING.md](ENHANCED_5D_RENDERING.md)**: Complete technical documentation of the enhanced 5D rendering system
+  - Layered window rendering (book effect)
+  - 5D icon system with depth and interactivity
+  - Advanced gradient types (horizontal, vertical, radial)
+  - Alpha-transparent rounded rectangles
+  - Depth-aware shadow system
+  
+- **[SCREENSHOT_DESCRIPTIONS.md](SCREENSHOT_DESCRIPTIONS.md)**: Detailed visual descriptions of enhanced features
+  - ASCII art representations of new effects
+  - Explanation of layered window depth
+  - Icon depth system showcase
+  - Gradient enhancement examples
 
 ---
 
