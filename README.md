@@ -87,8 +87,15 @@ To develop a modern, secure, and highly efficient operating system that surpasse
 
 ### 📚 Enhanced 5D Rendering Documentation
 
-Aurora OS features an advanced **Enhanced 5D Rendering System** that creates depth-aware, interactive visual experiences:
+Aurora OS features an advanced **Enhanced 5D Rendering System** with **Plugin Theme Architecture** that creates depth-aware, interactive visual experiences:
 
+- **[THEME_PLUGIN_SYSTEM.md](THEME_PLUGIN_SYSTEM.md)**: **NEW!** Complete plugin system documentation
+  - Plugin API for custom themes and effects
+  - 5D renderer with plugin support
+  - Example plugins: Neon, Retro, Matrix themes
+  - Custom effect creation guide
+  - Plugin development best practices
+  
 - **[ENHANCED_5D_RENDERING.md](ENHANCED_5D_RENDERING.md)**: Complete technical documentation of the enhanced 5D rendering system
   - Layered window rendering (book effect)
   - 5D icon system with depth and interactivity
@@ -101,6 +108,30 @@ Aurora OS features an advanced **Enhanced 5D Rendering System** that creates dep
   - Explanation of layered window depth
   - Icon depth system showcase
   - Gradient enhancement examples
+
+### 🎨 Plugin Theme System
+
+Aurora OS now features a **comprehensive plugin architecture** for themes and visual effects:
+
+**Key Features:**
+- **Extensible Theme System**: Create custom themes without modifying core code
+- **Plugin API**: Simple, well-documented interface for plugin development
+- **5D Effect Plugins**: Add custom rendering effects to the 5D renderer
+- **Hot-Swappable Themes**: Switch themes dynamically at runtime
+- **Example Plugins Included**:
+  - **Neon**: Bright neon colors with intense glow effects
+  - **Retro**: Classic 80s/90s computing aesthetic with CRT scanlines
+  - **Matrix**: Green-on-black Matrix theme with digital rain effect
+
+**Enhanced 5D Renderer Capabilities:**
+- Depth fog with atmospheric perspective
+- Volumetric lighting effects
+- Holographic rendering with scan lines
+- Chromatic aberration (RGB separation)
+- Parallax depth effects
+- Lens distortion
+- Plugin-based custom effects
+- Three rendering modes: Standard, Enhanced, Plugin-Only
 
 ---
 
