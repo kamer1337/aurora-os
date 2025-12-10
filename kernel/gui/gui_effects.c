@@ -131,6 +131,8 @@ void gui_draw_gradient(int32_t x, int32_t y, uint32_t width, uint32_t height,
 
 void gui_draw_gradient_horizontal(int32_t x, int32_t y, uint32_t width, uint32_t height,
                                    color_t color1, color_t color2) {
+    if (width == 0 || height == 0) return;
+    
     for (uint32_t dx = 0; dx < width; dx++) {
         float t = (float)dx / (float)width;
         
@@ -146,6 +148,8 @@ void gui_draw_gradient_horizontal(int32_t x, int32_t y, uint32_t width, uint32_t
 
 void gui_draw_gradient_radial(int32_t x, int32_t y, uint32_t radius,
                                color_t color1, color_t color2) {
+    if (radius == 0) return;
+    
     int32_t r_squared = (int32_t)(radius * radius);
     
     for (int32_t dy = -(int32_t)radius; dy <= (int32_t)radius; dy++) {
@@ -843,9 +847,8 @@ sprite_t* gui_create_icon(uint32_t size, color_t base_color, uint32_t icon_type)
                     
                 case 3:  // Folder icon (simplified)
                     if (y < size / 3 && x >= size / 4 && x < 3 * size / 4) {
-                        // Tab part - lighter color
-                        uint16_t new_r = base_color.r + (255 - base_color.r) / 5;
-                        pixel_color.r = new_r > 255 ? 255 : (uint8_t)new_r;
+                        // Tab part - lighter color (safe calculation, cannot overflow)
+                        pixel_color.r = (uint8_t)(base_color.r + (255 - base_color.r) / 5);
                         pixel_color.g = base_color.g;
                         pixel_color.b = base_color.b;
                     } else if (y >= size / 3 && x >= size / 8 && x < 7 * size / 8) {
@@ -857,12 +860,16 @@ sprite_t* gui_create_icon(uint32_t size, color_t base_color, uint32_t icon_type)
                     
                 case 4:  // Star shape (approximated)
                     {
-                        float angle = 0.0f;
-                        if (dx != 0 || dy != 0) {
-                            // Simplified angle calculation
-                            angle = (float)dy / (float)(dx + 1);
+                        // Simplified star pattern - no division by zero risk
+                        float star_radius;
+                        if (dx == 0 && dy == 0) {
+                            star_radius = max_dist;
+                        } else {
+                            // Simple radial variation based on position
+                            float angle_factor = (float)(fabs_custom((float)dx) + fabs_custom((float)dy));
+                            star_radius = max_dist * (0.6f + 0.4f * (angle_factor / (2.0f * max_dist)));
                         }
-                        float star_radius = max_dist * (0.5f + 0.5f * (1.0f + angle * 0.3f));
+                        
                         if (dist <= star_radius) {
                             pixel_color.a = 255;
                         } else {
