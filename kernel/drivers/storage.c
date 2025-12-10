@@ -7,6 +7,7 @@
 #include "storage.h"
 #include "ahci.h"
 #include "pci.h"
+#include "nvme.h"
 #include "../core/port_io.h"
 #include <stddef.h>
 
@@ -823,191 +824,49 @@ int sata_identify(uint32_t port, uint16_t* buffer) {
     return -1;
 }
 
-/* NVMe controller structure */
-typedef struct {
-    uint32_t pci_device_id;
-    uint32_t pci_vendor_id;
-    void* bar0;  /* Memory-mapped registers */
-    uint32_t num_queues;
-    int initialized;
-} nvme_controller_t;
-
-/* Global NVMe controller state */
-static nvme_controller_t g_nvme_controller = {0};
+/* ============================================================================
+ * NVMe Driver Integration
+ * 
+ * The storage driver now uses the dedicated nvme.c driver for NVMe operations.
+ * All NVMe-specific code has been moved to kernel/drivers/nvme.c
+ * ============================================================================ */
 
 /**
  * Initialize NVMe subsystem
- * Detects NVMe controllers via PCI and sets up basic structures
+ * Wrapper that delegates to the dedicated NVMe driver
  */
 int storage_nvme_init_stub(void) {
-    /* NVMe initialization involves:
-     * 1. PCI enumeration to find NVMe controller (PCI class 0x0108)
-     * 2. Memory-mapped I/O setup for NVMe registers (BAR0)
-     * 3. Admin queue setup (submission and completion queues)
-     * 4. Controller initialization and configuration
-     * 5. I/O queue pair setup
-     * 
-     * This implementation provides basic detection and structure setup.
-     * For full NVMe support, a dedicated nvme.c driver module is recommended.
-     */
+    /* Initialize the dedicated NVMe driver */
+    nvme_init();
     
-    /* Initialize controller structure */
-    g_nvme_controller.pci_device_id = 0;
-    g_nvme_controller.pci_vendor_id = 0;
-    g_nvme_controller.bar0 = NULL;
-    g_nvme_controller.num_queues = 0;
-    g_nvme_controller.initialized = 0;
+    /* Detect and initialize NVMe controllers */
+    int controller_count = nvme_detect_controllers();
     
-    /* Real NVMe controller initialization via PCI detection */
-    
-    /* Step 1: Scan PCI bus for NVMe controllers (class 0x01, subclass 0x08) */
-    pci_device_t nvme_devices[4];
-    int nvme_count = pci_find_devices_by_class(PCI_CLASS_STORAGE, nvme_devices, 4);
-    
-    if (nvme_count > 0) {
-        /* Find NVMe device (subclass 0x08) */
-        for (int i = 0; i < nvme_count; i++) {
-            if (nvme_devices[i].subclass == PCI_SUBCLASS_STORAGE_NVME) {
-                /* Found NVMe controller */
-                g_nvme_controller.pci_vendor_id = nvme_devices[i].vendor_id;
-                g_nvme_controller.pci_device_id = nvme_devices[i].device_id;
-                
-                /* Step 2: Map BAR0 for register access (64-bit BAR) */
-                uint32_t bar0_low = nvme_devices[i].bar[0];
-                uint32_t bar0_high = nvme_devices[i].bar[1];
-                
-                /* Check if BAR is memory-mapped (bit 0 = 0) */
-                if ((bar0_low & 0x1) == 0) {
-                    /* Extract base address (bits 31:4 for memory BAR) */
-                    uint64_t bar_addr = (bar0_low & 0xFFFFFFF0);
-                    if (bar0_low & 0x4) {
-                        /* 64-bit BAR */
-                        bar_addr |= ((uint64_t)bar0_high << 32);
-                    }
-                    
-                    /* Map BAR0 to virtual address space */
-                    /* In real implementation: use memory mapping */
-                    g_nvme_controller.bar0 = (void*)bar_addr;
-                    
-                    /* Step 3: Read controller capabilities (CAP register at offset 0x00) */
-                    /* uint64_t cap = mmio_read64(bar0 + 0x00); */
-                    /* Max queue entries: (cap >> 32) & 0xFFFF */
-                    /* Doorbell stride: (cap >> 32) & 0xF */
-                    
-                    /* Step 4: Reset controller if not already reset */
-                    /* Write to CC (Configuration) register at offset 0x14 */
-                    /* Set CC.EN = 0 to disable controller */
-                    /* mmio_write32(bar0 + 0x14, 0x00000000); */
-                    
-                    /* Step 5: Wait for CSTS.RDY = 0 (controller ready to be configured) */
-                    /* Poll CSTS register at offset 0x1C */
-                    uint32_t timeout = 5000000;  /* 5 second timeout */
-                    while (timeout--) {
-                        /* uint32_t csts = mmio_read32(bar0 + 0x1C); */
-                        /* if ((csts & 0x1) == 0) break;  // RDY = 0 */
-                        if (timeout < 4999000) break;  /* Simulated */
-                    }
-                    
-                    /* Step 6: Configure Admin Queue (AQ) */
-                    /* Allocate memory for Admin Submission Queue (64 entries x 64 bytes) */
-                    /* Allocate memory for Admin Completion Queue (64 entries x 16 bytes) */
-                    /* Write base addresses to ASQ (0x28) and ACQ (0x30) registers */
-                    /* Set queue sizes in AQA register (0x24) */
-                    
-                    /* Step 7: Enable controller */
-                    /* Write to CC register: EN=1, CSS=0 (NVM command set) */
-                    /* mmio_write32(bar0 + 0x14, 0x00460001); */
-                    /* Wait for CSTS.RDY = 1 */
-                    
-                    /* Step 8: Create I/O queue pairs */
-                    /* Send Create I/O Completion Queue command to Admin Queue */
-                    /* Send Create I/O Submission Queue command to Admin Queue */
-                    
-                    g_nvme_controller.num_queues = 1;  /* 1 I/O queue pair */
-                    g_nvme_controller.initialized = 1;
-                    
-                    return 0;
-                }
-            }
-        }
-    }
-    
-    /* No NVMe controller found, return success anyway (subsystem available) */
-    return 0;
+    return (controller_count > 0) ? 0 : 0;  /* Return success if any found, or 0 anyway */
 }
 
 /**
  * Identify NVMe controller
- * Retrieves controller identification data
+ * Wrapper that delegates to the dedicated NVMe driver
  */
 int storage_nvme_identify_controller_stub(uint32_t nsid, uint8_t* buffer) {
     if (!buffer) {
         return -1;
     }
     
-    /* Check if NVMe is initialized */
-    if (!g_nvme_controller.initialized) {
-        /* Fill buffer with simulated controller data */
-        /* In real implementation, would execute NVMe IDENTIFY command */
-        
-        /* Clear buffer (4KB identify data) */
-        for (int i = 0; i < 4096; i++) {
-            buffer[i] = 0;
-        }
-        
-        /* Populate basic controller info (NVMe spec format) */
-        /* Vendor ID (bytes 0-1) */
-        buffer[0] = (g_nvme_controller.pci_vendor_id & 0xFF);
-        buffer[1] = ((g_nvme_controller.pci_vendor_id >> 8) & 0xFF);
-        
-        /* Subsystem Vendor ID (bytes 2-3) */
-        buffer[2] = (g_nvme_controller.pci_vendor_id & 0xFF);
-        buffer[3] = ((g_nvme_controller.pci_vendor_id >> 8) & 0xFF);
-        
-        /* Serial Number (bytes 4-23) - ASCII */
-        const char* serial = "AURORA-NVME-00000001";
-        for (int i = 0; i < 20 && serial[i]; i++) {
-            buffer[4 + i] = serial[i];
-        }
-        
-        /* Model Number (bytes 24-63) - ASCII */
-        const char* model = "Aurora OS NVMe Controller";
-        for (int i = 0; i < 40 && model[i]; i++) {
-            buffer[24 + i] = model[i];
-        }
-        
-        /* Firmware Revision (bytes 64-71) - ASCII */
-        const char* firmware = "1.0.0";
-        for (int i = 0; i < 8 && firmware[i]; i++) {
-            buffer[64 + i] = firmware[i];
-        }
-        
-        /* Version (bytes 80-83) - NVMe spec version (1.4 = 0x00010400) */
-        buffer[80] = 0x00;
-        buffer[81] = 0x04;
-        buffer[82] = 0x01;
-        buffer[83] = 0x00;
-        
-        return 0;
+    /* Get first NVMe controller */
+    nvme_controller_t* ctrl = nvme_get_controller(0);
+    if (!ctrl) {
+        return -1;  /* No NVMe controller available */
     }
     
-    /* NVMe IDENTIFY command execution would involve:
-     * 1. Building an Admin command (IDENTIFY CNS=0x01 for controller)
-     * 2. Allocating DMA buffer for the 4KB identify data
-     * 3. Submitting command to admin submission queue
-     * 4. Ring doorbell to notify controller
-     * 5. Waiting for completion in admin completion queue
-     * 6. Copying result to buffer
-     * 7. Checking completion status
-     */
-    
-    (void)nsid;
-    return -1;  /* Not fully implemented - use dedicated NVMe driver */
+    /* Use the dedicated NVMe driver to identify the controller */
+    return nvme_identify_controller(ctrl, buffer);
 }
 
 /**
  * Read data from NVMe namespace
- * Performs NVMe READ command
+ * Wrapper that delegates to the dedicated NVMe driver
  */
 int nvme_read(uint32_t nsid, uint64_t lba, uint32_t count, uint8_t* buffer) {
     if (!buffer || count == 0) {
@@ -1019,39 +878,19 @@ int nvme_read(uint32_t nsid, uint64_t lba, uint32_t count, uint8_t* buffer) {
         return -1;
     }
     
-    /* NVMe READ command execution would involve:
-     * 1. Allocating PRP (Physical Region Page) entries for data buffer
-     *    - PRP1 points to first memory page
-     *    - PRP2 points to PRP list for larger transfers
-     * 2. Building an I/O command structure:
-     *    - Opcode: 0x02 (Read)
-     *    - NSID: Namespace identifier
-     *    - SLBA: Starting LBA (64-bit)
-     *    - NLB: Number of logical blocks (0-based, so count-1)
-     *    - PRP1, PRP2: Memory addresses
-     * 3. Submitting command to I/O submission queue
-     * 4. Ringing doorbell register to notify controller
-     * 5. Waiting for completion entry in I/O completion queue
-     * 6. Checking status code field in completion entry
-     * 7. Updating queue head pointer
-     * 
-     * NVMe operates at block level (typically 512B or 4KB blocks)
-     * Each namespace (nsid) is like a separate disk
-     * Maximum transfer size depends on controller capabilities (MDTS field)
-     */
+    /* Get first NVMe controller */
+    nvme_controller_t* ctrl = nvme_get_controller(0);
+    if (!ctrl) {
+        return -1;  /* No NVMe controller available */
+    }
     
-    (void)nsid;
-    (void)lba;
-    (void)count;
-    
-    /* Without full NVMe controller access, return error */
-    /* A dedicated NVMe driver module should be used for real operations */
-    return -1;
+    /* Use the dedicated NVMe driver to read sectors */
+    return nvme_read_sectors(ctrl, nsid, lba, count, buffer);
 }
 
 /**
  * Write data to NVMe namespace
- * Performs NVMe WRITE command
+ * Wrapper that delegates to the dedicated NVMe driver
  */
 int nvme_write(uint32_t nsid, uint64_t lba, uint32_t count, const uint8_t* buffer) {
     if (!buffer || count == 0) {
@@ -1063,37 +902,15 @@ int nvme_write(uint32_t nsid, uint64_t lba, uint32_t count, const uint8_t* buffe
         return -1;
     }
     
-    /* NVMe WRITE command execution would involve:
-     * 1. Allocating PRP entries for data buffer
-     *    - Similar to READ, but data flows to device
-     * 2. Copying data to DMA-accessible buffer if needed
-     * 3. Building an I/O command structure:
-     *    - Opcode: 0x01 (Write)
-     *    - NSID: Namespace identifier
-     *    - SLBA: Starting LBA (64-bit)
-     *    - NLB: Number of logical blocks (0-based)
-     *    - PRP1, PRP2: Memory addresses
-     * 4. Submitting command to I/O submission queue
-     * 5. Ringing doorbell register to notify controller
-     * 6. Waiting for completion entry in I/O completion queue
-     * 7. Checking status code (write protected, capacity exceeded, etc.)
-     * 8. Updating queue head pointer
-     * 
-     * Write operations may include:
-     * - FUA (Force Unit Access) flag for bypassing cache
-     * - LR (Limited Retry) flag for time-critical writes
-     * - Dataset Management for optimization hints
-     */
+    /* Get first NVMe controller */
+    nvme_controller_t* ctrl = nvme_get_controller(0);
+    if (!ctrl) {
+        return -1;  /* No NVMe controller available */
+    }
     
-    (void)nsid;
-    (void)lba;
-    (void)count;
-    
-    /* Without full NVMe controller access, return error */
-    /* A dedicated NVMe driver module should be used for real operations */
-    return -1;
+    /* Use the dedicated NVMe driver to write sectors */
+    return nvme_write_sectors(ctrl, nsid, lba, count, buffer);
 }
-
 
 /* Utility functions */
 const char* storage_get_type_string(uint8_t type) {
