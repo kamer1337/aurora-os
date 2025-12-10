@@ -325,8 +325,6 @@ float gui_ease(float t, ease_type_t ease_type) {
             if (t == 0.0f) return 0.0f;
             if (t == 1.0f) return 1.0f;
             
-            float p = 0.3f;
-            float s = p / 4.0f;
             float post = t - 1.0f;
             
             // Simplified elastic without pow: use quadratic approximation
@@ -530,8 +528,7 @@ void gui_draw_glass_effect(int32_t x, int32_t y, uint32_t width, uint32_t height
     gui_draw_gradient(x, y, width, height, top_color, bottom_color);
     
     // Add highlight at top
-    color_t highlight = {255, 255, 255, opacity + 50};
-    if (highlight.a > 255) highlight.a = 255;
+    color_t highlight = {255, 255, 255, (uint8_t)(opacity + 50 > 255 ? 255 : opacity + 50)};
     framebuffer_draw_hline(x, x + width - 1, y, highlight);
     framebuffer_draw_hline(x, x + width - 1, y + 1, highlight);
 }
