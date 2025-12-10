@@ -71,28 +71,26 @@ int test_plugin_registration(void) {
     return 0;
 }
 
+// Test callbacks for plugin loading test
+static int load_test_init_called = 0;
+static int load_test_shutdown_called = 0;
+
+static int load_test_init(theme_plugin_t* plugin) {
+    (void)plugin;
+    load_test_init_called = 1;
+    return 0;
+}
+
+static void load_test_shutdown(theme_plugin_t* plugin) {
+    (void)plugin;
+    load_test_shutdown_called = 1;
+}
+
 int test_plugin_loading(void) {
     printf("[TEST] Plugin Loading\n");
     
     // Initialize plugin system
     theme_plugin_system_init();
-    
-    // Flag to track init/shutdown calls
-    static int init_called = 0;
-    static int shutdown_called = 0;
-    
-    // Init callback
-    static int test_init(theme_plugin_t* plugin) {
-        (void)plugin;
-        init_called = 1;
-        return 0;
-    }
-    
-    // Shutdown callback
-    static void test_shutdown(theme_plugin_t* plugin) {
-        (void)plugin;
-        shutdown_called = 1;
-    }
     
     // Create test plugin with callbacks
     static theme_plugin_t test_plugin = {
@@ -103,8 +101,8 @@ int test_plugin_loading(void) {
         .api_version = THEME_PLUGIN_API_VERSION,
         .type = PLUGIN_TYPE_THEME,
         .status = PLUGIN_STATUS_UNLOADED,
-        .init = test_init,
-        .shutdown = test_shutdown,
+        .init = load_test_init,
+        .shutdown = load_test_shutdown,
         .get_theme = NULL,
         .private_data = NULL,
         .effects = NULL,
@@ -116,17 +114,17 @@ int test_plugin_loading(void) {
     TEST_ASSERT(result == 0, "Plugin registration failed");
     
     // Load plugin
-    init_called = 0;
+    load_test_init_called = 0;
     result = theme_plugin_load(&test_plugin);
     TEST_ASSERT(result == 0, "Plugin load failed");
-    TEST_ASSERT(init_called == 1, "Init callback not called");
+    TEST_ASSERT(load_test_init_called == 1, "Init callback not called");
     TEST_ASSERT(test_plugin.status == PLUGIN_STATUS_LOADED, "Plugin status incorrect");
     
     // Unload plugin
-    shutdown_called = 0;
+    load_test_shutdown_called = 0;
     result = theme_plugin_unload(&test_plugin);
     TEST_ASSERT(result == 0, "Plugin unload failed");
-    TEST_ASSERT(shutdown_called == 1, "Shutdown callback not called");
+    TEST_ASSERT(load_test_shutdown_called == 1, "Shutdown callback not called");
     TEST_ASSERT(test_plugin.status == PLUGIN_STATUS_UNLOADED, "Plugin status incorrect");
     
     // Cleanup
@@ -174,21 +172,20 @@ int test_plugin_activation(void) {
     return 0;
 }
 
+// Test effect callback
+static int effect_test_rendered = 0;
+
+static void effect_test_render(int32_t x, int32_t y, uint32_t width, uint32_t height,
+                               void* params, void* user_data) {
+    (void)x; (void)y; (void)width; (void)height; (void)params; (void)user_data;
+    effect_test_rendered = 1;
+}
+
 int test_plugin_effects(void) {
     printf("[TEST] Plugin Effects\n");
     
     // Initialize plugin system
     theme_plugin_system_init();
-    
-    // Flag to track effect render call
-    static int effect_rendered = 0;
-    
-    // Test effect renderer
-    static void test_effect_render(int32_t x, int32_t y, uint32_t width, uint32_t height,
-                                   void* params, void* user_data) {
-        (void)x; (void)y; (void)width; (void)height; (void)params; (void)user_data;
-        effect_rendered = 1;
-    }
     
     // Create test plugin
     static theme_plugin_t test_plugin = {
@@ -211,7 +208,7 @@ int test_plugin_effects(void) {
     static plugin_effect_t test_effect = {
         .name = "test_effect",
         .description = "Test effect",
-        .render = test_effect_render,
+        .render = effect_test_render,
         .user_data = NULL,
         .next = NULL
     };
@@ -229,10 +226,10 @@ int test_plugin_effects(void) {
     TEST_ASSERT(found == &test_effect, "Effect not found");
     
     // Render effect
-    effect_rendered = 0;
+    effect_test_rendered = 0;
     result = theme_plugin_render_effect(&test_plugin, "test_effect", 0, 0, 100, 100, NULL);
     TEST_ASSERT(result == 0, "Effect render failed");
-    TEST_ASSERT(effect_rendered == 1, "Effect render callback not called");
+    TEST_ASSERT(effect_test_rendered == 1, "Effect render callback not called");
     
     // Unregister effect
     result = theme_plugin_unregister_effect(&test_plugin, "test_effect");

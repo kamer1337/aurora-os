@@ -94,7 +94,8 @@ int gui_5d_renderer_render_layer(render_layer_5d_t* layer) {
     
     // Calculate depth-based effects
     float depth = clamp_float(layer->depth, 0.0f, 1.0f);
-    float opacity = clamp_float(layer->opacity, 0.0f, 1.0f);
+    // Note: opacity is part of layer struct but not used in current rendering
+    // It's available for future enhancements
     
     // Apply depth fog if enabled
     if (renderer_context.enable_depth_fog) {
