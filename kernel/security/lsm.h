@@ -346,4 +346,11 @@ int capability_module_init(void);
 int selinux_stub_init(void);
 int apparmor_stub_init(void);
 
+/* Enhanced security policy management */
+int lsm_get_module_count(void);
+int lsm_list_modules(char* buffer, size_t buffer_size);
+int lsm_get_module_status(const char* name, int* enabled, int* hook_count);
+int lsm_set_enforcing_mode(const char* module_name, int enforcing);
+int lsm_get_enforcing_mode(const char* module_name);
+
 #endif /* AURORA_LSM_H */

@@ -6,6 +6,8 @@
 
 #include "storage.h"
 #include "ahci.h"
+#include "pci.h"
+#include "nvme.h"
 #include "../core/port_io.h"
 #include <stddef.h>
 
@@ -822,85 +824,92 @@ int sata_identify(uint32_t port, uint16_t* buffer) {
     return -1;
 }
 
-/* NVMe-specific stub functions (for legacy compatibility) */
+/* ============================================================================
+ * NVMe Driver Integration
+ * 
+ * The storage driver now uses the dedicated nvme.c driver for NVMe operations.
+ * All NVMe-specific code has been moved to kernel/drivers/nvme.c
+ * ============================================================================ */
+
+/**
+ * Initialize NVMe subsystem
+ * Wrapper that delegates to the dedicated NVMe driver
+ */
 int storage_nvme_init_stub(void) {
-    /* NVMe initialization requires:
-     * 1. PCI enumeration to find NVMe controller
-     * 2. Memory-mapped I/O setup for NVMe registers
-     * 3. Admin queue setup (submission and completion queues)
-     * 4. Controller initialization and configuration
-     * 5. I/O queue pair setup
-     * 
-     * This is a complex operation that requires:
-     * - PCI configuration space access
-     * - Physical memory management for queue buffers
-     * - Interrupt handling for completion notifications
-     * 
-     * This returns 0 to indicate the subsystem is available.
-     * Full NVMe support is provided by the nvme.c driver module. */
-    return 0;
+    /* Initialize the dedicated NVMe driver */
+    nvme_init();
+    
+    /* Detect and initialize NVMe controllers */
+    int controller_count = nvme_detect_controllers();
+    
+    return (controller_count > 0) ? 0 : 0;  /* Return success if any found, or 0 anyway */
 }
 
+/**
+ * Identify NVMe controller
+ * Wrapper that delegates to the dedicated NVMe driver
+ */
 int storage_nvme_identify_controller_stub(uint32_t nsid, uint8_t* buffer) {
     if (!buffer) {
         return -1;
     }
     
-    /* NVMe IDENTIFY command would involve:
-     * 1. Building an Admin command (IDENTIFY CNS=0x01)
-     * 2. Allocating DMA buffer for the 4KB identify data
-     * 3. Submitting to admin submission queue
-     * 4. Waiting for completion in admin completion queue
-     * 5. Copying result to buffer
-     * 
-     * This stub returns error to indicate the nvme.c driver module
-     * should be used directly for NVMe operations. */
-    (void)nsid;
-    return -1;
+    /* Get first NVMe controller */
+    nvme_controller_t* ctrl = nvme_get_controller(0);
+    if (!ctrl) {
+        return -1;  /* No NVMe controller available */
+    }
+    
+    /* Use the dedicated NVMe driver to identify the controller */
+    return nvme_identify_controller(ctrl, buffer);
 }
 
+/**
+ * Read data from NVMe namespace
+ * Wrapper that delegates to the dedicated NVMe driver
+ */
 int nvme_read(uint32_t nsid, uint64_t lba, uint32_t count, uint8_t* buffer) {
     if (!buffer || count == 0) {
         return -1;
     }
     
-    /* NVMe READ command would involve:
-     * 1. Allocating PRP (Physical Region Page) entries for data buffer
-     * 2. Building an I/O command (READ opcode=0x02)
-     * 3. Setting starting LBA and number of blocks
-     * 4. Submitting to I/O submission queue
-     * 5. Waiting for completion
-     * 6. Checking status and copying data
-     * 
-     * NVMe operates at block level (typically 4KB blocks)
-     * Each namespace (nsid) is like a separate disk
-     * 
-     * Without full NVMe implementation, return error */
-    (void)nsid;
-    (void)lba;
-    (void)count;
-    return -1;
+    /* Validate namespace ID */
+    if (nsid == 0 || nsid > 0xFFFFFFFF) {
+        return -1;
+    }
+    
+    /* Get first NVMe controller */
+    nvme_controller_t* ctrl = nvme_get_controller(0);
+    if (!ctrl) {
+        return -1;  /* No NVMe controller available */
+    }
+    
+    /* Use the dedicated NVMe driver to read sectors */
+    return nvme_read_sectors(ctrl, nsid, lba, count, buffer);
 }
 
+/**
+ * Write data to NVMe namespace
+ * Wrapper that delegates to the dedicated NVMe driver
+ */
 int nvme_write(uint32_t nsid, uint64_t lba, uint32_t count, const uint8_t* buffer) {
     if (!buffer || count == 0) {
         return -1;
     }
     
-    /* NVMe WRITE command would involve:
-     * 1. Allocating PRP entries for data buffer
-     * 2. Building an I/O command (WRITE opcode=0x01)
-     * 3. Setting starting LBA and number of blocks
-     * 4. Copying data to DMA buffer
-     * 5. Submitting to I/O submission queue
-     * 6. Waiting for completion
-     * 7. Checking status
-     * 
-     * Without full NVMe implementation, return error */
-    (void)nsid;
-    (void)lba;
-    (void)count;
-    return -1;
+    /* Validate namespace ID */
+    if (nsid == 0 || nsid > 0xFFFFFFFF) {
+        return -1;
+    }
+    
+    /* Get first NVMe controller */
+    nvme_controller_t* ctrl = nvme_get_controller(0);
+    if (!ctrl) {
+        return -1;  /* No NVMe controller available */
+    }
+    
+    /* Use the dedicated NVMe driver to write sectors */
+    return nvme_write_sectors(ctrl, nsid, lba, count, buffer);
 }
 
 /* Utility functions */

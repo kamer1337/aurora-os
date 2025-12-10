@@ -506,59 +506,6 @@ static int launch_settings(void) {
     applications[APP_SETTINGS].window = window;
     return 0;
 }
-    storage_init();
-    int device_count = storage_detect_devices();
-    
-    char storage_text[48];
-    int pos = 0;
-    const char* prefix = "  Devices Detected: ";
-    while (*prefix) storage_text[pos++] = *prefix++;
-    storage_text[pos++] = '0' + device_count;
-    storage_text[pos] = '\0';
-    gui_create_label(window, storage_text, 50, 235);
-    
-    if (device_count > 0) {
-        storage_device_t* device = storage_get_device(0);
-        if (device) {
-            /* Show first device as primary */
-            char primary_text[64];
-            pos = 0;
-            const char* prim_prefix = "  Primary Drive: ";
-            while (*prim_prefix) primary_text[pos++] = *prim_prefix++;
-            const char* type_str = storage_get_type_string(device->type);
-            while (*type_str) primary_text[pos++] = *type_str++;
-            primary_text[pos++] = ' ';
-            uint32_t cap = (uint32_t)storage_get_capacity_gb(device);
-            if (cap >= 100) primary_text[pos++] = '0' + (cap / 100);
-            if (cap >= 10) primary_text[pos++] = '0' + ((cap / 10) % 10);
-            primary_text[pos++] = '0' + (cap % 10);
-            primary_text[pos++] = 'G';
-            primary_text[pos++] = 'B';
-            primary_text[pos] = '\0';
-            gui_create_label(window, primary_text, 50, 255);
-        }
-    }
-    
-    gui_create_button(window, "Manage Storage", 50, 285, 140, 30);
-    
-    /* Network Settings Section */
-    gui_create_label(window, "Network Settings", 30, 335);
-    gui_create_label(window, "  Network Interface: Enabled", 50, 360);
-    gui_create_label(window, "  Status: Not Connected", 50, 380);
-    
-    /* Power Settings Section */
-    gui_create_label(window, "Power Settings", 30, 420);
-    gui_create_label(window, "  Power Mode: Balanced", 50, 445);
-    
-    /* Action buttons */
-    gui_create_button(window, "Apply", 30, 450, 80, 30);
-    gui_create_button(window, "Close", 440, 450, 80, 30);
-    
-    gui_show_window(window);
-    gui_focus_window(window);
-    
-    return 0;
-}
 
 static int launch_system_info(void) {
     window_t* window = gui_create_window("System Information", 200, 150, 500, 400);
