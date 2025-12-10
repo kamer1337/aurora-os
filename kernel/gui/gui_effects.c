@@ -129,6 +129,43 @@ void gui_draw_gradient(int32_t x, int32_t y, uint32_t width, uint32_t height,
     }
 }
 
+void gui_draw_gradient_horizontal(int32_t x, int32_t y, uint32_t width, uint32_t height,
+                                   color_t color1, color_t color2) {
+    for (uint32_t dx = 0; dx < width; dx++) {
+        float t = (float)dx / (float)width;
+        
+        color_t line_color;
+        line_color.r = (uint8_t)(color1.r + (color2.r - color1.r) * t);
+        line_color.g = (uint8_t)(color1.g + (color2.g - color1.g) * t);
+        line_color.b = (uint8_t)(color1.b + (color2.b - color1.b) * t);
+        line_color.a = 255;
+        
+        framebuffer_draw_vline(x + dx, y, y + height - 1, line_color);
+    }
+}
+
+void gui_draw_gradient_radial(int32_t x, int32_t y, uint32_t radius,
+                               color_t color1, color_t color2) {
+    int32_t r_squared = (int32_t)(radius * radius);
+    
+    for (int32_t dy = -(int32_t)radius; dy <= (int32_t)radius; dy++) {
+        for (int32_t dx = -(int32_t)radius; dx <= (int32_t)radius; dx++) {
+            int32_t dist_squared = dx * dx + dy * dy;
+            
+            if (dist_squared <= r_squared) {
+                float dist = sqrt_custom((float)dist_squared);
+                float t = dist / (float)radius;
+                
+                // Clamp t
+                if (t > 1.0f) t = 1.0f;
+                
+                color_t pixel_color = gui_color_lerp(color1, color2, t);
+                framebuffer_draw_pixel(x + dx, y + dy, pixel_color);
+            }
+        }
+    }
+}
+
 void gui_draw_rounded_rect(int32_t x, int32_t y, uint32_t width, uint32_t height,
                            uint32_t radius, color_t color) {
     if (radius > width / 2) radius = width / 2;
@@ -180,6 +217,62 @@ void gui_draw_rounded_rect(int32_t x, int32_t y, uint32_t width, uint32_t height
             int32_t dy = cy;
             if (dx * dx + dy * dy <= (int32_t)(radius * radius)) {
                 framebuffer_draw_pixel(x + width - radius + cx, y + height - radius + cy, color);
+            }
+        }
+    }
+}
+
+void gui_draw_rounded_rect_alpha(int32_t x, int32_t y, uint32_t width, uint32_t height,
+                                  uint32_t radius, color_t color) {
+    if (radius > width / 2) radius = width / 2;
+    if (radius > height / 2) radius = height / 2;
+    
+    // Draw main body with alpha
+    gui_draw_rect_alpha(x + radius, y, width - 2 * radius, height, color);
+    gui_draw_rect_alpha(x, y + radius, radius, height - 2 * radius, color);
+    gui_draw_rect_alpha(x + width - radius, y + radius, radius, height - 2 * radius, color);
+    
+    // Draw rounded corners with alpha
+    // Top-left corner
+    for (uint32_t cy = 0; cy < radius; cy++) {
+        for (uint32_t cx = 0; cx < radius; cx++) {
+            int32_t dx = radius - cx;
+            int32_t dy = radius - cy;
+            if (dx * dx + dy * dy <= (int32_t)(radius * radius)) {
+                gui_draw_pixel_alpha(x + cx, y + cy, color);
+            }
+        }
+    }
+    
+    // Top-right corner
+    for (uint32_t cy = 0; cy < radius; cy++) {
+        for (uint32_t cx = 0; cx < radius; cx++) {
+            int32_t dx = cx;
+            int32_t dy = radius - cy;
+            if (dx * dx + dy * dy <= (int32_t)(radius * radius)) {
+                gui_draw_pixel_alpha(x + width - radius + cx, y + cy, color);
+            }
+        }
+    }
+    
+    // Bottom-left corner
+    for (uint32_t cy = 0; cy < radius; cy++) {
+        for (uint32_t cx = 0; cx < radius; cx++) {
+            int32_t dx = radius - cx;
+            int32_t dy = cy;
+            if (dx * dx + dy * dy <= (int32_t)(radius * radius)) {
+                gui_draw_pixel_alpha(x + cx, y + height - radius + cy, color);
+            }
+        }
+    }
+    
+    // Bottom-right corner
+    for (uint32_t cy = 0; cy < radius; cy++) {
+        for (uint32_t cx = 0; cx < radius; cx++) {
+            int32_t dx = cx;
+            int32_t dy = cy;
+            if (dx * dx + dy * dy <= (int32_t)(radius * radius)) {
+                gui_draw_pixel_alpha(x + width - radius + cx, y + height - radius + cy, color);
             }
         }
     }
@@ -635,5 +728,251 @@ void gui_destroy_sprite(sprite_t* sprite) {
     // For now with static pool, just mark as unused (simplified)
     if (sprite) {
         sprite->pixels = 0;
+    }
+}
+
+// ============================================================================
+// Layered Window Rendering - 5D Depth
+// ============================================================================
+
+void gui_draw_window_with_depth(int32_t x, int32_t y, uint32_t width, uint32_t height,
+                                 float depth_offset, color_t color, const char* title) {
+    // Clamp depth to [0, 1]
+    if (depth_offset < 0.0f) depth_offset = 0.0f;
+    if (depth_offset > 1.0f) depth_offset = 1.0f;
+    
+    // Calculate depth effects
+    float scale = 1.0f - (depth_offset * 0.3f);  // Scale from 1.0 to 0.7
+    uint8_t alpha = (uint8_t)(255 - (depth_offset * 100));  // Alpha from 255 to 155
+    
+    // Apply perspective offset (windows further back appear lower and to the right)
+    int32_t offset_x = (int32_t)(depth_offset * 30);
+    int32_t offset_y = (int32_t)(depth_offset * 20);
+    
+    // Scaled dimensions
+    uint32_t scaled_width = (uint32_t)(width * scale);
+    uint32_t scaled_height = (uint32_t)(height * scale);
+    
+    // Adjusted position
+    int32_t draw_x = x + offset_x;
+    int32_t draw_y = y + offset_y;
+    
+    // Draw shadow with reduced intensity for background windows
+    uint32_t shadow_offset = (uint32_t)(5 * scale);
+    uint32_t shadow_blur = (uint32_t)(8 * scale);
+    gui_draw_shadow(draw_x, draw_y, scaled_width, scaled_height, shadow_offset, shadow_blur);
+    
+    // Draw window with rounded corners and transparency
+    color_t window_color = color;
+    window_color.a = alpha;
+    gui_draw_rounded_rect_alpha(draw_x, draw_y, scaled_width, scaled_height, 12, window_color);
+    
+    // Draw titlebar with gradient
+    uint32_t title_height = (uint32_t)(24 * scale);
+    color_t title_color1 = {70, 130, 220, alpha};
+    color_t title_color2 = {40, 90, 180, alpha};
+    
+    // Draw titlebar background with rounded top corners
+    gui_draw_gradient(draw_x + 1, draw_y + 1, scaled_width - 2, title_height, 
+                     title_color1, title_color2);
+    
+    // Draw title text if provided (scale text is complex, so simplified)
+    if (title && depth_offset < 0.5f) {  // Only draw text for front windows
+        framebuffer_draw_string(draw_x + 8, draw_y + 8, title, 
+                              COLOR_WHITE, title_color1);
+    }
+    
+    // Draw subtle glow for foreground windows
+    if (depth_offset < 0.3f) {
+        color_t glow_color = {100, 150, 255, (uint8_t)(50 * (1.0f - depth_offset))};
+        gui_draw_glow(draw_x, draw_y, scaled_width, scaled_height, glow_color, 3);
+    }
+}
+
+// ============================================================================
+// 5D Icon System with Depth
+// ============================================================================
+
+sprite_t* gui_create_icon(uint32_t size, color_t base_color, uint32_t icon_type) {
+    if (size < 8 || size > 128) return 0;
+    
+    // Allocate pixel data
+    uint32_t* pixels = (uint32_t*)kmalloc(size * size * sizeof(uint32_t));
+    if (!pixels) return 0;
+    
+    // Generate icon based on type
+    for (uint32_t y = 0; y < size; y++) {
+        for (uint32_t x = 0; x < size; x++) {
+            uint32_t idx = y * size + x;
+            color_t pixel_color = base_color;
+            
+            // Calculate distance from center
+            int32_t cx = (int32_t)(size / 2);
+            int32_t cy = (int32_t)(size / 2);
+            int32_t dx = (int32_t)x - cx;
+            int32_t dy = (int32_t)y - cy;
+            float dist = sqrt_custom((float)(dx * dx + dy * dy));
+            float max_dist = (float)(size / 2);
+            
+            switch (icon_type % 10) {
+                case 0:  // Circular icon with gradient
+                    if (dist <= max_dist) {
+                        float t = dist / max_dist;
+                        pixel_color.r = (uint8_t)(base_color.r * (1.0f - t * 0.5f));
+                        pixel_color.g = (uint8_t)(base_color.g * (1.0f - t * 0.5f));
+                        pixel_color.b = (uint8_t)(base_color.b * (1.0f - t * 0.5f));
+                        pixel_color.a = 255;
+                    } else {
+                        pixel_color.a = 0;  // Transparent outside circle
+                    }
+                    break;
+                    
+                case 1:  // Square icon with border
+                    if (x < 4 || x >= size - 4 || y < 4 || y >= size - 4) {
+                        pixel_color.r = (uint8_t)(base_color.r * 0.7f);
+                        pixel_color.g = (uint8_t)(base_color.g * 0.7f);
+                        pixel_color.b = (uint8_t)(base_color.b * 0.7f);
+                    }
+                    pixel_color.a = 255;
+                    break;
+                    
+                case 2:  // Diamond shape
+                    if (fabs_custom((float)dx) + fabs_custom((float)dy) <= max_dist) {
+                        pixel_color.a = 255;
+                    } else {
+                        pixel_color.a = 0;
+                    }
+                    break;
+                    
+                case 3:  // Folder icon (simplified)
+                    if (y < size / 3 && x >= size / 4 && x < 3 * size / 4) {
+                        pixel_color.r = (uint8_t)(base_color.r * 1.2f);
+                        if (pixel_color.r < base_color.r) pixel_color.r = 255;
+                    } else if (y >= size / 3 && x >= size / 8 && x < 7 * size / 8) {
+                        pixel_color.a = 255;
+                    } else {
+                        pixel_color.a = 0;
+                    }
+                    break;
+                    
+                case 4:  // Star shape (approximated)
+                    {
+                        float angle = 0.0f;
+                        if (dx != 0 || dy != 0) {
+                            // Simplified angle calculation
+                            angle = (float)dy / (float)(dx + 1);
+                        }
+                        float star_radius = max_dist * (0.5f + 0.5f * (1.0f + angle * 0.3f));
+                        if (dist <= star_radius) {
+                            pixel_color.a = 255;
+                        } else {
+                            pixel_color.a = 0;
+                        }
+                    }
+                    break;
+                    
+                default:  // Default: circular with radial gradient
+                    if (dist <= max_dist) {
+                        float t = dist / max_dist;
+                        color_t edge_color = {
+                            (uint8_t)(base_color.r * 0.6f),
+                            (uint8_t)(base_color.g * 0.6f),
+                            (uint8_t)(base_color.b * 0.6f),
+                            255
+                        };
+                        pixel_color = gui_color_lerp(base_color, edge_color, t);
+                    } else {
+                        pixel_color.a = 0;
+                    }
+                    break;
+            }
+            
+            // Pack RGBA into uint32_t (R G B A format as expected by sprite drawing)
+            pixels[idx] = ((uint32_t)pixel_color.r << 24) | 
+                         ((uint32_t)pixel_color.g << 16) | 
+                         ((uint32_t)pixel_color.b << 8) | 
+                         (uint32_t)pixel_color.a;
+        }
+    }
+    
+    return gui_create_sprite(size, size, pixels);
+}
+
+void gui_draw_icon_5d(sprite_t* sprite, int32_t x, int32_t y, 
+                      icon_depth_level_t depth, uint8_t hover) {
+    if (!sprite) return;
+    
+    // Depth scaling factors
+    float scale = 1.0f;
+    uint8_t base_alpha = 255;
+    int32_t offset_x = 0;
+    int32_t offset_y = 0;
+    
+    switch (depth) {
+        case ICON_DEPTH_FOREGROUND:
+            scale = 1.0f;
+            base_alpha = 255;
+            break;
+        case ICON_DEPTH_NORMAL:
+            scale = 0.9f;
+            base_alpha = 230;
+            offset_x = 5;
+            offset_y = 3;
+            break;
+        case ICON_DEPTH_BACKGROUND:
+            scale = 0.8f;
+            base_alpha = 200;
+            offset_x = 10;
+            offset_y = 6;
+            break;
+        case ICON_DEPTH_FAR:
+            scale = 0.7f;
+            base_alpha = 170;
+            offset_x = 15;
+            offset_y = 9;
+            break;
+    }
+    
+    // Hover effects
+    if (hover) {
+        scale *= 1.1f;  // Slightly enlarge on hover
+        
+        // Draw glow effect
+        color_t glow_color = {200, 220, 255, 150};
+        uint32_t glow_size = (uint32_t)(sprite->width * scale * 0.2f);
+        gui_draw_glow(x + offset_x - glow_size, y + offset_y - glow_size,
+                     (uint32_t)(sprite->width * scale) + 2 * glow_size,
+                     (uint32_t)(sprite->height * scale) + 2 * glow_size,
+                     glow_color, 5);
+        
+        // Emit particles on hover
+        if (depth == ICON_DEPTH_FOREGROUND) {
+            static uint32_t hover_particle_timer = 0;
+            hover_particle_timer++;
+            if (hover_particle_timer % 10 == 0) {  // Emit every 10 frames
+                color_t particle_color = {255, 220, 100, 255};
+                gui_emit_particles(x + sprite->width / 2, y + sprite->height / 2, 3, particle_color);
+            }
+        }
+    }
+    
+    // Draw shadow based on depth
+    uint32_t shadow_offset = (uint32_t)(3 * scale);
+    uint32_t shadow_blur = (uint32_t)(5 * scale);
+    if (depth == ICON_DEPTH_FOREGROUND) {
+        gui_draw_shadow(x + offset_x, y + offset_y,
+                       (uint32_t)(sprite->width * scale),
+                       (uint32_t)(sprite->height * scale),
+                       shadow_offset, shadow_blur);
+    }
+    
+    // Draw the icon sprite with scaling and alpha
+    if (scale == 1.0f && base_alpha == 255) {
+        gui_draw_sprite(sprite, x + offset_x, y + offset_y);
+    } else if (scale == 1.0f) {
+        gui_draw_sprite_alpha(sprite, x + offset_x, y + offset_y, base_alpha);
+    } else {
+        // Draw scaled with alpha
+        gui_draw_sprite_scaled(sprite, x + offset_x, y + offset_y, scale, scale);
     }
 }
