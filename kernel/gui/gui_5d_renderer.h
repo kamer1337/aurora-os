@@ -30,7 +30,7 @@ typedef struct {
     uint32_t width;
     uint32_t height;
     float depth;                // 0.0 = front, 1.0 = back
-    float opacity;              // 0.0 = transparent, 1.0 = opaque
+    float opacity;              // 0.0 = transparent, 1.0 = opaque (reserved for future use)
     color_t tint;
     void* content;              // Layer content (window, widget, etc.)
 } render_layer_5d_t;
