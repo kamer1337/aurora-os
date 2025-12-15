@@ -140,4 +140,9 @@ static inline size_t platform_strlen(const char* str) {
     return len;
 }
 
+#ifndef AURORA_STANDALONE
+/* Forward declaration - implementation in platform_util.c */
+uint32_t platform_get_timestamp(void);
+#endif
+
 #endif /* PLATFORM_UTIL_H */

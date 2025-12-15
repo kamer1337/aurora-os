@@ -22,8 +22,11 @@ typedef enum {
     DESKTOP_WIDGET_CUSTOM
 } desktop_widget_type_t;
 
+// Forward declaration
+typedef struct desktop_widget_s desktop_widget_t;
+
 // Desktop widget structure
-typedef struct {
+struct desktop_widget_s {
     desktop_widget_type_t type;
     char title[64];
     rect_t bounds;
@@ -32,12 +35,10 @@ typedef struct {
     uint8_t draggable;
     color_t bg_color;
     void* data;  // Widget-specific data
-    void (*update)(struct desktop_widget_s* widget);
-    void (*render)(struct desktop_widget_s* widget);
-    void (*on_click)(struct desktop_widget_s* widget, int32_t x, int32_t y);
-} desktop_widget_s;
-
-typedef struct desktop_widget_s desktop_widget_t;
+    void (*update)(desktop_widget_t* widget);
+    void (*render)(desktop_widget_t* widget);
+    void (*on_click)(desktop_widget_t* widget, int32_t x, int32_t y);
+};
 
 /**
  * Initialize desktop widget system
