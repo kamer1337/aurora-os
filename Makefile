@@ -45,12 +45,12 @@ endif
 
 # Compiler flags - GCC 15.2 compatible with optimizations
 ifeq ($(ARCH),64)
-CFLAGS = -Wall -Wextra -Wno-attributes -nostdlib -ffreestanding -m64 -fno-pie -mcmodel=large -O2 -fno-strict-aliasing -fno-builtin-memcpy -fno-builtin-memset
+CFLAGS = -Wall -Wextra -Wno-attributes -nostdlib -ffreestanding -m64 -fno-pie -mcmodel=large -O2 -fno-strict-aliasing -fno-builtin-memcpy -fno-builtin-memset -D_FORTIFY_SOURCE=0
 ASFLAGS = -f elf64
 LDFLAGS = -m elf_x86_64 -nostdlib
 LINKER_SCRIPT = linker64.ld
 else
-CFLAGS = -Wall -Wextra -Wno-attributes -nostdlib -ffreestanding -m32 -fno-pie -O2 -fno-strict-aliasing -fno-builtin-memcpy -fno-builtin-memset
+CFLAGS = -Wall -Wextra -Wno-attributes -nostdlib -ffreestanding -m32 -fno-pie -O2 -fno-strict-aliasing -fno-builtin-memcpy -fno-builtin-memset -D_FORTIFY_SOURCE=0
 ASFLAGS = -f elf32
 LDFLAGS = -m elf_i386 -nostdlib
 LINKER_SCRIPT = linker.ld
