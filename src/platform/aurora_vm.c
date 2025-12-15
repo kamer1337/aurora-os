@@ -2425,8 +2425,11 @@ int aurora_vm_snapshot_create(const AuroraVM *vm, aurora_vm_snapshot_t *snapshot
     /* Set metadata */
     snapshot->magic = AURORA_SNAPSHOT_MAGIC;
     snapshot->version = AURORA_SNAPSHOT_VERSION;
-    /* TODO: Implement get_system_timestamp() for proper timestamp */
-    snapshot->timestamp = 0;  /* Would use real timestamp */
+    #ifndef AURORA_STANDALONE
+    snapshot->timestamp = platform_get_timestamp();
+    #else
+    snapshot->timestamp = 0;  /* Standalone builds don't have timer */
+    #endif
     
     if (description) {
         platform_strncpy(snapshot->description, description, 

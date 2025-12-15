@@ -7,7 +7,7 @@
 #include "../kernel/gui/theme_plugins_examples.h"
 #include "../kernel/gui/gui_5d_renderer.h"
 #include "../kernel/gui/theme_manager.h"
-#include <stdio.h>
+#include "../kernel/drivers/vga.h"
 
 // Test helper
 static int test_passed = 0;
@@ -16,7 +16,11 @@ static int test_failed = 0;
 #define TEST_ASSERT(condition, message) \
     do { \
         if (!(condition)) { \
-            printf("[FAIL] %s: %s\n", __FUNCTION__, message); \
+            vga_write("[FAIL] "); \
+            vga_write(__FUNCTION__); \
+            vga_write(": "); \
+            vga_write(message); \
+            vga_write("\n"); \
             test_failed++; \
             return -1; \
         } \
@@ -24,7 +28,7 @@ static int test_failed = 0;
     } while(0)
 
 int test_plugin_registration(void) {
-    printf("[TEST] Plugin Registration\n");
+    vga_write("[TEST] Plugin Registration\n");
     
     // Initialize plugin system
     int result = theme_plugin_system_init();
@@ -67,7 +71,7 @@ int test_plugin_registration(void) {
     found = theme_plugin_get_by_name("TestPlugin");
     TEST_ASSERT(found == NULL, "Plugin should be removed");
     
-    printf("[PASS] Plugin Registration\n");
+    vga_write("[PASS] Plugin Registration\n");
     return 0;
 }
 
@@ -87,7 +91,7 @@ static void load_test_shutdown(theme_plugin_t* plugin) {
 }
 
 int test_plugin_loading(void) {
-    printf("[TEST] Plugin Loading\n");
+    vga_write("[TEST] Plugin Loading\n");
     
     // Initialize plugin system
     theme_plugin_system_init();
@@ -130,12 +134,12 @@ int test_plugin_loading(void) {
     // Cleanup
     theme_plugin_unregister(&test_plugin);
     
-    printf("[PASS] Plugin Loading\n");
+    vga_write("[PASS] Plugin Loading\n");
     return 0;
 }
 
 int test_plugin_activation(void) {
-    printf("[TEST] Plugin Activation\n");
+    vga_write("[TEST] Plugin Activation\n");
     
     // Initialize systems
     theme_plugin_system_init();
@@ -168,7 +172,7 @@ int test_plugin_activation(void) {
     // Cleanup
     theme_plugins_examples_shutdown();
     
-    printf("[PASS] Plugin Activation\n");
+    vga_write("[PASS] Plugin Activation\n");
     return 0;
 }
 
@@ -182,7 +186,7 @@ static void effect_test_render(int32_t x, int32_t y, uint32_t width, uint32_t he
 }
 
 int test_plugin_effects(void) {
-    printf("[TEST] Plugin Effects\n");
+    vga_write("[TEST] Plugin Effects\n");
     
     // Initialize plugin system
     theme_plugin_system_init();
@@ -242,12 +246,12 @@ int test_plugin_effects(void) {
     // Cleanup
     theme_plugin_unregister(&test_plugin);
     
-    printf("[PASS] Plugin Effects\n");
+    vga_write("[PASS] Plugin Effects\n");
     return 0;
 }
 
 int test_example_plugins(void) {
-    printf("[TEST] Example Plugins\n");
+    vga_write("[TEST] Example Plugins\n");
     
     // Initialize systems
     theme_plugin_system_init();
@@ -281,12 +285,12 @@ int test_example_plugins(void) {
     // Cleanup
     theme_plugins_examples_shutdown();
     
-    printf("[PASS] Example Plugins\n");
+    vga_write("[PASS] Example Plugins\n");
     return 0;
 }
 
 int test_5d_renderer_init(void) {
-    printf("[TEST] 5D Renderer Initialization\n");
+    vga_write("[TEST] 5D Renderer Initialization\n");
     
     // Initialize renderer
     int result = gui_5d_renderer_init();
@@ -317,12 +321,12 @@ int test_5d_renderer_init(void) {
     // Shutdown
     gui_5d_renderer_shutdown();
     
-    printf("[PASS] 5D Renderer Initialization\n");
+    vga_write("[PASS] 5D Renderer Initialization\n");
     return 0;
 }
 
 int test_5d_renderer_layers(void) {
-    printf("[TEST] 5D Renderer Layers\n");
+    vga_write("[TEST] 5D Renderer Layers\n");
     
     // Initialize renderer
     gui_5d_renderer_init();
@@ -355,12 +359,12 @@ int test_5d_renderer_layers(void) {
     // Shutdown
     gui_5d_renderer_shutdown();
     
-    printf("[PASS] 5D Renderer Layers\n");
+    vga_write("[PASS] 5D Renderer Layers\n");
     return 0;
 }
 
 int test_5d_renderer_plugin_integration(void) {
-    printf("[TEST] 5D Renderer Plugin Integration\n");
+    vga_write("[TEST] 5D Renderer Plugin Integration\n");
     
     // Initialize systems
     theme_plugin_system_init();
@@ -384,12 +388,12 @@ int test_5d_renderer_plugin_integration(void) {
     theme_plugins_examples_shutdown();
     gui_5d_renderer_shutdown();
     
-    printf("[PASS] 5D Renderer Plugin Integration\n");
+    vga_write("[PASS] 5D Renderer Plugin Integration\n");
     return 0;
 }
 
 int theme_plugin_tests_run_all(void) {
-    printf("\n=== Theme Plugin System Tests ===\n\n");
+    vga_write("\n=== Theme Plugin System Tests ===\n\n");
     
     test_passed = 0;
     test_failed = 0;
@@ -404,10 +408,16 @@ int theme_plugin_tests_run_all(void) {
     test_5d_renderer_layers();
     test_5d_renderer_plugin_integration();
     
-    printf("\n=== Test Summary ===\n");
-    printf("Passed: %d\n", test_passed);
-    printf("Failed: %d\n", test_failed);
-    printf("Total:  %d\n", test_passed + test_failed);
+    vga_write("\n=== Test Summary ===\n");
+    vga_write("Passed: ");
+    vga_write_dec(test_passed);
+    vga_write("\n");
+    vga_write("Failed: ");
+    vga_write_dec(test_failed);
+    vga_write("\n");
+    vga_write("Total:  ");
+    vga_write_dec(test_passed + test_failed);
+    vga_write("\n");
     
     return test_failed;
 }
